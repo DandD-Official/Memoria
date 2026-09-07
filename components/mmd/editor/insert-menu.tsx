@@ -80,6 +80,7 @@ export function MmdInsertMenu({ onInsert, disabled }: { onInsert: (blockName: st
         aria-expanded={open}
         disabled={disabled}
         onClick={() => setOpen((v) => !v)}
+        aria-label="Insert Memoria Markdown block"
         className="flex h-8 items-center gap-1 rounded-md px-2 text-ink-soft hover:bg-ink/5 hover:text-ink disabled:opacity-40"
         title="Insert Memoria Markdown block"
       >
@@ -92,6 +93,7 @@ export function MmdInsertMenu({ onInsert, disabled }: { onInsert: (blockName: st
         <div
           role="menu"
           aria-label="Insert Memoria Markdown block"
+          id="mmd-insert-menu"
           className="absolute left-0 z-50 mt-1 max-h-96 w-72 overflow-y-auto rounded-lg border border-line bg-surface p-1 shadow-card-hover"
         >
           {GROUPS.map((group) => (

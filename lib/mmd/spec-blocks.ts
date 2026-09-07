@@ -200,7 +200,7 @@ export const BLOCK_DEFS: Record<string, BlockDefinition> = {
   image: {
     name: "image",
     category: "media",
-    description: "An image with alt text, an optional caption, alignment, and size.",
+    description: "A real uploaded or external image asset, including SVG, with alt text, an optional caption, alignment, and size.",
     attrs: {
       src: safeString(2000),
       alt: safeString(300),
@@ -234,7 +234,7 @@ export const BLOCK_DEFS: Record<string, BlockDefinition> = {
   "image-request": {
     name: "image-request",
     category: "ai",
-    description: "A placeholder marking where a generated or uploaded image should go once available. Never a real image.",
+    description: "A request for a user-supplied visual; fulfill it with an uploaded SVG/image or a separately edited diagram. Never a generated image or raw SVG.",
     attrs: {
       purpose: safeString(1000),
       alt: safeString(300),

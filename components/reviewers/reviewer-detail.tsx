@@ -82,7 +82,7 @@ export function ReviewerDetail({ reviewer, isOwner, autoSave }: ReviewerDetailPr
 
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <Badge tone="accent">{reviewer.style}</Badge>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center justify-end gap-2">
           <ExportMenu options={[{ value: "pdf", label: "PDF document" }, { value: "docx", label: "Word document" }, { value: "md", label: "Markdown" }, { value: "json", label: "Memoria JSON" }]} onExport={handleExport} />
           <Link
             href={`/quizzes?fromReviewer=${reviewer.id}`}
@@ -115,7 +115,7 @@ export function ReviewerDetail({ reviewer, isOwner, autoSave }: ReviewerDetailPr
         </>
       ) : (
         <>
-          <h1 className="font-display text-2xl text-ink">{title}</h1>
+          <h1 className="break-words font-display text-2xl text-ink">{title}</h1>
           {isOwner && <TagEditor resourceType="REVIEWER" resourceId={reviewer.id} />}
           {reviewer.description && <p className="mt-1 text-ink-soft">{reviewer.description}</p>}
           <p className="mt-1 text-xs text-ink-faint">

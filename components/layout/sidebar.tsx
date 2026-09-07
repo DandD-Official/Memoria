@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BookMarked, LayoutDashboard, FileText, Layers, ListChecks, GraduationCap, Share2, Settings, Bell, Archive, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { BookMarked, LayoutDashboard, FileText, Layers, ListChecks, GraduationCap, Share2, Settings, Bell, Archive, PanelLeftClose, PanelLeftOpen, Workflow } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const topLinks = [
@@ -14,6 +14,7 @@ const memoryLinks = [
   { href: "/notes", label: "Notes", icon: FileText },
   { href: "/reviewers", label: "Reviewers", icon: Layers },
   { href: "/quizzes", label: "Quizzes", icon: ListChecks },
+  { href: "/diagrams", label: "Diagrams", icon: Workflow },
 ];
 
 const utilityLinks = [

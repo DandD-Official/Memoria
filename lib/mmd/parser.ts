@@ -265,7 +265,11 @@ function postprocess(node: RawNode, depth: number): MmdNode {
 
 export function parseMmd(source: string): MmdDocument {
   const normalized = source.replace(/\r\n/g, "\n");
-  const lines = normalized.split("\n");
+  // `split("\n")` would turn a single trailing line break into an extra
+  // empty text line. The old Markdown path treated that final terminator as
+  // framing rather than document content, so discard it before tokenizing
+  // to preserve the parser's backward-compatible output shape.
+  const lines = (normalized.endsWith("\n") ? normalized.slice(0, -1) : normalized).split("\n");
   const cursor: Cursor = { i: 0 };
   const rawNodes = tokenize(lines, cursor, true);
   const children = rawNodes.map((node) => postprocess(node, 0));

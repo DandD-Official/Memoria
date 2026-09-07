@@ -1,5 +1,6 @@
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { ResponsiveTable } from "@/components/ui/responsive-table";
 
 /**
  * Renders a run of ordinary Markdown. Used both for top-level content and
@@ -16,5 +17,18 @@ import remarkGfm from "remark-gfm";
  */
 export function InlineMarkdown({ content }: { content: string }) {
   if (!content.trim()) return null;
-  return <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>;
+  return (
+    <ReactMarkdown
+      remarkPlugins={[remarkGfm]}
+      components={{
+        table: ({ children, ...props }) => (
+          <ResponsiveTable>
+            <table {...props}>{children}</table>
+          </ResponsiveTable>
+        ),
+      }}
+    >
+      {content}
+    </ReactMarkdown>
+  );
 }

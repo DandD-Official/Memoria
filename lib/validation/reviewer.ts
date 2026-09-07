@@ -16,11 +16,29 @@ export const reviewerStyleEnum = z.enum([
   "CUSTOM",
 ]);
 
-/** Strips ```markdown / ``` code fences some AI responses wrap output in, despite being asked not to. */
-export function stripCodeFences(text: string): string {
+export interface ReviewerImportAnalysis {
+  content: string;
+  warning?: string;
+}
+
+/** Cleans one outer response fence and identifies ambiguous fenced responses
+ * without discarding commentary or guessing which part is authoritative. */
+export function analyzeReviewerImport(text: string): ReviewerImportAnalysis {
   const trimmed = text.trim();
   const fenceMatch = trimmed.match(/^```(?:markdown|md)?\s*\n([\s\S]*?)\n?```$/i);
-  return fenceMatch ? fenceMatch[1].trim() : trimmed;
+  if (fenceMatch) return { content: fenceMatch[1].trim() };
+  if (/```(?:markdown|md)?\s*\n/i.test(trimmed)) {
+    return {
+      content: trimmed,
+      warning: "This response includes text outside its Markdown fence. Memoria kept everything so you can remove the commentary safely.",
+    };
+  }
+  return { content: trimmed };
+}
+
+/** Backward-compatible convenience wrapper used by validation schemas. */
+export function stripCodeFences(text: string): string {
+  return analyzeReviewerImport(text).content;
 }
 
 const markdownContentSchema = z

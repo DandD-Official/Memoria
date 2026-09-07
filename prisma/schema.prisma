@@ -29,6 +29,7 @@ model User {
   reviewers             Reviewer[]
   quizzes               Quiz[]
   diagrams              Diagram[]
+  media                 Media[]
   quizAttempts          QuizAttempt[]
   sharesGiven           ResourceShare[]         @relation("SharesGivenByOwner")
   sharesGranted         ResourceShare[]         @relation("SharesGrantedToUser")
@@ -503,6 +504,23 @@ enum ResourceType {
   REVIEWER
   QUIZ
   DIAGRAM
+}
+
+enum MediaKind {
+  UPLOADED
+}
+
+model Media {
+  id        String   @id @default(cuid())
+  ownerId   String
+  owner     User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  kind      MediaKind
+  mimeType  String
+  data      Bytes
+  createdAt DateTime @default(now())
+
+  @@index([ownerId, createdAt])
+  @@map("media")
 }
 
 enum Permission {

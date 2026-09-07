@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input, Label, Textarea } from "@/components/ui/input";
 import { MarkdownRenderer } from "@/components/markdown/renderer";
 import { MmdValidationNotice } from "@/components/mmd/validation-notice";
-import { stripCodeFences } from "@/lib/validation/reviewer";
+import { analyzeReviewerImport, stripCodeFences } from "@/lib/validation/reviewer";
 import { cn } from "@/lib/utils";
 
 const STYLES = [
@@ -104,7 +104,8 @@ export function ReviewerWizard({ notes, defaultNoteId, initiallyOpen = false, in
     }
   }
 
-  const cleanedMarkdown = stripCodeFences(pastedMarkdown);
+  const importAnalysis = analyzeReviewerImport(pastedMarkdown);
+  const cleanedMarkdown = importAnalysis.content;
   const isValidLength = cleanedMarkdown.trim().length >= 20;
 
   function extractTitleFromMarkdown(md: string): string {
@@ -278,6 +279,7 @@ export function ReviewerWizard({ notes, defaultNoteId, initiallyOpen = false, in
           <p className="mt-1 text-xs text-ink-faint">
             If it&apos;s wrapped in a ```markdown code fence, that&apos;s fine — Memoria strips it automatically.
           </p>
+          {importAnalysis.warning && <p className="mt-3 rounded-lg border border-warning/30 bg-warning/5 p-3 text-sm text-ink-soft">{importAnalysis.warning}</p>}
 
           {pastedMarkdown.trim() && !isValidLength && (
             <p className="mt-3 rounded-lg border border-danger/30 bg-danger/5 p-3 text-sm text-danger">
@@ -300,7 +302,7 @@ export function ReviewerWizard({ notes, defaultNoteId, initiallyOpen = false, in
                 />
               </div>
               <div className="max-h-64 overflow-y-auto rounded-lg border border-line bg-surface p-4">
-                <MarkdownRenderer content={cleanedMarkdown} />
+                <MarkdownRenderer content={cleanedMarkdown} onReplaceBlock={(raw, replacement) => setPastedMarkdown(cleanedMarkdown.replace(raw, replacement))} />
               </div>
               <MmdValidationNotice content={cleanedMarkdown} />
             </div>

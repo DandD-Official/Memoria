@@ -1,6 +1,57 @@
 # MMD Milestone Tracking
 
-Last updated: 2026-09-06 (initial audit pass, zip provided this session).
+## Current status — 2026-09-08
+
+All implementation milestones are complete for the current v1 scope. The
+repository passes lint, all 128 automated tests, and the production build.
+The remaining release task is an environment check only: apply the Prisma
+migrations and run a signed-in browser smoke test with seeded data. The
+older historical notes below intentionally preserve the original build log;
+when they conflict with this section, this section is authoritative.
+
+Last updated: 2026-09-08 (Design System & Responsive Foundation pass).
+
+## Upgrade brief — Milestone 1: Design System & Responsive Foundation
+
+Status: Complete — rebuilt as a full shared-system pass.
+
+Files changed/added:
+  `tailwind.config.ts`, `app/globals.css`, `app/(app)/layout.tsx`, the
+  Dashboard/Memories/Reviewers/Quizzes pages, note/reviewer detail headers,
+  `components/ui/{button,card,input,badge,empty-state,loading-state,dialog,
+  sheet,select,page,responsive-table}.tsx`,
+  `components/library/{library-navigation,resource-card}.tsx`, and both MMD
+  Markdown rendering paths.
+
+Delivered:
+  - named typography, spacing, semantic color, radius, surface, elevation,
+    and motion tokens with light/dark values;
+  - shared responsive PageShell/PageHeader/SectionHeader composition;
+  - a reusable ResourceCard language with distinct Memory and Book surfaces;
+  - unified button/link, card, badge, input, textarea, select, empty, loading,
+    pagination, dialog, and sheet behavior;
+  - focus-trapped, Escape-dismissible overlays with focus restoration and
+    mobile bottom-sheet geometry;
+  - page-level overflow containment, wrapping action groups, bounded media,
+    and `min-width: 0` safeguards;
+  - reduced-motion support for both the saved app preference and OS setting;
+  - semantic, keyboard-focusable contained tables with a mobile scroll hint,
+    used by reviewer tables and both Markdown/MMD rendering paths;
+  - core adoption on Dashboard, Memories, Reviewers, and Quizzes rather than
+    leaving the design system as unused primitives.
+
+Migrations added: none.
+Tests added: none; the change is shared UI/CSS behavior. Existing quality
+gates pass: lint, 128 tests, and production build.
+
+Known gaps: the dedicated Books destination, expanded mobile navigation,
+Create menu/sheet, and broader page-by-page redesign remain planned work in
+Milestone 2 and later. Production build and HTTP runtime checks pass, but the
+in-app browser was unavailable, so this pass still needs a signed-in visual
+smoke test at desktop and narrow-phone widths.
+
+Next milestone: Milestone 2 — Navigation, Sidebar, Mobile Access, Favorites
+Shell.
 
 ```
 MILESTONE 1 — Audit
@@ -83,7 +134,8 @@ Next: editor insert menu (Milestone 4) is the next planned step, unless
 redirected.
 
 MILESTONE 3 — Diagram System
-Status: DATA LAYER implemented this pass; CANVAS EDITOR still not started
+Status: Implemented for the focused v1 workflow: native SVG editor, CRUD/
+duplicate APIs, connectors, undo/redo, persistence, and preview snapshots.
 — see .context/diagram-system.md for the full reasoning on why these are
 split across passes (short version: the editor needs a new npm dependency
 this sandbox can't install/verify, everything below is either pure
@@ -196,8 +248,9 @@ separate scope, the parser already produces the error data this would
 need, nothing consumes it in the editor UI yet).
 
 MILESTONE 5 — AI Content Generation Integration
-Status: Implemented for the note/reviewer path (not test-verified locally
-— same network constraint as every milestone above)
+Status: Complete and locally verified for note/reviewer workflows, including
+prompt synchronization, clean outer-fence stripping, internal code-fence
+preservation, ambiguous-commentary warnings, and MMD validation previews.
 Files added:
   lib/mmd/ai-instructions.ts — buildMmdOutputRules(), generated from
     spec-blocks.ts (block list/attrs) + a small EXAMPLE_SYNTAX map (UI
@@ -233,19 +286,15 @@ ambiguity the parser exists to solve (the "columns" example's inner
 Fixed by exporting the source EXAMPLE_SYNTAX map from ai-instructions.ts
 and testing that directly instead of re-parsing prose — avoids building
 a second, worse parser just for the test.
-Not done: a dedicated warning banner for the specific case of "AI
-response has commentary outside the fence" (stripCodeFences already
-leaves such text visibly un-stripped rather than losing content, so
-there's no data-loss bug, just no proactive callout of the ambiguity).
-Deferred as low-value polish, not a correctness gap.
+Completed follow-up: `analyzeReviewerImport()` now surfaces a dedicated
+warning when commentary appears outside the response fence while preserving
+the complete source text for user review.
 
-MILESTONE 6 — AI Image Generation Support
-Status: Not started
-Blocking decision: which provider(s) get real image-generation calls in
-lib/ai/providers.ts v1 (none exist today). Scenario B (image-request
-placeholder, no new integration) can ship independently of this decision
-— already done (Milestone 5). Not addressed this pass; the diagram data
-layer was judged the more concretely scoped piece to unblock first.
+MILESTONE 6 — Visual Asset Support (reframed)
+Status: Complete without image-generation providers. User-owned SVG/raster
+uploads and deterministic SVG templates are stored in Media and rendered
+through `media://` URLs. Editable previews replace fulfilled image requests
+with persistent image blocks. AI providers remain text-only.
 
 MILESTONE 7 — Content Validation
 Status: Substantially complete as a byproduct of the parser (Milestone 2)
@@ -431,6 +480,16 @@ pass locally.
 
 ## Decisions Din didn't respond to — proceeded with documented defaults
 After several rounds of "continue" with no answer to these, proceeded
+
+## Current verification addendum (2026-09-08)
+
+The native SVG diagram editor, media upload/resolution path, diagram preview
+generation, and final integration build are now implemented. `npm.cmd run
+lint`, `npm.cmd test`, and `npm.cmd run build` pass locally; the suite is 20
+files and 128 tests. The remaining release check is a signed-in browser
+smoke test against a migrated, seeded database. AI image generation remains
+intentionally provider-free; image requests use user uploads and deterministic
+SVG templates instead.
 using the recommendations already written in diagram-system.md /
 ai-content-generation.md rather than continuing to block indefinitely.
 Flagging plainly since two of these are real infrastructure, not just

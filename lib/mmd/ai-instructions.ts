@@ -116,7 +116,7 @@ ${buildBlockReference()}
 
 Use an image or diagram only when it would make the concept SIGNIFICANTLY easier to understand (architecture, process flow, system components, hierarchy, relationships) — never as decoration, and never for something a short paragraph or list already explains well.
 
-If an image would help but you cannot return an actual image file/URL that Memoria can store, use ":::image-request{purpose=\"...\" alt=\"...\"}" instead of inventing a fake image URL. Never write a ":::image" or Markdown "![]()" pointing at a URL you did not actually generate — a fabricated image link is worse than no image.
+Memoria supports three visual paths: reference an existing saved diagram with ":::diagram{id=\"...\"}", reference a real uploaded/external SVG or raster asset with ":::image{src=\"...\" alt=\"...\"}", or mark a needed visual for the user to supply with ":::image-request{purpose=\"...\" alt=\"...\"}". If you do not have a real asset URL supplied in the source, use image-request. Never invent a fake or fabricated image URL, emit raw HTML/SVG, or claim that an image was generated. SVG is accepted only as a stored/uploaded image asset.
 
 Maintain a logical heading hierarchy (one top-level "#" title, then "##"/"###" for structure).
 

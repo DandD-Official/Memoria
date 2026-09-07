@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { stripCodeFences } from "@/lib/validation/reviewer";
+import { analyzeReviewerImport, stripCodeFences } from "@/lib/validation/reviewer";
 import { parseMmd, collectMmdErrors } from "@/lib/mmd/parser";
 import { isBlockNode } from "@/lib/mmd/ast";
 
@@ -157,5 +157,10 @@ describe("AI import — response with commentary outside the fence (ambiguous ca
     // discarded. The fence characters staying visible is the intended
     // "let the user review it" fallback, not a bug.
     expect(cleaned).toBe(raw);
+    expect(analyzeReviewerImport(raw).warning).toMatch(/outside its Markdown fence/);
+  });
+
+  it("does not warn for a clean outer fence", () => {
+    expect(analyzeReviewerImport("```markdown\n# Title\n\nBody.\n```").warning).toBeUndefined();
   });
 });

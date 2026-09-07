@@ -13,7 +13,7 @@ type ResolveState = "loading" | "found" | "not-found";
  * diagram data layer exists (lib/diagrams/repo.ts, prisma Diagram model —
  * see .context/diagram-system.md). Every reference will still show
  * "not available" today because nothing creates diagram rows yet — the
- * canvas editor (the remaining, larger half of Milestone 3: shapes,
+ * native canvas editor supports the focused v1 diagram workflow (shapes,
  * connectors, drag/undo/redo, wrapping @xyflow/react) hasn't been built.
  * This component is written to "just work" once that editor starts
  * creating real rows, without needing to change again.
@@ -28,15 +28,14 @@ export function DiagramPlaceholder({ node }: { node: MmdBlockNode }) {
   const diagramId = node.attrs.id;
 
   useEffect(() => {
-    let cancelled = false;
+    const controller = new AbortController();
     if (!diagramId) {
       setState("not-found");
       return;
     }
-    fetch(`/api/diagrams/${encodeURIComponent(diagramId)}`)
+    fetch(`/api/diagrams/${encodeURIComponent(diagramId)}`, { signal: controller.signal })
       .then((res) => (res.ok ? res.json() : null))
       .then((body) => {
-        if (cancelled) return;
         if (body?.diagram) {
           setTitle(body.diagram.title as string);
           setState("found");
@@ -45,11 +44,9 @@ export function DiagramPlaceholder({ node }: { node: MmdBlockNode }) {
         }
       })
       .catch(() => {
-        if (!cancelled) setState("not-found");
+        if (!controller.signal.aborted) setState("not-found");
       });
-    return () => {
-      cancelled = true;
-    };
+    return () => controller.abort();
   }, [diagramId]);
 
   if (state === "loading") {
@@ -69,7 +66,7 @@ export function DiagramPlaceholder({ node }: { node: MmdBlockNode }) {
             broken-image fallback is acceptable here since it's paired
             with the title text right below it, not the only signal. */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={`/api/diagrams/${encodeURIComponent(diagramId)}/preview`} alt={title ?? "Diagram"} className="w-full" />
+        <img src={`/api/diagrams/${encodeURIComponent(diagramId)}/preview`} alt={title ?? "Diagram"} loading="lazy" decoding="async" className="w-full" />
         <figcaption className="border-t border-line bg-surface px-3 py-2 text-center text-xs text-ink-soft">
           {node.attrs.caption || title}
         </figcaption>

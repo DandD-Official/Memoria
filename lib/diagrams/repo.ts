@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/db";
-import type { Diagram as DbDiagram } from "@prisma/client";
+import type { Diagram as DbDiagram, Prisma } from "@prisma/client";
 import { diagramDataSchema, emptyDiagramData, type DiagramData } from "@/lib/diagrams/schema";
 
 /**
@@ -77,7 +77,7 @@ export async function duplicateDiagram(id: string, ownerId: string): Promise<Dia
     data: {
       ownerId,
       title: `${original.title} (copy)`,
-      data: original.data,
+      data: original.data as Prisma.InputJsonValue,
     },
   });
   return hydrate(copy);

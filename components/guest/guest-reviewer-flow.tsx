@@ -7,7 +7,7 @@ import { Input, Label, Textarea } from "@/components/ui/input";
 import { MarkdownRenderer } from "@/components/markdown/renderer";
 import { MmdValidationNotice } from "@/components/mmd/validation-notice";
 import { FileDropzone } from "@/components/notes/file-dropzone";
-import { stripCodeFences } from "@/lib/validation/reviewer";
+import { analyzeReviewerImport } from "@/lib/validation/reviewer";
 import { serializeWithFrontmatter } from "@/lib/markdown-frontmatter";
 import { cn } from "@/lib/utils";
 import { extractFlashcardsFromMarkdown } from "@/lib/flashcards";
@@ -92,7 +92,8 @@ export function GuestReviewerFlow({ initialView = "reviewer" }: { initialView?: 
     setTimeout(() => setCopied(false), 1500);
   }
 
-  const cleanedMarkdown = stripCodeFences(pastedMarkdown);
+  const importAnalysis = analyzeReviewerImport(pastedMarkdown);
+  const cleanedMarkdown = importAnalysis.content;
   const isValidLength = cleanedMarkdown.trim().length >= 20;
   const flashcards = extractFlashcardsFromMarkdown(cleanedMarkdown);
 
@@ -158,6 +159,7 @@ export function GuestReviewerFlow({ initialView = "reviewer" }: { initialView?: 
             placeholder="# Reviewer title&#10;&#10;## Section&#10;..."
             className="font-mono text-xs"
           />
+          {importAnalysis.warning && <p className="mt-3 rounded-lg border border-warning/30 bg-warning/5 p-3 text-sm text-ink-soft">{importAnalysis.warning}</p>}
 
           {isValidLength && (
             <div className="mt-4 space-y-3">

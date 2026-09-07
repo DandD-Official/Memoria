@@ -5,6 +5,7 @@ import { Bold, Italic, Heading1, Heading2, List, ListOrdered, Table2, Quote, Hel
 import { MarkdownRenderer } from "@/components/markdown/renderer";
 import { MmdInsertMenu } from "@/components/mmd/editor/insert-menu";
 import { MmdReferenceGuide } from "@/components/mmd/editor/reference-guide";
+import { MmdBlockMap } from "@/components/mmd/editor/block-map";
 import { MmdValidationNotice } from "@/components/mmd/validation-notice";
 import { INSERT_TEMPLATES } from "@/lib/mmd/editor-templates";
 import { cn } from "@/lib/utils";
@@ -62,6 +63,17 @@ export function MarkdownEditor({ value, onChange, minRows = 16, className }: Mar
     const template = INSERT_TEMPLATES[blockName];
     if (!template || template.disabled) return;
     applyEdit(template.build, { block: true });
+  }
+
+  function jumpToLine(line: number) {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+    const lines = value.replace(/\r\n/g, "\n").split("\n");
+    const offset = lines.slice(0, Math.max(0, line - 1)).reduce((total, current) => total + current.length + 1, 0);
+    textarea.focus();
+    textarea.setSelectionRange(offset, offset + (lines[line - 1]?.length ?? 0));
+    const lineHeight = Number.parseFloat(window.getComputedStyle(textarea).lineHeight) || 20;
+    textarea.scrollTop = Math.max(0, (line - 3) * lineHeight);
   }
 
   const toolbarButtons = [
@@ -181,11 +193,12 @@ export function MarkdownEditor({ value, onChange, minRows = 16, className }: Mar
             className="w-full resize-y bg-surface p-4 font-mono text-sm text-ink outline-none"
             placeholder="# Untitled&#10;&#10;Start writing in Markdown…"
           />
+          <MmdBlockMap content={debouncedValue} onSelectLine={jumpToLine} />
           <MmdValidationNotice content={debouncedValue} className="mx-4 mb-4" />
         </>
       ) : (
         <div className="max-h-[32rem] overflow-y-auto bg-surface p-4">
-          {value.trim() ? <MarkdownRenderer content={value} /> : <p className="text-sm text-ink-faint">Nothing to preview yet.</p>}
+          {value.trim() ? <MarkdownRenderer content={value} onReplaceBlock={(raw, replacement) => onChange(value.replace(raw, replacement))} /> : <p className="text-sm text-ink-faint">Nothing to preview yet.</p>}
         </div>
       )}
     </div>

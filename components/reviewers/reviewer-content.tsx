@@ -1,4 +1,5 @@
 import { AlertTriangle, Info, Sparkles, Quote } from "lucide-react";
+import { ResponsiveTable } from "@/components/ui/responsive-table";
 
 type Block = { type: string; [key: string]: unknown };
 type Section = { heading: string; content: Block[] };
@@ -29,7 +30,7 @@ function Block({ block }: { block: Block }) {
       const headers = block.headers as string[];
       const rows = block.rows as string[][];
       return (
-        <div className="overflow-x-auto">
+        <ResponsiveTable>
           <table className="w-full border-collapse text-sm">
             <thead>
               <tr>
@@ -46,7 +47,7 @@ function Block({ block }: { block: Block }) {
               ))}
             </tbody>
           </table>
-        </div>
+        </ResponsiveTable>
       );
     }
     case "definition":

@@ -110,9 +110,7 @@ export const INSERT_TEMPLATES: Record<string, InsertTemplate> = {
   },
 
   diagram: {
-    disabled: true,
-    disabledReason: "The diagram editor isn't available yet.",
-    build: (s) => fence("diagram", `id="" caption="${s || ""}"`, ""),
+    build: (s) => fence("diagram", `id="your-diagram-id" caption="${s || "Diagram"}"`, ""),
   },
 
   "image-request": {

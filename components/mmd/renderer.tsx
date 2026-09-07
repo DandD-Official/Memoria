@@ -1,7 +1,11 @@
+"use client";
+
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { parseMmd, isPlainMarkdown } from "@/lib/mmd/parser";
 import { MmdNodeList } from "@/components/mmd/node-list";
+import { MmdReplacementProvider } from "@/components/mmd/replacement-context";
+import { ResponsiveTable } from "@/components/ui/responsive-table";
 
 /**
  * Renders Memoria Markdown (MMD) — see .context/mmd-spec.md. This is the
@@ -11,7 +15,7 @@ import { MmdNodeList } from "@/components/mmd/node-list";
  * public collection viewer, the editor's preview pane) keeps working
  * unchanged.
  */
-export function MmdRenderer({ content }: { content: string }) {
+export function MmdRenderer({ content, onReplaceBlock }: { content: string; onReplaceBlock?: (raw: string, replacement: string) => void }) {
   if (isPlainMarkdown(content)) {
     // Fast path, and a deliberate safety net: documents with zero MMD
     // fences (100% of existing Notes/Reviewers today) render through
@@ -20,7 +24,14 @@ export function MmdRenderer({ content }: { content: string }) {
     // parser and back out again. Existing content cannot regress.
     return (
       <div className="memora-markdown">
-        <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
+        <ReactMarkdown
+          remarkPlugins={[remarkGfm]}
+          components={{
+            table: ({ children, ...props }) => (
+              <ResponsiveTable><table {...props}>{children}</table></ResponsiveTable>
+            ),
+          }}
+        >{content}</ReactMarkdown>
       </div>
     );
   }
@@ -28,7 +39,9 @@ export function MmdRenderer({ content }: { content: string }) {
   const doc = parseMmd(content);
   return (
     <div className="memora-markdown">
-      <MmdNodeList nodes={doc.children} />
+      <MmdReplacementProvider onReplace={onReplaceBlock}>
+        <MmdNodeList nodes={doc.children} />
+      </MmdReplacementProvider>
     </div>
   );
 }

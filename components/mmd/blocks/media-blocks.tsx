@@ -6,7 +6,7 @@ import type { MmdBlockNode, MmdNode } from "@/lib/mmd/ast";
 import { cn } from "@/lib/utils";
 
 /**
- * No media/upload storage exists in Memoria yet (confirmed during the
+ * Visual assets may be external URLs or authenticated user-owned media.
  * MMD audit — no Media model, no blob storage integration). `media://`
  * ids therefore cannot be resolved to a real URL today; only external
  * http(s) URLs render. This is intentionally NOT a broken-image state —
@@ -17,6 +17,7 @@ import { cn } from "@/lib/utils";
  */
 function resolveImageSrc(src: string): { url: string } | { unresolved: true } {
   if (src.startsWith("http://") || src.startsWith("https://")) return { url: src };
+  if (src.startsWith("media://")) return { url: `/api/media/${encodeURIComponent(src.slice("media://".length))}` };
   return { unresolved: true };
 }
 
@@ -63,7 +64,7 @@ export function ImageBlock({ node }: { node: MmdBlockNode }) {
           className="block w-full cursor-zoom-in overflow-hidden rounded-lg border border-line"
         >
           {/* eslint-disable-next-line @next/next/no-img-element -- external/unknown-origin MMD image URLs, not part of the Next.js image pipeline */}
-          <img src={resolved.url} alt={alt} className="w-full" />
+          <img src={resolved.url} alt={alt} loading="lazy" decoding="async" className="w-full" />
         </button>
         {caption && <figcaption className="mt-1.5 text-center text-xs text-ink-soft">{caption}</figcaption>}
       </figure>
@@ -116,7 +117,7 @@ export function GalleryBlock({ node }: { node: MmdBlockNode }) {
               className="group relative aspect-square overflow-hidden rounded-lg border border-line"
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={resolved.url} alt={img.alt} className="h-full w-full object-cover" />
+              <img src={resolved.url} alt={img.alt} loading="lazy" decoding="async" className="h-full w-full object-cover" />
               <span className="absolute inset-0 flex items-center justify-center bg-ink/0 opacity-0 transition group-hover:bg-ink/20 group-hover:opacity-100">
                 <Maximize2 className="h-5 w-5 text-white" aria-hidden="true" />
               </span>
@@ -156,6 +157,7 @@ function GalleryLightbox({ image, onClose }: { image: GalleryImage; onClose: () 
       <img
         src={resolved.url}
         alt={image.alt}
+        decoding="async"
         className="max-h-[85vh] max-w-[90vw] rounded-lg object-contain"
         onClick={(e) => e.stopPropagation()}
       />

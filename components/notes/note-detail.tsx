@@ -151,7 +151,7 @@ export function NoteDetail({ note, canEdit, isOwner, autoSave }: NoteDetailProps
         </>
       ) : (
         <>
-          <h1 className="font-display text-2xl text-ink">{title}</h1>
+          <h1 className="break-words font-display text-2xl text-ink">{title}</h1>
           <p className="mt-1 text-xs text-ink-faint">Last updated {formatDate(note.updatedAt)}</p>
           <div className="mt-4 rounded-card border border-line bg-surface p-6">
             <MarkdownRenderer content={content} />

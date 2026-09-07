@@ -10,7 +10,7 @@ export default async function CollectionDetailPage({ params }: { params: Promise
 
   return (
     <CollectionEditor
-      initialCollection={{ id: data.collection.id, title: data.collection.title, description: data.collection.description, slug: data.collection.slug, isPublished: data.collection.isPublished, expiresAt: data.collection.expiresAt?.toISOString() ?? null, passwordProtected: Boolean(data.collection.passwordHash), items: data.collection.items.map((item) => ({ id: item.id, resourceType: item.resourceType, resourceId: item.resourceId })), members: data.collection.members.map((member) => ({ id: member.id, name: member.user.name, email: member.user.email })) }}
+      initialCollection={{ id: data.collection.id, title: data.collection.title, description: data.collection.description, slug: data.collection.slug, isPublished: data.collection.isPublished, expiresAt: data.collection.expiresAt?.toISOString() ?? null, passwordProtected: Boolean(data.collection.passwordHash), items: data.collection.items.map((item) => ({ id: item.id, resourceType: item.resourceType as "NOTE" | "REVIEWER" | "QUIZ", resourceId: item.resourceId })), members: data.collection.members.map((member) => ({ id: member.id, name: member.user.name, email: member.user.email })) }}
       rows={data.rows}
       initialFeedback={data.feedback.map((row) => ({ ...row, createdAt: row.createdAt.toISOString() }))}
     />

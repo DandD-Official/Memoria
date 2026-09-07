@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { cloneElement, isValidElement, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Dialog } from "@/components/ui/dialog";
 
 interface ConfirmDialogProps {
-  trigger: React.ReactNode;
+  trigger: React.ReactElement<{ onClick?: React.MouseEventHandler }>;
   title: string;
   description: string;
   confirmLabel?: string;
@@ -15,36 +16,48 @@ interface ConfirmDialogProps {
 export function ConfirmDialog({ trigger, title, description, confirmLabel = "Confirm", destructive, onConfirm }: ConfirmDialogProps) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  return (
-    <>
-      <span onClick={() => setOpen(true)}>{trigger}</span>
-      {open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 p-4" onClick={() => setOpen(false)}>
-          <div className="card w-full max-w-sm p-6" onClick={(e) => e.stopPropagation()}>
-            <h3 className="font-display text-lg text-ink">{title}</h3>
-            <p className="mt-2 text-sm text-ink-soft">{description}</p>
-            <div className="mt-6 flex justify-end gap-2">
-              <Button variant="ghost" size="sm" onClick={() => setOpen(false)}>
-                Cancel
-              </Button>
-              <Button
-                variant={destructive ? "danger" : "primary"}
-                size="sm"
-                loading={loading}
-                onClick={async () => {
-                  setLoading(true);
-                  await onConfirm();
-                  setLoading(false);
-                  setOpen(false);
-                }}
-              >
-                {confirmLabel}
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
-    </>
-  );
+  const renderedTrigger = isValidElement(trigger)
+    ? cloneElement(trigger, {
+        onClick: (event: React.MouseEvent) => {
+          trigger.props.onClick?.(event);
+          if (!event.defaultPrevented) { setError(null); setOpen(true); }
+        },
+      })
+    : trigger;
+
+  return <>
+    {renderedTrigger}
+    <Dialog
+      open={open}
+      onOpenChange={(next) => { if (!loading) setOpen(next); }}
+      title={title}
+      description={description}
+      className="max-w-sm"
+      footer={<>
+        <Button variant="ghost" onClick={() => setOpen(false)} disabled={loading}>Cancel</Button>
+        <Button
+          variant={destructive ? "danger" : "primary"}
+          loading={loading}
+          onClick={async () => {
+            setLoading(true);
+            setError(null);
+            try {
+              await onConfirm();
+              setOpen(false);
+            } catch {
+              setError("That action could not be completed. Please try again.");
+            } finally {
+              setLoading(false);
+            }
+          }}
+        >
+          {confirmLabel}
+        </Button>
+      </>}
+    >
+      {error ? <p className="rounded-control border border-danger/25 bg-danger/5 p-3 text-sm text-danger" role="alert">{error}</p> : <span className="sr-only">Choose cancel to return without making changes.</span>}
+    </Dialog>
+  </>;
 }
