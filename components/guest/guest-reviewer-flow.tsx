@@ -5,6 +5,7 @@ import { Copy, Check, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input, Label, Textarea } from "@/components/ui/input";
 import { MarkdownRenderer } from "@/components/markdown/renderer";
+import { MmdValidationNotice } from "@/components/mmd/validation-notice";
 import { FileDropzone } from "@/components/notes/file-dropzone";
 import { stripCodeFences } from "@/lib/validation/reviewer";
 import { serializeWithFrontmatter } from "@/lib/markdown-frontmatter";
@@ -171,6 +172,7 @@ export function GuestReviewerFlow({ initialView = "reviewer" }: { initialView?: 
               <div className="max-h-[32rem] overflow-y-auto rounded-lg border border-line bg-surface p-5">
                 {resultView === "reviewer" ? <MarkdownRenderer content={cleanedMarkdown} /> : <GuestFlashcards cards={flashcards} />}
               </div>
+              {resultView === "reviewer" && <MmdValidationNotice content={cleanedMarkdown} />}
               <ExportMenu options={[{ value: "pdf", label: "PDF document" }, { value: "docx", label: "Word document" }, { value: "md", label: "Markdown" }, { value: "json", label: "Memoria JSON" }]} onExport={exportReviewer} />
               <p className="flex items-center gap-1.5 text-xs text-ink-faint">
                 <Upload className="h-3.5 w-3.5" /> Want to save this and build quizzes from it later? Create a free account.

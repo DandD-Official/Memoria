@@ -2,6 +2,17 @@ import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 import type { QuizQuestion } from "@/lib/validation/quiz";
 import { formatCorrectAnswer } from "@/lib/quiz-grading";
+import { parseMmd } from "@/lib/mmd/parser";
+import { isBlockNode, type MmdNode } from "@/lib/mmd/ast";
+import {
+  getBlockLabel,
+  getDiagramPlaceholderText,
+  getImagePlaceholderText,
+  getImageRequestPlaceholderText,
+  getSectionHeading,
+  getUnsupportedBlockText,
+  isCalloutBlock,
+} from "@/lib/mmd/export-helpers";
 
 const PAGE_MARGIN = 48;
 const LINE_HEIGHT = 16;
@@ -112,13 +123,13 @@ export function buildMarkdownPdf(title: string, markdown: string): jsPDF {
     return Math.max(1, wrapped.length) * size * 1.35;
   }
 
-  function flushTable() {
+  function flushTable(baseIndent: number) {
     if (!tableBuffer || tableBuffer.length === 0) return;
     const [header, , ...rows] = tableBuffer; // row 1 is the "---|---" divider
     ensureSpace(60);
     autoTable(doc, {
       startY: y,
-      margin: { left: PAGE_MARGIN, right: PAGE_MARGIN },
+      margin: { left: PAGE_MARGIN + baseIndent, right: PAGE_MARGIN },
       head: [header],
       body: rows,
       styles: { fontSize: 9, cellPadding: 5 },
@@ -132,6 +143,150 @@ export function buildMarkdownPdf(title: string, markdown: string): jsPDF {
     tableBuffer = null;
   }
 
+  /**
+   * Renders one contiguous run of ORDINARY Markdown (a single
+   * MmdTextNode's content — see lib/mmd/parser.ts). This is exactly the
+   * original buildMarkdownPdf line-scanning logic, just parameterized by
+   * `indent` so text nested inside an MMD block (see renderMmdNode below)
+   * shifts right instead of resetting to the page margin. Byte-for-byte
+   * the same behavior as before MMD existed when called once for the
+   * whole document with indent 0, which is exactly what happens for any
+   * document containing zero ":::" fences.
+   */
+  function renderMarkdownLines(text: string, indent: number) {
+    const textLines = text.split("\n");
+    tableBuffer = null;
+
+    for (let index = 0; index < textLines.length; index += 1) {
+      const rawLine = textLines[index];
+      const line = rawLine.trimEnd();
+
+      // Keep ordinary lesson sections together when they fit on one page,
+      // so headings and the last bullet do not become isolated page orphans.
+      if (/^#{1,4}\s+/.test(line)) {
+        let sectionHeight = 0;
+        for (let next = index; next < textLines.length; next += 1) {
+          if (next > index && /^#{1,4}\s+/.test(textLines[next])) break;
+          if (/^\|.*\|$/.test(textLines[next].trim())) break;
+          sectionHeight += estimatedLineHeight(textLines[next]);
+        }
+        if (sectionHeight <= pageHeight - PAGE_MARGIN * 2) ensureSpace(sectionHeight);
+      }
+
+      if (/^\|.*\|$/.test(line.trim())) {
+        const cells = line.trim().slice(1, -1).split("|").map((c) => c.trim());
+        if (!tableBuffer) tableBuffer = [];
+        tableBuffer.push(cells);
+        continue;
+      } else if (tableBuffer) {
+        flushTable(indent);
+      }
+
+      if (!line.trim()) {
+        y += 6;
+        continue;
+      }
+
+      if (line.startsWith("# ")) writeParagraph(line.slice(2), 18, "bold", indent);
+      else if (line.startsWith("## ")) writeParagraph(line.slice(3), 15, "bold", indent);
+      else if (line.startsWith("### ")) writeParagraph(line.slice(4), 13, "bold", indent);
+      else if (line.startsWith("#### ")) writeParagraph(line.slice(5), 12, "bold", indent);
+      else if (line.startsWith("> ")) writeParagraph(line.slice(2), 11, "italic", indent + 16);
+      else if (/^[-*]\s+/.test(line)) writeParagraph(`•  ${line.replace(/^[-*]\s+/, "")}`, 11, "normal", indent + 12);
+      else if (/^\d+\.\s+/.test(line)) writeParagraph(line, 11, "normal", indent + 12);
+      else writeParagraph(line, 11, "normal", indent);
+    }
+    flushTable(indent);
+  }
+
+  const MAX_INDENT = 60; // caps runaway indentation from deeply nested blocks
+
+  /**
+   * Renders one MMD node (see lib/mmd/ast.ts) at the given nesting depth.
+   * Plain text passes straight through to renderMarkdownLines; blocks get
+   * a bold label line (see lib/mmd/export-helpers.ts) and their children
+   * indented one step further; anything the parser couldn't validate
+   * (MmdErrorNode) still prints its raw source rather than being dropped,
+   * per .context/mmd-spec.md §7 — export must never lose content the
+   * in-app preview still shows.
+   */
+  function renderMmdNode(node: MmdNode, depth: number) {
+    const indent = Math.min(depth * 14, MAX_INDENT);
+
+    if (node.type === "markdown") {
+      renderMarkdownLines(node.content, indent);
+      return;
+    }
+
+    if (node.type === "mmd-error") {
+      writeParagraph(getUnsupportedBlockText(node.reason), 9, "italic", indent);
+      writeParagraph(node.raw, 8, "normal", indent + 8);
+      y += 6;
+      return;
+    }
+
+    // node.type === "block"
+    switch (node.block) {
+      case "section": {
+        const { title, subtitle } = getSectionHeading(node);
+        y += 6;
+        writeParagraph(title, 16, "bold", indent);
+        if (subtitle) writeParagraph(subtitle, 10, "italic", indent);
+        y += 4;
+        for (const child of node.children) renderMmdNode(child, depth);
+        y += 6;
+        return;
+      }
+      case "columns": {
+        // Side-by-side layout has no faithful single-pass PDF equivalent
+        // with independent per-column wrapping/pagination, so columns
+        // stack sequentially in export — an explicit, documented v1
+        // simplification (mmd-spec.md's print-fallback guidance applied
+        // to columns), not an oversight.
+        const columnBlocks = node.children.filter(isBlockNode);
+        columnBlocks.forEach((column, i) => {
+          for (const child of column.children) renderMmdNode(child, depth + 1);
+          if (i < columnBlocks.length - 1) {
+            y += 4;
+            doc.setDrawColor(210, 210, 210);
+            doc.line(PAGE_MARGIN + indent, y, pageWidth - PAGE_MARGIN, y);
+            y += 8;
+          }
+        });
+        return;
+      }
+      case "column": {
+        for (const child of node.children) renderMmdNode(child, depth);
+        return;
+      }
+      case "diagram":
+        writeParagraph(getDiagramPlaceholderText(node), 10, "italic", indent);
+        y += 4;
+        return;
+      case "image":
+        writeParagraph(getImagePlaceholderText(node), 10, "italic", indent);
+        y += 4;
+        return;
+      case "gallery":
+        for (const child of node.children) renderMmdNode(child, depth);
+        return;
+      case "image-request":
+        writeParagraph(getImageRequestPlaceholderText(node), 10, "italic", indent);
+        y += 4;
+        return;
+      default: {
+        const label = getBlockLabel(node);
+        if (label) {
+          writeParagraph(label, isCalloutBlock(node.block) ? 11 : 10, "bold", indent);
+          y += 2;
+        }
+        for (const child of node.children) renderMmdNode(child, indent === MAX_INDENT ? depth : depth + 1);
+        if (label) y += 6;
+        return;
+      }
+    }
+  }
+
   startPage();
   y = drawBrandHeader(doc, pageWidth);
   doc.setFont("helvetica", "bold");
@@ -139,46 +294,8 @@ export function buildMarkdownPdf(title: string, markdown: string): jsPDF {
   doc.text(stripInlineMarkdown(title), PAGE_MARGIN, y);
   y += 30;
 
-  for (let index = 0; index < lines.length; index += 1) {
-    const rawLine = lines[index];
-    const line = rawLine.trimEnd();
-
-    // Keep ordinary lesson sections together when they fit on one page, so
-    // headings and the last bullet do not become isolated page orphans.
-    if (/^#{1,4}\s+/.test(line)) {
-      let sectionHeight = 0;
-      for (let next = index; next < lines.length; next += 1) {
-        if (next > index && /^#{1,4}\s+/.test(lines[next])) break;
-        if (/^\|.*\|$/.test(lines[next].trim())) break;
-        sectionHeight += estimatedLineHeight(lines[next]);
-      }
-      if (sectionHeight <= pageHeight - PAGE_MARGIN * 2) ensureSpace(sectionHeight);
-    }
-
-    if (/^\|.*\|$/.test(line.trim())) {
-      const cells = line.trim().slice(1, -1).split("|").map((c) => c.trim());
-      if (!tableBuffer) tableBuffer = [];
-      tableBuffer.push(cells);
-      continue;
-    } else if (tableBuffer) {
-      flushTable();
-    }
-
-    if (!line.trim()) {
-      y += 6;
-      continue;
-    }
-
-    if (line.startsWith("# ")) writeParagraph(line.slice(2), 18, "bold");
-    else if (line.startsWith("## ")) writeParagraph(line.slice(3), 15, "bold");
-    else if (line.startsWith("### ")) writeParagraph(line.slice(4), 13, "bold");
-    else if (line.startsWith("#### ")) writeParagraph(line.slice(5), 12, "bold");
-    else if (line.startsWith("> ")) writeParagraph(line.slice(2), 11, "italic", 16);
-    else if (/^[-*]\s+/.test(line)) writeParagraph(`•  ${line.replace(/^[-*]\s+/, "")}`, 11, "normal", 12);
-    else if (/^\d+\.\s+/.test(line)) writeParagraph(line, 11, "normal", 12);
-    else writeParagraph(line, 11, "normal");
-  }
-  flushTable();
+  const mmdDocument = parseMmd(markdown);
+  for (const node of mmdDocument.children) renderMmdNode(node, 0);
 
   const totalPages = doc.getNumberOfPages();
   for (let page = 1; page <= totalPages; page += 1) {

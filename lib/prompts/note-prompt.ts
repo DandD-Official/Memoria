@@ -1,3 +1,5 @@
+import { buildMmdOutputRules } from "@/lib/mmd/ai-instructions";
+
 export type ProcessingStyle = "preserve" | "balanced" | "condensed" | "exam_focused";
 
 export const PROCESSING_STYLE_LABELS: Record<ProcessingStyle, string> = {
@@ -28,10 +30,14 @@ interface NoteForPrompt {
  * (or the downloaded source package) into Claude or another AI assistant;
  * Memoria can use a connected per-user AI key or a manual copy/paste workflow.
  *
- * Output is plain Markdown (GitHub-flavored — tables, headings, bold, lists),
- * not JSON. Markdown is dramatically more reliable for a model to produce
- * correctly than a nested JSON block schema, and Memora renders it directly
- * with full typography, so nothing is lost by asking for it this way.
+ * Output is Memoria Markdown (MMD) — standard GitHub-flavored Markdown
+ * plus the small set of fenced custom blocks defined in
+ * .context/mmd-spec.md — wrapped in exactly one outer code fence. The
+ * paste-back flow (components/reviewers/reviewer-wizard.tsx and the guest
+ * equivalent) already strips that outer fence via stripCodeFences()
+ * (lib/validation/reviewer.ts) while preserving any code fences that are
+ * genuinely part of the document — see .context/ai-content-generation.md
+ * for why the fence is required now rather than forbidden.
  */
 export function buildNoteReformatPrompt(notes: NoteForPrompt[], style: ProcessingStyle): string {
   const sourceBlock = notes
@@ -44,7 +50,7 @@ export function buildNoteReformatPrompt(notes: NoteForPrompt[], style: Processin
   return `You are helping convert raw study notes into a clean, well-organized study reviewer.
 
 TASK
-Reformat the study material below into clean, organized Markdown. ${STYLE_INSTRUCTIONS[style]}
+Reformat the study material below into clean, organized Memoria Markdown. ${STYLE_INSTRUCTIONS[style]}
 
 RULES
 - Preserve all factual information: terminology, names, dates, numbers, and technical terms must stay accurate.
@@ -52,27 +58,14 @@ RULES
 - Do not remove information that is clearly important, even if it seems minor.
 - If something in the source is unclear, illegible, or ambiguous, mark it as [UNCLEAR: ...] instead of guessing or inventing a replacement.
 - Organize the content into logical topics using headings and subheadings.
-- Make flashcard material machine-readable: write key definitions as "**Term**: definition" or place them in a two-column Term | Definition table. This lets Memoria create flashcards automatically.
+- Make flashcard material machine-readable: write key definitions as "**Term**: definition" or place them in a two-column Term | Definition table, or as ":::definition{term=\"...\"}" blocks. This lets Memoria create flashcards automatically.
 
-FORMATTING GUIDE — use standard GitHub-flavored Markdown:
-- "# Title" for the reviewer's main title (use exactly one).
-- "## Section" / "### Subsection" for topic headings.
-- "**bold**" for key terms, "*italics*" for emphasis.
-- "- item" for bullet lists, "1. item" for numbered/ordered steps.
-- Markdown tables for any structured comparison, e.g.:
-  | Term | Definition |
-  |------|------------|
-  | Mitosis | Cell division producing two identical daughter cells |
-- "> blockquote" for a definition, callout, or important note you want to stand out.
-- Triple-backtick fenced code blocks only for actual code/formulas that need monospacing.
-
-OUTPUT FORMAT
-Return ONLY the Markdown document itself — no JSON, no explanation, no preamble like "Here's the reformatted notes:", and do NOT wrap the whole thing in a \`\`\`markdown code fence. Just output the Markdown text directly, starting with the "# Title" heading.
+${buildMmdOutputRules()}
 
 SOURCE MATERIAL
 ${sourceBlock}
 
-Return only the Markdown document described above.`;
+Return the complete reformatted document as described above, inside exactly one outer \`\`\`markdown code fence.`;
 }
 
 /**
@@ -105,11 +98,11 @@ export function buildSourcePackage(
     "==============================",
     "MEMORIA AI INSTRUCTIONS",
     "==============================",
-    `Convert the study material above into a clean Markdown reviewer.`,
+    `Convert the study material above into a clean Memoria Markdown reviewer.`,
     `Processing style: ${PROCESSING_STYLE_LABELS[style]}`,
     STYLE_INSTRUCTIONS[style],
     "",
-    "Return ONLY the Markdown document — headings, bold key terms, bullet/numbered lists, and Markdown tables for comparisons. Do not wrap it in a code fence.",
+    buildMmdOutputRules(),
   ].join("\n");
 
   return `${header}\n${body}\n${instructions}\n`;

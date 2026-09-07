@@ -6,6 +6,7 @@ import { Copy, Check, Plus, X, Sparkles, FileText, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input, Label, Textarea } from "@/components/ui/input";
 import { MarkdownRenderer } from "@/components/markdown/renderer";
+import { MmdValidationNotice } from "@/components/mmd/validation-notice";
 import { stripCodeFences } from "@/lib/validation/reviewer";
 import { cn } from "@/lib/utils";
 
@@ -301,6 +302,7 @@ export function ReviewerWizard({ notes, defaultNoteId, initiallyOpen = false, in
               <div className="max-h-64 overflow-y-auto rounded-lg border border-line bg-surface p-4">
                 <MarkdownRenderer content={cleanedMarkdown} />
               </div>
+              <MmdValidationNotice content={cleanedMarkdown} />
             </div>
           )}
 

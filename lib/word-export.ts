@@ -1,6 +1,17 @@
-import { AlignmentType, Document, Footer, HeadingLevel, ImageRun, Packer, PageBreak, PageNumber, Paragraph, TextRun } from "docx";
+import { AlignmentType, BorderStyle, Document, Footer, HeadingLevel, ImageRun, Packer, PageBreak, PageNumber, Paragraph, ShadingType, TextRun } from "docx";
 import type { QuizQuestion } from "@/lib/validation/quiz";
 import { formatCorrectAnswer } from "@/lib/quiz-grading";
+import { parseMmd } from "@/lib/mmd/parser";
+import { isBlockNode, type MmdNode } from "@/lib/mmd/ast";
+import {
+  getBlockLabel,
+  getDiagramPlaceholderText,
+  getImagePlaceholderText,
+  getImageRequestPlaceholderText,
+  getSectionHeading,
+  getUnsupportedBlockText,
+  isCalloutBlock,
+} from "@/lib/mmd/export-helpers";
 
 const PAGE_MARGIN = 960;
 const FONT = "Arial";
@@ -51,20 +62,173 @@ function cleanInline(text: string) {
   return text.replace(/\*\*(.+?)\*\*/g, "$1").replace(/\*(.+?)\*/g, "$1").replace(/`(.+?)`/g, "$1").replace(/\[(.+?)\]\(.+?\)/g, "$1");
 }
 
-function markdownParagraphs(title: string, markdown: string) {
-  const rows: Paragraph[] = [...brandHeader(), new Paragraph({ heading: HeadingLevel.TITLE, children: [new TextRun({ text: title, bold: true, size: 40, color: "1B1F3B" })] })];
-  for (const raw of markdown.split("\n")) {
+function markdownLines(text: string, indent: number): Paragraph[] {
+  const rows: Paragraph[] = [];
+  for (const raw of text.split("\n")) {
     const line = raw.trimEnd();
-    if (!line) { rows.push(new Paragraph({})); continue; }
+    if (!line) {
+      rows.push(new Paragraph({}));
+      continue;
+    }
     const heading = line.match(/^(#{1,4})\s+(.+)/);
+    const indentProps = indent > 0 ? { indent: { left: indent } } : {};
     if (heading) {
       const levels = [HeadingLevel.HEADING_1, HeadingLevel.HEADING_2, HeadingLevel.HEADING_3, HeadingLevel.HEADING_4];
-      rows.push(new Paragraph({ heading: levels[heading[1].length - 1], keepNext: true, children: [new TextRun({ text: cleanInline(heading[2]), bold: true, color: "1B1F3B" })] }));
-    } else if (/^[-*]\s+/.test(line)) rows.push(new Paragraph({ bullet: { level: 0 }, children: [new TextRun(cleanInline(line.replace(/^[-*]\s+/, "")))] }));
-    else if (/^\d+\.\s+/.test(line)) rows.push(new Paragraph({ indent: { left: 240 }, children: [new TextRun(cleanInline(line))] }));
-    else if (line.startsWith("> ")) rows.push(new Paragraph({ indent: { left: 360 }, children: [new TextRun({ text: cleanInline(line.slice(2)), italics: true, color: "4A4F6A" })] }));
-    else rows.push(new Paragraph({ children: [new TextRun(cleanInline(line))] }));
+      rows.push(
+        new Paragraph({
+          heading: levels[heading[1].length - 1],
+          keepNext: true,
+          ...indentProps,
+          children: [new TextRun({ text: cleanInline(heading[2]), bold: true, color: "1B1F3B" })],
+        })
+      );
+    } else if (/^[-*]\s+/.test(line)) {
+      rows.push(
+        new Paragraph({
+          bullet: { level: 0 },
+          ...indentProps,
+          children: [new TextRun(cleanInline(line.replace(/^[-*]\s+/, "")))],
+        })
+      );
+    } else if (/^\d+\.\s+/.test(line)) {
+      rows.push(new Paragraph({ indent: { left: 240 + indent }, children: [new TextRun(cleanInline(line))] }));
+    } else if (line.startsWith("> ")) {
+      rows.push(
+        new Paragraph({
+          indent: { left: 360 + indent },
+          children: [new TextRun({ text: cleanInline(line.slice(2)), italics: true, color: "4A4F6A" })],
+        })
+      );
+    } else {
+      rows.push(new Paragraph({ ...indentProps, children: [new TextRun(cleanInline(line))] }));
+    }
   }
+  return rows;
+}
+
+const CALLOUT_SHADING = "FBF3E3"; // pale amber, echoes the brand accent color
+const CARD_SHADING = "F3F1EC"; // pale neutral
+
+const INDENT_STEP = 280; // twips per nesting level
+const MAX_INDENT = 1200;
+
+/**
+ * Renders one MMD node (see lib/mmd/ast.ts) into docx Paragraphs at the
+ * given nesting depth. Mirrors renderMmdNode in lib/pdf-export.ts —
+ * same block-to-label mapping (lib/mmd/export-helpers.ts), same
+ * "columns stack sequentially" and "details render expanded" export
+ * simplifications, same "never drop content" handling for parse errors.
+ */
+function renderMmdNode(node: MmdNode, depth: number): Paragraph[] {
+  const indent = Math.min(depth * INDENT_STEP, MAX_INDENT);
+
+  if (node.type === "markdown") return markdownLines(node.content, indent);
+
+  if (node.type === "mmd-error") {
+    return [
+      new Paragraph({
+        indent: indent > 0 ? { left: indent } : undefined,
+        children: [new TextRun({ text: getUnsupportedBlockText(node.reason), italics: true, color: "8A2E2E" })],
+      }),
+      new Paragraph({
+        indent: { left: indent + 160 },
+        children: [new TextRun({ text: node.raw, font: "Courier New", size: 18, color: "4A4F6A" })],
+      }),
+    ];
+  }
+
+  // node.type === "block"
+  switch (node.block) {
+    case "section": {
+      const { title, subtitle } = getSectionHeading(node);
+      const rows: Paragraph[] = [
+        new Paragraph({
+          heading: HeadingLevel.HEADING_2,
+          keepNext: true,
+          indent: indent > 0 ? { left: indent } : undefined,
+          children: [new TextRun({ text: title, bold: true, color: "1B1F3B" })],
+        }),
+      ];
+      if (subtitle) {
+        rows.push(
+          new Paragraph({
+            indent: indent > 0 ? { left: indent } : undefined,
+            children: [new TextRun({ text: subtitle, italics: true, color: "525770" })],
+          })
+        );
+      }
+      for (const child of node.children) rows.push(...renderMmdNode(child, depth));
+      return rows;
+    }
+    case "columns": {
+      // Same fallback as the PDF exporter: sequential stacking rather
+      // than a real side-by-side layout — see lib/pdf-export.ts's
+      // renderMmdNode "columns" case for the full reasoning.
+      const rows: Paragraph[] = [];
+      const columnBlocks = node.children.filter(isBlockNode);
+      columnBlocks.forEach((column, i) => {
+        for (const child of column.children) rows.push(...renderMmdNode(child, depth + 1));
+        if (i < columnBlocks.length - 1) {
+          rows.push(new Paragraph({ border: { bottom: { style: BorderStyle.SINGLE, size: 4, color: "D2D2D2" } }, children: [] }));
+        }
+      });
+      return rows;
+    }
+    case "column": {
+      const rows: Paragraph[] = [];
+      for (const child of node.children) rows.push(...renderMmdNode(child, depth));
+      return rows;
+    }
+    case "diagram":
+      return [
+        new Paragraph({
+          indent: indent > 0 ? { left: indent } : undefined,
+          children: [new TextRun({ text: getDiagramPlaceholderText(node), italics: true, color: "525770" })],
+        }),
+      ];
+    case "image":
+      return [
+        new Paragraph({
+          indent: indent > 0 ? { left: indent } : undefined,
+          children: [new TextRun({ text: getImagePlaceholderText(node), italics: true, color: "525770" })],
+        }),
+      ];
+    case "gallery": {
+      const rows: Paragraph[] = [];
+      for (const child of node.children) rows.push(...renderMmdNode(child, depth));
+      return rows;
+    }
+    case "image-request":
+      return [
+        new Paragraph({
+          indent: indent > 0 ? { left: indent } : undefined,
+          children: [new TextRun({ text: getImageRequestPlaceholderText(node), italics: true, color: "8A6D2E" })],
+        }),
+      ];
+    default: {
+      const label = getBlockLabel(node);
+      const shading = isCalloutBlock(node.block) || node.block === "card" || node.block === "details" ? CALLOUT_SHADING : undefined;
+      const rows: Paragraph[] = [];
+      if (label) {
+        rows.push(
+          new Paragraph({
+            indent: indent > 0 ? { left: indent } : undefined,
+            shading: shading ? { type: ShadingType.SOLID, color: "auto", fill: shading } : undefined,
+            children: [new TextRun({ text: label, bold: true, color: "1B1F3B" })],
+          })
+        );
+      }
+      const childDepth = indent === MAX_INDENT ? depth : depth + 1;
+      for (const child of node.children) rows.push(...renderMmdNode(child, childDepth));
+      return rows;
+    }
+  }
+}
+
+function markdownParagraphs(title: string, markdown: string) {
+  const rows: Paragraph[] = [...brandHeader(), new Paragraph({ heading: HeadingLevel.TITLE, children: [new TextRun({ text: title, bold: true, size: 40, color: "1B1F3B" })] })];
+  const mmdDocument = parseMmd(markdown);
+  for (const node of mmdDocument.children) rows.push(...renderMmdNode(node, 0));
   return rows;
 }
 

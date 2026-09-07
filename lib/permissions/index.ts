@@ -12,6 +12,7 @@ const ownerLookup: Record<ResourceType, (id: string) => Promise<{ ownerId: strin
   NOTE: (id) => prisma.note.findUnique({ where: { id }, select: { ownerId: true } }),
   REVIEWER: (id) => prisma.reviewer.findUnique({ where: { id }, select: { ownerId: true } }),
   QUIZ: (id) => prisma.quiz.findUnique({ where: { id }, select: { ownerId: true } }),
+  DIAGRAM: (id) => prisma.diagram.findUnique({ where: { id }, select: { ownerId: true } }),
 };
 
 export type AccessLevel = "OWNER" | "EDIT" | "VIEW" | "NONE";

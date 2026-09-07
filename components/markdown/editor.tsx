@@ -1,8 +1,12 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Bold, Italic, Heading1, Heading2, List, ListOrdered, Table2, Quote, HelpCircle, Eye, Pencil } from "lucide-react";
 import { MarkdownRenderer } from "@/components/markdown/renderer";
+import { MmdInsertMenu } from "@/components/mmd/editor/insert-menu";
+import { MmdReferenceGuide } from "@/components/mmd/editor/reference-guide";
+import { MmdValidationNotice } from "@/components/mmd/validation-notice";
+import { INSERT_TEMPLATES } from "@/lib/mmd/editor-templates";
 import { cn } from "@/lib/utils";
 
 interface MarkdownEditorProps {
@@ -18,6 +22,16 @@ export function MarkdownEditor({ value, onChange, minRows = 16, className }: Mar
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [mode, setMode] = useState<"edit" | "preview">("edit");
   const [showGuide, setShowGuide] = useState(false);
+  const [showFullMmdReference, setShowFullMmdReference] = useState(false);
+
+  // Debounced so malformed-MMD diagnostics (Milestone 15) don't re-parse
+  // the whole document on every keystroke — see .context/mmd-spec.md's
+  // performance guidance ("avoid repeated parsing of unchanged content").
+  const [debouncedValue, setDebouncedValue] = useState(value);
+  useEffect(() => {
+    const timeout = setTimeout(() => setDebouncedValue(value), 400);
+    return () => clearTimeout(timeout);
+  }, [value]);
 
   function applyEdit(transform: (selected: string) => string, options?: { block?: boolean }) {
     const textarea = textareaRef.current;
@@ -42,6 +56,12 @@ export function MarkdownEditor({ value, onChange, minRows = 16, className }: Mar
       const cursor = prefix.length + insertion.length;
       textarea.setSelectionRange(cursor, cursor);
     });
+  }
+
+  function insertMmdBlock(blockName: string) {
+    const template = INSERT_TEMPLATES[blockName];
+    if (!template || template.disabled) return;
+    applyEdit(template.build, { block: true });
   }
 
   const toolbarButtons = [
@@ -79,6 +99,8 @@ export function MarkdownEditor({ value, onChange, minRows = 16, className }: Mar
           >
             <HelpCircle className="h-4 w-4" />
           </button>
+          <div className="mx-1 h-5 w-px bg-line" aria-hidden="true" />
+          <MmdInsertMenu onInsert={insertMmdBlock} disabled={mode === "preview"} />
         </div>
         <div className="flex gap-1 rounded-md bg-ink/5 p-0.5">
           <button
@@ -116,18 +138,51 @@ export function MarkdownEditor({ value, onChange, minRows = 16, className }: Mar
 | Mitosis | Cell division   |`}
           </pre>
           <p className="mt-1">Click the table icon above to insert this template automatically, then edit the cells.</p>
+
+          <p className="mt-3 mb-1 font-medium text-ink">
+            Memoria Markdown — richer blocks via the <span className="italic">Insert</span> menu
+          </p>
+          <div className="grid gap-x-6 gap-y-1 sm:grid-cols-2">
+            <p><code className="rounded bg-surface px-1">:::note ... :::</code> → note / tip / warning / etc.</p>
+            <p><code className="rounded bg-surface px-1">:::definition{"{"}term=&quot;X&quot;{"}"}</code> → defines a term</p>
+            <p><code className="rounded bg-surface px-1">:::section{"{"}title=&quot;X&quot;{"}"}</code> → titled section</p>
+            <p><code className="rounded bg-surface px-1">:::card ... :::</code> → content card</p>
+            <p><code className="rounded bg-surface px-1">:::columns ... :::</code> → side-by-side layout</p>
+            <p><code className="rounded bg-surface px-1">:::details{"{"}title=&quot;X&quot;{"}"}</code> → collapsible content</p>
+          </div>
+          <p className="mt-1">
+            These blocks are plain text and work anywhere in the document — the Insert menu just saves you
+            typing the syntax by hand. Unknown or mistyped blocks show a clear warning instead of breaking
+            the rest of your document.
+          </p>
+
+          <button
+            type="button"
+            onClick={() => setShowFullMmdReference((v) => !v)}
+            className="mt-2 text-xs font-medium text-accent-dark underline-offset-2 hover:underline"
+          >
+            {showFullMmdReference ? "Hide" : "Show"} the complete Memoria Markdown reference
+          </button>
+          {showFullMmdReference && (
+            <div className="mt-3 border-t border-line/60 pt-3">
+              <MmdReferenceGuide />
+            </div>
+          )}
         </div>
       )}
 
       {mode === "edit" ? (
-        <textarea
-          ref={textareaRef}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          rows={minRows}
-          className="w-full resize-y bg-surface p-4 font-mono text-sm text-ink outline-none"
-          placeholder="# Untitled&#10;&#10;Start writing in Markdown…"
-        />
+        <>
+          <textarea
+            ref={textareaRef}
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            rows={minRows}
+            className="w-full resize-y bg-surface p-4 font-mono text-sm text-ink outline-none"
+            placeholder="# Untitled&#10;&#10;Start writing in Markdown…"
+          />
+          <MmdValidationNotice content={debouncedValue} className="mx-4 mb-4" />
+        </>
       ) : (
         <div className="max-h-[32rem] overflow-y-auto bg-surface p-4">
           {value.trim() ? <MarkdownRenderer content={value} /> : <p className="text-sm text-ink-faint">Nothing to preview yet.</p>}

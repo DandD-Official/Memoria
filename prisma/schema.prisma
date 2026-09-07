@@ -28,6 +28,7 @@ model User {
   notes                 Note[]
   reviewers             Reviewer[]
   quizzes               Quiz[]
+  diagrams              Diagram[]
   quizAttempts          QuizAttempt[]
   sharesGiven           ResourceShare[]         @relation("SharesGivenByOwner")
   sharesGranted         ResourceShare[]         @relation("SharesGrantedToUser")
@@ -190,6 +191,33 @@ enum NoteSourceType {
   GOOGLE_DOCS
   NOTION
   MANUAL
+}
+
+// ---------------------------------------------------------------------------
+// Diagrams — embedded via :::diagram{id="..."} in MMD content (Note/Reviewer).
+// See .context/diagram-system.md for the versioned `data` schema
+// (lib/diagrams/schema.ts is the Zod source of truth) and for why diagrams
+// are their own table rather than inline JSON inside Note/Reviewer content:
+// independent editing, duplication, and reuse across documents.
+// ---------------------------------------------------------------------------
+model Diagram {
+  id           String   @id @default(cuid())
+  ownerId      String
+  owner        User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  title        String
+  data         Json // versioned MemoriaDiagram shape — see lib/diagrams/schema.ts
+  schemaVersion Int     @default(1)
+  // Rendered PNG/SVG snapshot for embedding in PDF/DOCX exports and for a
+  // fast inline preview without re-rendering the live canvas — see
+  // diagram-system.md "Export". Nullable: a brand-new diagram has no
+  // snapshot until first saved from the editor.
+  previewImage Bytes?
+  previewMimeType String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([ownerId, updatedAt])
+  @@map("diagrams")
 }
 
 // ---------------------------------------------------------------------------
@@ -474,6 +502,7 @@ enum ResourceType {
   NOTE
   REVIEWER
   QUIZ
+  DIAGRAM
 }
 
 enum Permission {

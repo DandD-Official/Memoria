@@ -1,0 +1,90 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { Loader2, Workflow } from "lucide-react";
+import type { MmdBlockNode } from "@/lib/mmd/ast";
+
+type ResolveState = "loading" | "found" | "not-found";
+
+/**
+ * :::diagram{id="..." caption="..."}
+ *
+ * Resolves against the real /api/diagrams/:id endpoint now that the
+ * diagram data layer exists (lib/diagrams/repo.ts, prisma Diagram model —
+ * see .context/diagram-system.md). Every reference will still show
+ * "not available" today because nothing creates diagram rows yet — the
+ * canvas editor (the remaining, larger half of Milestone 3: shapes,
+ * connectors, drag/undo/redo, wrapping @xyflow/react) hasn't been built.
+ * This component is written to "just work" once that editor starts
+ * creating real rows, without needing to change again.
+ *
+ * A 401 (guest mode — these routes require auth) resolves to the same
+ * "not-found" state as a genuinely missing id; there's no meaningful
+ * difference to show the reader in either case.
+ */
+export function DiagramPlaceholder({ node }: { node: MmdBlockNode }) {
+  const [state, setState] = useState<ResolveState>("loading");
+  const [title, setTitle] = useState<string | null>(null);
+  const diagramId = node.attrs.id;
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!diagramId) {
+      setState("not-found");
+      return;
+    }
+    fetch(`/api/diagrams/${encodeURIComponent(diagramId)}`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((body) => {
+        if (cancelled) return;
+        if (body?.diagram) {
+          setTitle(body.diagram.title as string);
+          setState("found");
+        } else {
+          setState("not-found");
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setState("not-found");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [diagramId]);
+
+  if (state === "loading") {
+    return (
+      <div className="my-4 flex items-center justify-center gap-2 rounded-lg border border-line bg-ink/[0.02] p-8 text-sm text-ink-faint">
+        <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+        Loading diagram…
+      </div>
+    );
+  }
+
+  if (state === "found") {
+    return (
+      <figure className="my-4 overflow-hidden rounded-lg border border-line">
+        {/* No snapshot may exist yet (a diagram saved before ever being
+            rendered once from the editor) — the browser's built-in
+            broken-image fallback is acceptable here since it's paired
+            with the title text right below it, not the only signal. */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={`/api/diagrams/${encodeURIComponent(diagramId)}/preview`} alt={title ?? "Diagram"} className="w-full" />
+        <figcaption className="border-t border-line bg-surface px-3 py-2 text-center text-xs text-ink-soft">
+          {node.attrs.caption || title}
+        </figcaption>
+      </figure>
+    );
+  }
+
+  return (
+    <figure className="my-4 flex flex-col items-center rounded-lg border border-dashed border-line bg-ink/[0.02] p-8 text-center">
+      <Workflow className="h-6 w-6 text-ink-faint" aria-hidden="true" />
+      <p className="mt-2 text-sm text-ink-soft">Diagram not found.</p>
+      <p className="mt-0.5 font-mono text-xs text-ink-faint">id: {diagramId}</p>
+      {node.attrs.caption && (
+        <figcaption className="mt-1 text-xs text-ink-faint">{node.attrs.caption}</figcaption>
+      )}
+    </figure>
+  );
+}
