@@ -176,7 +176,7 @@ export function ShareDialog({ resourceType, resourceId }: { resourceType: "NOTE"
                 {shares.map((share) => <div key={share.id} className="flex items-center justify-between gap-3 text-sm"><div className="min-w-0"><p className="truncate text-ink">{share.user.name || share.user.email}</p><p className="truncate text-xs text-ink-faint">{share.user.email}</p><Badge tone={share.permission === "EDIT" ? "accent" : "neutral"}>{share.pending ? "PENDING" : share.permission}</Badge></div><button onClick={() => handleRevoke(share.id, share.pending)} className="text-ink-faint hover:text-danger" aria-label={`Remove ${share.user.email}`}><Trash2 className="h-3.5 w-3.5" /></button></div>)}
               </div>
             )}
-            <div className="mt-4 border-t border-line pt-4"><Link href="/shared/collections" className="flex items-center gap-1.5 text-sm text-ink-soft hover:text-ink"><Layers className="h-3.5 w-3.5" /> Or add this to a collection</Link></div>
+            <div className="mt-4 border-t border-line pt-4"><Link href="/books" className="flex min-h-10 items-center gap-1.5 text-sm text-ink-soft hover:text-ink"><Layers className="h-3.5 w-3.5" /> Add this to a Book</Link></div>
           </div>
         </div>
       )}

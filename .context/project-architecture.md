@@ -50,3 +50,9 @@ API and use Postgres `Bytes` for the current small-asset implementation.
 Guest MMD rendering works without DB access. Guest users can see image-request
 intent and external assets, but diagram editing and media uploads require an
 authenticated owner and are unavailable in guest mode.
+
+## Books
+
+See `books.md` for the Book reader/studio, sharing authorization, reading
+progress, export templates, and the additive `ShareCollection*` compatibility
+boundary.

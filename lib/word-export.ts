@@ -248,6 +248,25 @@ export async function exportMarkdownToWord(title: string, markdown: string) {
   await downloadDocument(buildMarkdownWord(title, markdown), title);
 }
 
+export interface BookWordMetadata { subtitle?: string | null; description?: string | null; author?: string | null }
+
+export function buildBookWord(title: string, markdown: string, metadata: BookWordMetadata = {}) {
+  const children: Paragraph[] = [
+    new Paragraph({ spacing: { before: 900, after: 160 }, children: [new TextRun({ text: "MEMORIA BOOK", bold: true, size: 18, color: "A45C43", characterSpacing: 80 })] }),
+    new Paragraph({ heading: HeadingLevel.TITLE, spacing: { before: 1200, after: 220 }, children: [new TextRun({ text: title, bold: true, size: 64, color: "3D2D27", font: "Georgia" })] }),
+  ];
+  if (metadata.subtitle) children.push(new Paragraph({ spacing: { after: 360 }, children: [new TextRun({ text: metadata.subtitle, italics: true, size: 32, color: "665348", font: "Georgia" })] }));
+  if (metadata.description) children.push(new Paragraph({ spacing: { before: 300, after: 900 }, children: [new TextRun({ text: metadata.description, size: 22, color: "665B52" })] }));
+  children.push(new Paragraph({ spacing: { before: 1200 }, children: [new TextRun({ text: `Curated by ${metadata.author?.trim() || "a Memoria reader"}`, size: 18, color: "766658" })] }), new Paragraph({ children: [new PageBreak()] }), ...brandHeader());
+  const document = parseMmd(markdown);
+  for (const node of document.children) children.push(...renderMmdNode(node, 0));
+  return baseDocument(title, children);
+}
+
+export async function exportBookToWord(title: string, markdown: string, metadata: BookWordMetadata = {}) {
+  await downloadDocument(buildBookWord(title, markdown, metadata), title);
+}
+
 function options(question: QuizQuestion) {
   if (question.type === "multiple_choice" || question.type === "multiple_select") return question.choices.map((choice, index) => `${String.fromCharCode(65 + index)}. ${choice}`);
   if (question.type === "true_false") return ["A. True", "B. False"];

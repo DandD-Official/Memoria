@@ -1,70 +1,55 @@
-import Link from "next/link";
 import { Share2 } from "lucide-react";
 import { prisma } from "@/lib/db";
 import { requireUser } from "@/lib/auth/session";
 import { EmptyState } from "@/components/ui/empty-state";
+import { PageDescription, PageHeader, PageHeaderContent, PageShell, PageTitle } from "@/components/ui/page";
+import { ResourceCard, type ResourceKind } from "@/components/library/resource-card";
 import { Badge } from "@/components/ui/badge";
 import { formatRelativeTime } from "@/lib/utils";
-import { SharedNavigation } from "@/components/sharing/shared-navigation";
 
-const resourceRoutes: Record<string, string> = { NOTE: "/notes", REVIEWER: "/reviewers", QUIZ: "/quizzes" };
+const resourceRoutes: Record<string, string> = { NOTE: "/notes", REVIEWER: "/reviewers", QUIZ: "/quizzes", DIAGRAM: "/diagrams" };
+const resourceKinds: Record<string, ResourceKind> = { NOTE: "note", REVIEWER: "reviewer", QUIZ: "quiz", DIAGRAM: "diagram" };
 
 export default async function SharedWithMePage() {
   const user = await requireUser();
-  const [shares, collectionMemberships] = await Promise.all([
+  const [shares, bookMemberships] = await Promise.all([
     prisma.resourceShare.findMany({ where: { userId: user.id }, include: { owner: { select: { name: true, email: true } } }, orderBy: { createdAt: "desc" } }),
     prisma.shareCollectionMember.findMany({ where: { userId: user.id }, include: { collection: { include: { owner: { select: { name: true, email: true } }, _count: { select: { items: true } } } } }, orderBy: { createdAt: "desc" } }),
   ]);
 
-  // Resolve each share's resource title in one batch per type.
-  const noteIds = shares.filter((s) => s.resourceType === "NOTE").map((s) => s.resourceId);
-  const reviewerIds = shares.filter((s) => s.resourceType === "REVIEWER").map((s) => s.resourceId);
-  const quizIds = shares.filter((s) => s.resourceType === "QUIZ").map((s) => s.resourceId);
-
-  const [notes, reviewers, quizzes] = await Promise.all([
-    prisma.note.findMany({ where: { id: { in: noteIds } }, select: { id: true, title: true } }),
-    prisma.reviewer.findMany({ where: { id: { in: reviewerIds } }, select: { id: true, title: true } }),
-    prisma.quiz.findMany({ where: { id: { in: quizIds } }, select: { id: true, title: true } }),
+  const ids = (type: string) => shares.filter((share) => share.resourceType === type).map((share) => share.resourceId);
+  const [notes, reviewers, quizzes, diagrams] = await Promise.all([
+    prisma.note.findMany({ where: { id: { in: ids("NOTE") } }, select: { id: true, title: true } }),
+    prisma.reviewer.findMany({ where: { id: { in: ids("REVIEWER") } }, select: { id: true, title: true } }),
+    prisma.quiz.findMany({ where: { id: { in: ids("QUIZ") } }, select: { id: true, title: true } }),
+    prisma.diagram.findMany({ where: { id: { in: ids("DIAGRAM") } }, select: { id: true, title: true } }),
   ]);
-  const titleMap = new Map<string, string>();
-  [...notes, ...reviewers, ...quizzes].forEach((r) => titleMap.set(r.id, r.title));
+  const titleMap = new Map([...notes, ...reviewers, ...quizzes, ...diagrams].map((resource) => [resource.id, resource.title]));
 
   return (
-    <div className="mx-auto max-w-4xl">
-      <h1 className="font-display text-2xl text-ink">Shared with me</h1>
-      <p className="mt-1 text-sm text-ink-soft">Resources and private collections other Memoria users have shared with you.</p>
+    <PageShell className="max-w-5xl">
+      <PageHeader><PageHeaderContent><PageTitle>Shared with Me</PageTitle><PageDescription>Books, Memories, and study resources other people have invited you to use.</PageDescription></PageHeaderContent></PageHeader>
 
-      <div className="mt-4"><SharedNavigation /></div>
-
-      {shares.length === 0 && collectionMemberships.length === 0 ? (
-        <div className="mt-6">
-          <EmptyState
-            icon={Share2}
-            title="Nothing shared with you yet."
-            description="When someone shares a note, reviewer, or quiz with your account, it'll show up here."
-          />
-        </div>
+      {shares.length === 0 && bookMemberships.length === 0 ? (
+        <EmptyState icon={Share2} title="Nothing shared with you yet" description="When someone shares a Book or study resource with your account, it will appear here." />
       ) : (
-        <div className="mt-6 grid gap-3 sm:grid-cols-2">
-          {collectionMemberships.map(({ collection, id, createdAt }) => <Link key={id} href={`/c/${collection.slug}`} className="card p-4 hover:shadow-card-hover"><div className="mb-2 flex items-center justify-between"><Badge tone="accent">COLLECTION</Badge><span className="text-xs text-ink-faint">{collection._count.items} items</span></div><p className="font-display text-base text-ink line-clamp-1">{collection.title}</p><p className="mt-1 text-xs text-ink-faint">Shared by {collection.owner.name || collection.owner.email} · {formatRelativeTime(createdAt)}</p></Link>)}
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {bookMemberships.map(({ collection, id, createdAt, permission }) => (
+            <ResourceCard key={id} href={permission === "EDIT" ? `/books/${collection.id}` : `/c/${collection.slug}`} kind="book" title={collection.title} badge={`${collection._count.items} items`} meta={formatRelativeTime(createdAt)} description={`Shared by ${collection.owner.name || collection.owner.email}`}>
+              <Badge tone={permission === "EDIT" ? "accent" : "neutral"}>{permission}</Badge>
+            </ResourceCard>
+          ))}
           {shares.map((share) => {
-            const title = titleMap.get(share.resourceId) ?? "(deleted resource)";
-            const href = `${resourceRoutes[share.resourceType]}/${share.resourceId}`;
+            const route = resourceRoutes[share.resourceType] ?? "/shared";
+            const href = share.resourceType === "DIAGRAM" ? route : `${route}/${share.resourceId}`;
             return (
-              <Link key={share.id} href={href} className="card p-4 hover:shadow-card-hover">
-                <div className="mb-2 flex items-center justify-between">
-                  <Badge tone="neutral">{share.resourceType}</Badge>
-                  <Badge tone={share.permission === "EDIT" ? "accent" : "neutral"}>{share.permission}</Badge>
-                </div>
-                <p className="font-display text-base text-ink line-clamp-1">{title}</p>
-                <p className="mt-1 text-xs text-ink-faint">
-                  Shared by {share.owner.name || share.owner.email} · {formatRelativeTime(share.createdAt)}
-                </p>
-              </Link>
+              <ResourceCard key={share.id} href={href} kind={resourceKinds[share.resourceType] ?? "note"} title={titleMap.get(share.resourceId) ?? "Unavailable resource"} badge={share.resourceType === "NOTE" ? "Memory" : share.resourceType} meta={formatRelativeTime(share.createdAt)} description={`Shared by ${share.owner.name || share.owner.email}`}>
+                <Badge tone={share.permission === "EDIT" ? "accent" : "neutral"}>{share.permission}</Badge>
+              </ResourceCard>
             );
           })}
         </div>
       )}
-    </div>
+    </PageShell>
   );
 }

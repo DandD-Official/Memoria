@@ -11,6 +11,6 @@ export const GET = withApiErrorHandling(async (_request: Request, context: Route
   const cookieStore = await cookies();
   const allowProtected = Boolean(gate?.passwordHash && validCollectionAccessToken(params.slug, cookieStore.get(collectionAccessCookieName(params.slug))?.value));
   const collection = await getPublicCollectionBySlug(params.slug, allowProtected);
-  if (!collection) return NextResponse.json({ error: "This collection doesn't exist or is no longer shared." }, { status: 404 });
+  if (!collection) return NextResponse.json({ error: "This Book doesn't exist or is no longer shared." }, { status: 404 });
   return NextResponse.json({ collection });
 });

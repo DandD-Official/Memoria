@@ -3,13 +3,48 @@
 ## Current status — 2026-09-08
 
 All implementation milestones are complete for the current v1 scope. The
-repository passes lint, all 128 automated tests, and the production build.
+repository passes lint, all 133 automated tests, and the production build.
 The remaining release task is an environment check only: apply the Prisma
 migrations and run a signed-in browser smoke test with seeded data. The
 older historical notes below intentionally preserve the original build log;
 when they conflict with this section, this section is authoritative.
 
-Last updated: 2026-09-08 (Design System & Responsive Foundation pass).
+Last updated: 2026-09-08 (Books reader, sharing permissions, progress, and export redesign).
+
+## Books redesign and permission follow-up — 2026-09-08
+
+Status: Implemented; migration application and signed-in visual smoke testing
+remain environment checks.
+
+The Books shell is now a reading-first studio and reader rather than a renamed
+Collection screen. It includes simulated cover/page spreads, custom subtitle and
+contents heading, contents-first navigation, chapter ordering, saved per-user
+last chapter, Book favorites, and dedicated PDF/DOCX cover templates. The studio
+uses separate Book, Chapters, and Details views; the reader separates reading
+from discussion, and phones move from Contents to one chapter at a time. Book
+surfaces and text now use semantic theme tokens for readable light/dark contrast.
+Export and Share are the only top-right studio actions.
+
+Sharing moved into one accessible modal with “Anyone with the link” and “Add
+people” methods. Both persist Viewer/Editor permission. Owners alone manage
+sharing and deletion; editors can change Book copy and chapter structure without
+seeing unrelated owner resources; viewers remain read-only. Link editors must
+authenticate before mutation. Shared with Me routes Book editors to the studio
+and viewers to the reader.
+
+Persistence remains safely additive through the documented compatibility layer;
+see `books.md` and migration
+`20260908193000_add_book_sharing_permissions`. Authorization and Book export
+tests were added. `.context/personal-context.md` was re-read after it was
+populated, and its Book-specific TOC, resume, permission, export, mobile, and
+visual direction is reflected here.
+
+Verification: ESLint passes with zero warnings, TypeScript passes, Prisma schema
+validation passes, all 133 tests across 22 files pass, and `next build` passes.
+The package build's preliminary `prisma generate` step can be blocked on Windows
+when an existing Node process holds Prisma's query-engine DLL; the generated
+client and direct production build were verified without stopping that unrelated
+process.
 
 ## Upgrade brief — Milestone 1: Design System & Responsive Foundation
 
@@ -44,14 +79,57 @@ Migrations added: none.
 Tests added: none; the change is shared UI/CSS behavior. Existing quality
 gates pass: lint, 128 tests, and production build.
 
-Known gaps: the dedicated Books destination, expanded mobile navigation,
-Create menu/sheet, and broader page-by-page redesign remain planned work in
-Milestone 2 and later. Production build and HTTP runtime checks pass, but the
-in-app browser was unavailable, so this pass still needs a signed-in visual
-smoke test at desktop and narrow-phone widths.
+Known gaps at completion: the dedicated Books destination, expanded mobile
+navigation, and Create menu/sheet were planned for Milestone 2 and are now
+resolved below. The in-app browser remained unavailable, so the signed-in
+desktop and narrow-phone visual smoke test is still pending.
 
-Next milestone: Milestone 2 — Navigation, Sidebar, Mobile Access, Favorites
-Shell.
+## Upgrade brief — Milestone 2: Navigation, Sidebar, Mobile Access, Favorites Shell
+
+Status: Complete.
+
+Files changed/added:
+  `components/layout/navigation.ts`,
+  `components/layout/{sidebar,mobile-nav,topbar,create-menu}.tsx`,
+  `app/(app)/{layout,books,favorites,shared}/**`, the legacy
+  `app/(app)/shared/collections/**` redirects, and the existing collection
+  compatibility UI/API surfaces that now present user-facing Book language.
+
+Delivered:
+  - grouped desktop navigation with a stable logo in both expanded and
+    collapsed modes, active-route states, and retained manual/hover behavior;
+  - a phone-safe bottom navigation for Dashboard, Memories, Books, and Study,
+    plus an accessible More sheet exposing Favorites, Reviewers, Quizzes,
+    Diagrams, Shared with Me, Search, Notifications, Archive, and Settings;
+  - a functional Create sheet linked to the existing Memory import, Book,
+    reviewer, quiz, diagram, and connected-account workflows;
+  - first-class `/books` and `/books/[id]` destinations backed by the legacy
+    `ShareCollection` repository as an explicit compatibility boundary;
+  - a grouped `/favorites` shell for the currently favoritable Memory,
+    reviewer, and quiz models;
+  - a single, uncluttered Shared with Me grid combining direct resource shares
+    and legacy Book memberships, with type, owner, permission, and timestamp;
+  - removal of visible Collections tabs/links and compatibility redirects from
+    `/shared/collections/**` to `/books/**`;
+  - user-facing Book terminology in sharing, public-link, notification,
+    account-deletion, API error, and export filename surfaces.
+
+Compatibility decision: no schema or destructive data migration was performed.
+Legacy `ShareCollection*` models, `/api/collections` endpoints, export payload
+format identifiers, and internal repository/component names remain intact until
+Milestone 4 introduces the Book model and migration. Book favorites likewise
+wait for that model; the Favorites destination is complete for resource types
+that already persist favorite state.
+
+Migrations added: none. Tests added: none; this milestone composes existing
+data and behavior behind new navigation/UI surfaces. Verification passes:
+ESLint with zero warnings, TypeScript `--noEmit`, all 128 tests across 20 files,
+and the Next.js production build (including `/books`, `/books/[id]`, and
+`/favorites`). Browser-based signed-in visual QA remains pending because no
+in-app browser session was available and the configured database was not
+reachable from this environment.
+
+Next milestone: Milestone 3 — Dashboard & Authentication UI Redesign.
 
 ```
 MILESTONE 1 — Audit

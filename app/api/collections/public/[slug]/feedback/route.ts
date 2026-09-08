@@ -31,7 +31,7 @@ export const POST = withApiErrorHandling(async (request: Request, context: Route
   if (gate?.passwordHash && !privateAccess) {
     const cookieStore = await cookies();
     if (!validCollectionAccessToken(params.slug, cookieStore.get(collectionAccessCookieName(params.slug))?.value)) {
-      return NextResponse.json({ error: "Unlock this collection before leaving feedback." }, { status: 401 });
+      return NextResponse.json({ error: "Unlock this Book before leaving feedback." }, { status: 401 });
     }
   }
 

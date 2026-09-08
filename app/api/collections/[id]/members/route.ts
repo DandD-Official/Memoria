@@ -4,7 +4,8 @@ import { withApiErrorHandling, type RouteContext } from "@/lib/api/handler";
 import { requireUserOrNull } from "@/lib/auth/session";
 import { prisma } from "@/lib/db";
 
-const addSchema = z.object({ email: z.string().email().max(320) });
+const addSchema = z.object({ email: z.string().email().max(320), permission: z.enum(["VIEW", "EDIT"]).default("VIEW") });
+const updateSchema = z.object({ memberId: z.string().min(1), permission: z.enum(["VIEW", "EDIT"]) });
 
 export const POST = withApiErrorHandling(async (request: Request, context: RouteContext<{ id: string }>) => {
   const [{ id }, currentUser, body] = await Promise.all([context.params, requireUserOrNull(), request.json().catch(() => null)]);
@@ -15,20 +16,32 @@ export const POST = withApiErrorHandling(async (request: Request, context: Route
     prisma.shareCollection.findFirst({ where: { id, ownerId: currentUser.id }, select: { id: true, slug: true, title: true } }),
     prisma.user.findUnique({ where: { email: parsed.data.email.toLowerCase().trim() }, select: { id: true, name: true, email: true } }),
   ]);
-  if (!collection) return NextResponse.json({ error: "Collection not found." }, { status: 404 });
+  if (!collection) return NextResponse.json({ error: "Book not found." }, { status: 404 });
   if (!recipient) return NextResponse.json({ error: "No Memoria user found with that email." }, { status: 404 });
-  if (recipient.id === currentUser.id) return NextResponse.json({ error: "You already own this collection." }, { status: 400 });
+  if (recipient.id === currentUser.id) return NextResponse.json({ error: "You already own this Book." }, { status: 400 });
   const member = await prisma.shareCollectionMember.upsert({
     where: { collectionId_userId: { collectionId: id, userId: recipient.id } },
-    update: {},
-    create: { collectionId: id, userId: recipient.id },
+    update: { permission: parsed.data.permission },
+    create: { collectionId: id, userId: recipient.id, permission: parsed.data.permission },
     include: { user: { select: { name: true, email: true } } },
   });
   const notification = await prisma.notification.create({
-    data: { userId: recipient.id, type: "COLLECTION_SHARED", title: "A collection was shared with you", message: collection.title },
+    data: { userId: recipient.id, type: "COLLECTION_SHARED", title: "A Book was shared with you", message: collection.title },
   });
-  await prisma.notification.update({ where: { id: notification.id }, data: { href: `/c/${collection.slug}?notification=${notification.id}` } });
+  const destination = parsed.data.permission === "EDIT" ? `/books/${collection.id}` : `/c/${collection.slug}`;
+  await prisma.notification.update({ where: { id: notification.id }, data: { href: `${destination}?notification=${notification.id}` } });
   return NextResponse.json({ member }, { status: 201 });
+});
+
+export const PATCH = withApiErrorHandling(async (request: Request, context: RouteContext<{ id: string }>) => {
+  const [{ id }, currentUser, body] = await Promise.all([context.params, requireUserOrNull(), request.json().catch(() => null)]);
+  if (!currentUser) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const parsed = updateSchema.safeParse(body);
+  if (!parsed.success) return NextResponse.json({ error: "Choose Viewer or Editor access." }, { status: 400 });
+  const member = await prisma.shareCollectionMember.findFirst({ where: { id: parsed.data.memberId, collectionId: id, collection: { ownerId: currentUser.id } } });
+  if (!member) return NextResponse.json({ error: "Member not found." }, { status: 404 });
+  const updated = await prisma.shareCollectionMember.update({ where: { id: member.id }, data: { permission: parsed.data.permission }, include: { user: { select: { name: true, email: true } } } });
+  return NextResponse.json({ member: updated });
 });
 
 export const DELETE = withApiErrorHandling(async (request: Request, context: RouteContext<{ id: string }>) => {

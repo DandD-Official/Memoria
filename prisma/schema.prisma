@@ -48,6 +48,7 @@ model User {
   aiConnections         AiConnection[]
   invitesGiven          ResourceInvite[]        @relation("ResourceInvitesGiven")
   collectionMemberships ShareCollectionMember[]
+  collectionProgress    ShareCollectionProgress[]
   feedbackPosts         ShareFeedback[]         @relation("FeedbackAuthor")
   feedbackReports       FeedbackReport[]
   activeSessions        ActiveSession[]
@@ -596,8 +597,12 @@ model ShareCollection {
   owner        User      @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   slug         String    @unique
   title        String
+  subtitle     String?
   description  String?
+  tocTitle     String    @default("Contents")
   isPublished  Boolean   @default(false)
+  linkPermission Permission @default(VIEW)
+  isFavorite   Boolean   @default(false)
   passwordHash Bytes?
   expiresAt    DateTime?
   createdAt    DateTime  @default(now())
@@ -606,6 +611,7 @@ model ShareCollection {
   items    ShareCollectionItem[]
   feedback ShareFeedback[]
   members  ShareCollectionMember[]
+  progress ShareCollectionProgress[]
 
   @@index([ownerId])
   @@map("share_collections")
@@ -617,11 +623,27 @@ model ShareCollectionMember {
   collection   ShareCollection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
   userId       String
   user         User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  permission   Permission      @default(VIEW)
   createdAt    DateTime        @default(now())
 
   @@unique([collectionId, userId])
   @@index([userId, createdAt])
   @@map("share_collection_members")
+}
+
+model ShareCollectionProgress {
+  id             String          @id @default(cuid())
+  collectionId   String
+  collection     ShareCollection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lastItemId     String?
+  lastAccessedAt DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  @@unique([collectionId, userId])
+  @@index([userId, lastAccessedAt])
+  @@map("share_collection_progress")
 }
 
 // A resource (note/reviewer/quiz) included in a collection. resourceId is a

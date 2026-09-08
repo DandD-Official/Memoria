@@ -3,27 +3,9 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BookMarked, LayoutDashboard, FileText, Layers, ListChecks, GraduationCap, Share2, Settings, Bell, Archive, PanelLeftClose, PanelLeftOpen, Workflow } from "lucide-react";
+import { BookMarked, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-const topLinks = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-];
-
-const memoryLinks = [
-  { href: "/notes", label: "Notes", icon: FileText },
-  { href: "/reviewers", label: "Reviewers", icon: Layers },
-  { href: "/quizzes", label: "Quizzes", icon: ListChecks },
-  { href: "/diagrams", label: "Diagrams", icon: Workflow },
-];
-
-const utilityLinks = [
-  { href: "/study", label: "Study", icon: GraduationCap },
-  { href: "/archive", label: "Archive", icon: Archive },
-  { href: "/shared", label: "Shared with Me", icon: Share2 },
-  { href: "/notifications", label: "Notifications", icon: Bell },
-  { href: "/settings", label: "Settings", icon: Settings },
-];
+import { isNavigationItemActive, navigationGroups, utilityNavigation, type NavigationItem } from "@/components/layout/navigation";
 
 type SidebarMode = "HOVER" | "MANUAL";
 
@@ -33,66 +15,63 @@ export function Sidebar({ mode, initialCollapsed }: { mode: SidebarMode; initial
   const hoverMode = mode === "HOVER";
   const labelsHidden = !hoverMode && collapsed;
 
-  function announceSidebarState(isCollapsed: boolean) {
-    window.dispatchEvent(new CustomEvent("memoria:sidebar-state", { detail: { collapsed: isCollapsed } }));
-  }
-
   async function toggleCollapsed() {
     const next = !collapsed;
     setCollapsed(next);
-    announceSidebarState(next);
-    await fetch("/api/settings", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ sidebarCollapsed: next }),
-    }).catch(() => {});
+    await fetch("/api/settings", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ sidebarCollapsed: next }) }).catch(() => {});
   }
 
-  const renderLink = (link: (typeof topLinks)[number]) => {
-    const active = pathname === link.href || pathname.startsWith(link.href + "/");
-    return <Link
-      key={link.href}
-      href={link.href}
-      className={cn(
-        "flex h-9 items-center gap-3 overflow-hidden rounded-lg px-3 text-sm font-medium transition-colors",
-        labelsHidden && "justify-center px-0",
-        active ? "bg-action text-action-foreground" : "text-ink-soft hover:bg-ink/5 hover:text-ink"
-      )}
-      title={labelsHidden ? link.label : undefined}
-    >
-      <link.icon className="h-4 w-4 shrink-0" />
-      <span className={cn("whitespace-nowrap transition-opacity", labelsHidden && "sr-only", hoverMode && "opacity-0 group-hover/sidebar:opacity-100")}>{link.label}</span>
-    </Link>;
-  };
+  function renderLink(item: NavigationItem) {
+    const active = isNavigationItemActive(pathname, item.href);
+    return (
+      <Link
+        key={item.href}
+        href={item.href}
+        aria-current={active ? "page" : undefined}
+        title={labelsHidden ? item.label : undefined}
+        className={cn(
+          "group/link relative flex min-h-10 items-center gap-3 overflow-hidden rounded-control px-3 text-sm font-medium transition-[background-color,color]",
+          labelsHidden && "justify-center px-0",
+          active ? "bg-action text-action-foreground shadow-sm" : "text-ink-soft hover:bg-ink/5 hover:text-ink"
+        )}
+      >
+        <item.icon className="h-[1.125rem] w-[1.125rem] shrink-0" aria-hidden="true" />
+        <span className={cn("whitespace-nowrap transition-opacity", labelsHidden && "sr-only", hoverMode && "opacity-0 group-hover/sidebar:opacity-100")}>{item.label}</span>
+      </Link>
+    );
+  }
 
   return (
-    <div className={cn(
-      "hidden shrink-0 lg:block",
-      hoverMode ? "w-0" : ["sticky top-0 h-screen self-start", collapsed ? "w-16" : "w-60"]
-    )}>
-      <aside className={cn(
-        "group/sidebar relative flex shrink-0 flex-col border-r border-line bg-surface transition-[width] duration-200",
-        hoverMode ? "fixed inset-y-0 left-0 z-50 h-screen w-2 overflow-hidden shadow-card-hover hover:w-60" : "h-full",
-        !hoverMode && (collapsed ? "w-16" : "w-60")
-      )}
-        onMouseEnter={hoverMode ? () => announceSidebarState(false) : undefined}
-        onMouseLeave={hoverMode ? () => announceSidebarState(true) : undefined}
+    <div className={cn("hidden shrink-0 lg:block", hoverMode ? "w-[4.5rem]" : ["sticky top-0 h-screen self-start transition-[width] duration-200", collapsed ? "w-[4.5rem]" : "w-64"])}>
+      <aside
+        className={cn(
+          "group/sidebar flex h-screen shrink-0 flex-col overflow-hidden border-r border-line bg-surface/95 backdrop-blur transition-[width,box-shadow] duration-200",
+          hoverMode ? "fixed inset-y-0 left-0 z-50 w-[4.5rem] hover:w-64 hover:shadow-card-hover" : ["sticky top-0", collapsed ? "w-[4.5rem]" : "w-64"]
+        )}
       >
-        <div className={cn("flex h-16 shrink-0 items-center border-b border-line px-3", labelsHidden ? "justify-center" : "justify-start", hoverMode && "min-w-60")}>
-          <div className={cn("flex items-center gap-2 overflow-hidden font-display text-lg text-ink", labelsHidden && "invisible", hoverMode && "opacity-0 transition-opacity group-hover/sidebar:opacity-100")}>
-            <BookMarked className="h-5 w-5 shrink-0 text-accent-dark" />
-            <span className="whitespace-nowrap">Memoria</span>
-          </div>
-        </div>
-        {!hoverMode && <button type="button" onClick={() => void toggleCollapsed()} aria-label={collapsed ? "Open sidebar" : "Collapse sidebar"} aria-expanded={!collapsed} className="absolute -right-4 top-1/2 z-10 inline-flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-line bg-surface text-ink-soft shadow-card hover:border-accent hover:bg-accent-soft hover:text-ink">{collapsed ? <PanelLeftOpen className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}</button>}
-        <nav className={cn("min-h-0 min-w-0 flex-1 overflow-y-auto py-3", labelsHidden ? "px-2" : "px-3", hoverMode && "min-w-60 px-3")}>
-          <div className="space-y-0.5">{topLinks.map(renderLink)}</div>
-          <div className="mt-4">
-            <p className={cn("mb-1 px-3 text-[11px] font-semibold uppercase tracking-wider text-ink-faint", labelsHidden && "sr-only", hoverMode && "opacity-0 transition-opacity group-hover/sidebar:opacity-100")}>Memories</p>
-            <div className="space-y-0.5">{memoryLinks.map(renderLink)}</div>
-          </div>
-          <div className="mt-4 space-y-0.5 border-t border-line pt-4">{utilityLinks.map(renderLink)}</div>
+        <Link href="/dashboard" aria-label="Memoria dashboard" className={cn("flex h-16 shrink-0 items-center border-b border-line px-4", labelsHidden ? "justify-center" : "gap-2.5", hoverMode && "min-w-64")}>
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-control border border-accent/25 bg-accent-soft text-accent-dark shadow-sm"><BookMarked className="h-5 w-5" aria-hidden="true" /></span>
+          <span className={cn("whitespace-nowrap font-display text-xl font-medium text-ink transition-opacity", labelsHidden && "sr-only", hoverMode && "opacity-0 group-hover/sidebar:opacity-100")}>Memoria</span>
+        </Link>
+
+        <nav aria-label="Main navigation" className={cn("min-h-0 flex-1 overflow-y-auto py-4", labelsHidden ? "px-2.5" : "px-3", hoverMode && "min-w-64 px-3")}>
+          {navigationGroups.map((group, index) => (
+            <div key={group.label} className={cn(index > 0 && "mt-5 border-t border-line pt-4")}>
+              <p className={cn("mb-1.5 px-3 text-[0.6875rem] font-semibold uppercase tracking-[0.14em] text-ink-faint transition-opacity", labelsHidden && "sr-only", hoverMode && "opacity-0 group-hover/sidebar:opacity-100")}>{group.label}</p>
+              <div className="space-y-1">{group.items.map(renderLink)}</div>
+            </div>
+          ))}
         </nav>
+
+        <div className={cn("shrink-0 border-t border-line py-3", labelsHidden ? "px-2.5" : "px-3", hoverMode && "min-w-64 px-3")}>
+          <div className="space-y-1">{utilityNavigation.map(renderLink)}</div>
+          {!hoverMode && (
+            <button type="button" onClick={() => void toggleCollapsed()} aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"} aria-expanded={!collapsed} className={cn("mt-2 flex min-h-10 w-full items-center gap-3 rounded-control px-3 text-sm font-medium text-ink-faint transition-colors hover:bg-ink/5 hover:text-ink", labelsHidden && "justify-center px-0")}>
+              {collapsed ? <PanelLeftOpen className="h-[1.125rem] w-[1.125rem]" /> : <PanelLeftClose className="h-[1.125rem] w-[1.125rem]" />}
+              <span className={cn(labelsHidden && "sr-only")}>{collapsed ? "Expand" : "Collapse"}</span>
+            </button>
+          )}
+        </div>
       </aside>
     </div>
   );

@@ -32,13 +32,13 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   return (
     <div className={cn("flex min-h-screen bg-paper", userSettings.reduceMotion && "reduce-motion", userSettings.compactLayout && "compact-layout")}>
       <Sidebar mode={userSettings.sidebarMode === "HOVER" ? "HOVER" : "MANUAL"} initialCollapsed={userSettings.sidebarCollapsed} />
-      <div className="flex min-w-0 flex-1 flex-col overflow-x-clip pb-16 lg:pb-0">
-        <Topbar userName={user.name ?? user.email ?? "Account"} unreadNotifications={unreadNotifications} studyStreak={studyStreak} showBrandInitially={userSettings.sidebarMode === "HOVER" || userSettings.sidebarCollapsed} />
+      <div className="flex min-w-0 flex-1 flex-col overflow-x-clip pb-20 lg:pb-0">
+        <Topbar userName={user.name ?? user.email ?? "Account"} unreadNotifications={unreadNotifications} studyStreak={studyStreak} />
         <main className={cn("min-w-0 flex-1 px-page", userSettings.compactLayout ? "py-4" : "py-6")}>
           {children}
         </main>
       </div>
-      <MobileNav />
+      <MobileNav unreadNotifications={unreadNotifications} />
       <SessionHeartbeat />
       {user.sessionConflict && user.sessionId && <SessionConflictModal userName={user.name ?? user.email ?? "This account"} sessionId={user.sessionId} otherDevice={user.sessionConflictDevice} currentDevice={user.currentSessionDevice} />}
     </div>

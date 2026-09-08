@@ -3,17 +3,17 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { signOut } from "next-auth/react";
-import { Search, Plus, LogOut, User as UserIcon, FileText, Layers, ListChecks, Star, ArrowRight, Flame, BookMarked } from "lucide-react";
+import { Search, LogOut, User as UserIcon, FileText, Layers, ListChecks, Star, ArrowRight, Flame, BookMarked } from "lucide-react";
 import Link from "next/link";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { NotificationMenu } from "@/components/notifications/notification-menu";
 import { TagList } from "@/components/library/tag-list";
+import { CreateMenu } from "@/components/layout/create-menu";
 
-export function Topbar({ userName, unreadNotifications, studyStreak, showBrandInitially }: { userName: string; unreadNotifications: number; studyStreak: number; showBrandInitially: boolean }) {
+export function Topbar({ userName, unreadNotifications, studyStreak }: { userName: string; unreadNotifications: number; studyStreak: number }) {
   const router = useRouter();
   const [query, setQuery] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
-  const [showBrand, setShowBrand] = useState(showBrandInitially);
   const [signingOut, setSigningOut] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searching, setSearching] = useState(false);
@@ -27,18 +27,6 @@ export function Topbar({ userName, unreadNotifications, studyStreak, showBrandIn
     ...results.reviewers.map((item) => ({ ...item, type: "reviewer" as const, href: `/reviewers/${item.id}` })),
     ...results.quizzes.map((item) => ({ ...item, type: "quiz" as const, href: `/quizzes/${item.id}` })),
   ].slice(0, 10), [results]);
-
-  useEffect(() => {
-    setShowBrand(showBrandInitially);
-  }, [showBrandInitially]);
-
-  useEffect(() => {
-    function syncSidebarState(event: Event) {
-      setShowBrand((event as CustomEvent<{ collapsed: boolean }>).detail.collapsed);
-    }
-    window.addEventListener("memoria:sidebar-state", syncSidebarState);
-    return () => window.removeEventListener("memoria:sidebar-state", syncSidebarState);
-  }, []);
 
   useEffect(() => {
     if (!searchOpen) return;
@@ -92,8 +80,8 @@ export function Topbar({ userName, unreadNotifications, studyStreak, showBrandIn
   }
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-line bg-paper/90 px-4 backdrop-blur sm:px-6">
-      {showBrand && <Link href="/dashboard" aria-label="Memoria dashboard" title="Memoria" className="hidden h-9 w-9 shrink-0 items-center justify-center text-accent-dark sm:inline-flex"><BookMarked className="h-5 w-5" /></Link>}
+    <header className="sticky top-0 z-30 flex h-16 items-center gap-2 border-b border-line bg-paper/90 px-3 backdrop-blur sm:gap-3 sm:px-6">
+      <Link href="/dashboard" aria-label="Memoria dashboard" title="Memoria" className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-control text-accent-dark lg:hidden"><BookMarked className="h-5 w-5" /></Link>
       <form ref={searchRef} onSubmit={handleSearch} className="relative min-w-0 flex-1" role="search">
         <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-faint" />
         <input
@@ -105,7 +93,7 @@ export function Topbar({ userName, unreadNotifications, studyStreak, showBrandIn
             else if (event.key === "ArrowDown") { event.preventDefault(); setSelectedIndex((current) => Math.min(suggestions.length - 1, current + 1)); }
             else if (event.key === "ArrowUp") { event.preventDefault(); setSelectedIndex((current) => Math.max(-1, current - 1)); }
           }}
-          placeholder="Search notes, reviewers, quizzes…"
+          placeholder="Search Memories and study material…"
           role="combobox"
           aria-label="Search your study material"
           aria-expanded={searchOpen}
@@ -122,7 +110,7 @@ export function Topbar({ userName, unreadNotifications, studyStreak, showBrandIn
             {!searching && suggestions.length === 0 ? (
               <div className="p-3">
                 <p className="text-sm text-ink-soft">{query.trim() ? "No quick matches. Try searching all results." : "Your library is empty. Import something to make it searchable."}</p>
-                {!query.trim() && <Link href="/notes/import" onClick={() => setSearchOpen(false)} className="mt-2 inline-flex text-sm font-medium text-accent-dark hover:underline">Import your first note</Link>}
+                {!query.trim() && <Link href="/notes/import" onClick={() => setSearchOpen(false)} className="mt-2 inline-flex text-sm font-medium text-accent-dark hover:underline">Import your first Memory</Link>}
               </div>
             ) : suggestions.map((suggestion, index) => {
               const Icon = suggestion.type === "note" ? FileText : suggestion.type === "reviewer" ? Layers : ListChecks;
@@ -133,26 +121,20 @@ export function Topbar({ userName, unreadNotifications, studyStreak, showBrandIn
               </button>;
             })}
             {query.trim() && <button type="submit" onMouseEnter={() => setSelectedIndex(-1)} className="mt-1 flex w-full items-center justify-between border-t border-line px-3 py-3 text-left text-sm font-medium text-ink hover:bg-ink/[0.03]"><span>Search all for “{query.trim()}”</span><ArrowRight className="h-4 w-4" /></button>}
-            {!query.trim() && suggestions.length > 0 && <div className="mt-1 grid grid-cols-3 gap-1 border-t border-line pt-2">{[["Notes", "/notes"], ["Reviewers", "/reviewers"], ["Quizzes", "/quizzes"]].map(([label, href]) => <Link key={href} href={href} onClick={() => setSearchOpen(false)} className="rounded-md px-2 py-2 text-center text-xs text-ink-soft hover:bg-ink/5 hover:text-ink">Browse {label}</Link>)}</div>}
+            {!query.trim() && suggestions.length > 0 && <div className="mt-1 grid grid-cols-3 gap-1 border-t border-line pt-2">{[["Memories", "/notes"], ["Reviewers", "/reviewers"], ["Quizzes", "/quizzes"]].map(([label, href]) => <Link key={href} href={href} onClick={() => setSearchOpen(false)} className="rounded-md px-2 py-2 text-center text-xs text-ink-soft hover:bg-ink/5 hover:text-ink">Browse {label}</Link>)}</div>}
           </div>
         )}
       </form>
 
       <div className="flex shrink-0 items-center gap-3">
         <ThemeToggle className="hidden sm:inline-flex" />
-        <Link
-          href="/notes/import"
-          className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-action px-2.5 text-sm font-medium text-action-foreground hover:bg-action/90 sm:px-3.5"
-        >
-          <Plus className="h-4 w-4" />
-          <span className="hidden sm:inline">Create</span>
-        </Link>
+        <CreateMenu />
 
         <Link
           href="/study"
           aria-label={`${studyStreak}-day study streak`}
           title={`${studyStreak}-day study streak`}
-          className="inline-flex h-9 items-center gap-1.5 rounded-full border border-accent/40 bg-accent-soft px-2.5 text-sm font-semibold text-accent-dark transition-colors hover:border-accent hover:bg-accent/25"
+          className="hidden h-9 items-center gap-1.5 rounded-full border border-accent/40 bg-accent-soft px-2.5 text-sm font-semibold text-accent-dark transition-colors hover:border-accent hover:bg-accent/25 sm:inline-flex"
         >
           <Flame className="h-4 w-4 fill-accent text-accent-dark" />
           <span>{studyStreak}</span>

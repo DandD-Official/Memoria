@@ -61,7 +61,11 @@ function drawBrandHeader(doc: jsPDF, pageWidth: number): number {
  * than styled, which keeps this dependency-light and reliable across
  * AI-generated output.
  */
-export function buildMarkdownPdf(title: string, markdown: string): jsPDF {
+export interface MarkdownPdfOptions {
+  bookCover?: { subtitle?: string | null; description?: string | null; author?: string | null };
+}
+
+export function buildMarkdownPdf(title: string, markdown: string, options: MarkdownPdfOptions = {}): jsPDF {
   const doc = new jsPDF({ unit: "pt", format: "a4" });
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
@@ -288,6 +292,45 @@ export function buildMarkdownPdf(title: string, markdown: string): jsPDF {
   }
 
   startPage();
+  if (options.bookCover) {
+    doc.setFillColor(61, 45, 39);
+    doc.rect(0, 0, pageWidth, pageHeight, "F");
+    doc.setDrawColor(184, 105, 77);
+    doc.setLineWidth(2);
+    doc.roundedRect(34, 34, pageWidth - 68, pageHeight - 68, 8, 8, "S");
+    doc.setTextColor(242, 224, 199);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(9);
+    doc.text("MEMORIA BOOK", PAGE_MARGIN, 100);
+    doc.setDrawColor(184, 105, 77);
+    doc.line(PAGE_MARGIN, 122, PAGE_MARGIN + 52, 122);
+    doc.setFont("times", "bold");
+    doc.setFontSize(34);
+    const coverTitle = doc.splitTextToSize(stripInlineMarkdown(title), contentWidth - 40) as string[];
+    doc.text(coverTitle, PAGE_MARGIN, 205);
+    let coverY = 205 + coverTitle.length * 40;
+    if (options.bookCover.subtitle) {
+      doc.setFont("times", "italic");
+      doc.setFontSize(17);
+      doc.setTextColor(218, 190, 164);
+      const subtitleLines = doc.splitTextToSize(stripInlineMarkdown(options.bookCover.subtitle), contentWidth - 70) as string[];
+      doc.text(subtitleLines, PAGE_MARGIN, coverY + 20);
+      coverY += subtitleLines.length * 22 + 28;
+    }
+    if (options.bookCover.description) {
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10);
+      doc.setTextColor(220, 207, 193);
+      doc.text(doc.splitTextToSize(stripInlineMarkdown(options.bookCover.description), contentWidth - 90), PAGE_MARGIN, coverY + 24);
+    }
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    doc.setTextColor(218, 190, 164);
+    doc.text(`Curated by ${options.bookCover.author?.trim() || "a Memoria reader"}`, PAGE_MARGIN, pageHeight - 92);
+    doc.text("Made with Memoria", pageWidth - PAGE_MARGIN, pageHeight - 92, { align: "right" });
+    doc.addPage();
+    startPage();
+  }
   y = drawBrandHeader(doc, pageWidth);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(20);
@@ -298,7 +341,7 @@ export function buildMarkdownPdf(title: string, markdown: string): jsPDF {
   for (const node of mmdDocument.children) renderMmdNode(node, 0);
 
   const totalPages = doc.getNumberOfPages();
-  for (let page = 1; page <= totalPages; page += 1) {
+  for (let page = options.bookCover ? 2 : 1; page <= totalPages; page += 1) {
     doc.setPage(page);
     doc.setFont("helvetica", "normal");
     doc.setFontSize(8);
@@ -312,6 +355,10 @@ export function buildMarkdownPdf(title: string, markdown: string): jsPDF {
 
 export function exportMarkdownToPdf(title: string, markdown: string) {
   buildMarkdownPdf(title, markdown).save(`${sanitizeFilename(title)}.pdf`);
+}
+
+export function exportBookToPdf(title: string, markdown: string, cover: NonNullable<MarkdownPdfOptions["bookCover"]>) {
+  buildMarkdownPdf(title, markdown, { bookCover: cover }).save(`${sanitizeFilename(title)}.pdf`);
 }
 
 export interface QuizExportMetadata {

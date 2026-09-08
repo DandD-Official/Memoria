@@ -11,10 +11,10 @@ import { requireUserOrNull } from "@/lib/auth/session";
 export async function generateMetadata(props: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const params = await props.params;
   const collection = await prisma.shareCollection.findUnique({ where: { slug: params.slug }, select: { title: true, description: true, isPublished: true } });
-  if (!collection?.isPublished) return { title: "Private collection — Memoria" };
+  if (!collection?.isPublished) return { title: "Private Book — Memoria" };
   return {
     title: `${collection.title} — Memoria`,
-    description: collection.description ?? "A study collection shared on Memoria.",
+    description: collection.description ?? "A Book shared on Memoria.",
   };
 }
 

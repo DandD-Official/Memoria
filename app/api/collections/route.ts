@@ -24,7 +24,7 @@ export const POST = withApiErrorHandling(async (request: Request) => {
   const body = await request.json().catch(() => null);
   const parsed = createSchema.safeParse(body);
   if (!parsed.success) {
-    return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Invalid collection." }, { status: 400 });
+    return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Invalid Book." }, { status: 400 });
   }
 
   const collection = await createCollection({ ownerId: user.id, ...parsed.data });
