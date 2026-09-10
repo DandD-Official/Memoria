@@ -1,6 +1,7 @@
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { ResponsiveTable } from "@/components/ui/responsive-table";
+import { remarkMmdMath } from "@/lib/mmd/math";
 
 /**
  * Renders a run of ordinary Markdown. Used both for top-level content and
@@ -19,7 +20,7 @@ export function InlineMarkdown({ content }: { content: string }) {
   if (!content.trim()) return null;
   return (
     <ReactMarkdown
-      remarkPlugins={[remarkGfm]}
+      remarkPlugins={[remarkGfm, remarkMmdMath]}
       components={{
         table: ({ children, ...props }) => (
           <ResponsiveTable>

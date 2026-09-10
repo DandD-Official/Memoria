@@ -7,6 +7,7 @@ import {
   getDiagramPlaceholderText,
   getImagePlaceholderText,
   getImageRequestPlaceholderText,
+  getSvgPlaceholderText,
   getUnsupportedBlockText,
   isCalloutBlock,
 } from "@/lib/mmd/export-helpers";
@@ -18,7 +19,7 @@ import {
  * a new block is added to spec-blocks.ts without anyone deciding how it
  * should export — see the "every block is either labeled or explicitly
  * handled" test below. */
-const EXPLICITLY_HANDLED_IN_EXPORTERS = new Set(["section", "columns", "column", "diagram", "image", "gallery", "image-request"]);
+const EXPLICITLY_HANDLED_IN_EXPORTERS = new Set(["section", "columns", "column", "diagram", "image", "gallery", "image-request", "svg"]);
 
 function firstBlock(source: string): MmdBlockNode {
   const doc = parseMmd(source);
@@ -51,6 +52,8 @@ function minimalValidInstance(name: string): string {
       return ':::card{title="X"}\nbody\n:::';
     case "details":
       return ':::details{title="X"}\nbody\n:::';
+    case "math":
+      return ':::math{formula="\\\\rightarrow"}\n:::';
     default:
       return `:::${name}\nbody\n:::`;
   }
@@ -115,6 +118,12 @@ describe("placeholder text never implies a real image/diagram exists", () => {
     const text = getImageRequestPlaceholderText(node);
     expect(text.toLowerCase()).toContain("pending");
     expect(text).not.toMatch(/^\[Image\]$/); // not styled as if it's a resolved image
+  });
+
+  it("SVG placeholder identifies the visual and its alt text", () => {
+    const node = firstBlock(':::svg{alt="OSI layers" caption="Figure 1"}\n<svg></svg>\n:::');
+    expect(getSvgPlaceholderText(node)).toContain("OSI layers");
+    expect(getSvgPlaceholderText(node).toLowerCase()).toContain("svg visual");
   });
 });
 

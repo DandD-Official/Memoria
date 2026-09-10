@@ -9,6 +9,7 @@ import { createReviewerSchema } from "@/lib/validation/reviewer";
 import { createQuizSchema } from "@/lib/validation/quiz";
 import { prisma } from "@/lib/db";
 import { revalidatePath } from "next/cache";
+import { buildOcrExtractionPrompt } from "@/lib/prompts/ocr-prompt";
 
 export const POST = withApiErrorHandling(async (request: Request) => {
   const user = await requireUserOrNull();
@@ -82,7 +83,8 @@ export const POST = withApiErrorHandling(async (request: Request) => {
 });
 
 function buildExtractionPrompt(extracted: Array<{ file: File; text: string }>, errors: Array<{ filename: string }>) {
-  const partial = extracted.map((item) => `FILE: ${item.file.name}\nPARTIAL TEXT:\n${item.text}`).join("\n\n---\n\n");
-  const missing = errors.map((item) => item.filename).join(", ");
-  return `Extract every readable word, heading, label, table, equation, and diagram annotation from the attached source image(s). Preserve the original reading order and structure as Markdown. Do not summarize or invent missing text. Return only the completed Markdown.${missing ? `\n\nFiles needing OCR: ${missing}` : ""}${partial ? `\n\nMerge the OCR result with this partial extraction without duplicating text:\n\n${partial}` : ""}`;
+  return buildOcrExtractionPrompt(
+    extracted.map((item) => ({ name: item.file.name, text: item.text })),
+    errors.map((item) => item.filename)
+  );
 }

@@ -5,7 +5,8 @@
 AI text generation for notes and reviewers uses the centralized MMD contract
 from `lib/mmd/ai-instructions.ts`, generated from `spec-blocks.ts`. The prompt
 requires one outer Markdown fence, valid supported MMD blocks, meaningful
-visual restraint, accessible alt text, and no raw HTML or executable SVG.
+visual restraint, accessible alt text, and no raw HTML outside the safe inline
+SVG visual contract.
 
 Paste-back supports plain Markdown and clean fenced responses. It preserves
 internal code fences. `analyzeReviewerImport()` also identifies commentary
@@ -22,12 +23,13 @@ AI providers are text-only and use the user's configured API key only for
 text generation. Memoria does not call OpenAI or another image-generation
 provider.
 
-The prompt exposes three valid visual outcomes:
+The prompt exposes four valid visual outcomes:
 
 1. `:::diagram{id="..."}` for an existing Memoria diagram.
 2. `:::image{src="media://..." alt="..."}` or a real external HTTPS asset,
    including SVG files.
 3. `:::image-request{purpose="..." alt="..."}` when no real asset exists.
+4. `:::svg{alt="..."}` for a self-contained AI-generated conceptual visual.
 
 In an editable preview, an image request can be fulfilled by uploading an
 SVG/raster asset or creating a deterministic SVG template. Successful upload

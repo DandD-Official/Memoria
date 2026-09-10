@@ -19,6 +19,7 @@ describe("buildMmdOutputRules", () => {
   it("requires exactly one outer markdown code fence", () => {
     expect(rules).toMatch(/exactly ONE outer Markdown code fence/i);
     expect(rules).toContain("```markdown");
+    expect(rules.toLowerCase()).toContain("four backticks");
   });
 
   it("forbids raw HTML and inventing block types", () => {

@@ -297,6 +297,24 @@ describe("parseMmd — AI image-request placeholder", () => {
   });
 });
 
+describe("parseMmd — inline SVG visual", () => {
+  it("keeps SVG markup as the body of a valid svg block", () => {
+    const doc = parseMmd(
+      ':::svg{alt="A process flow" caption="Figure 1"}\n<svg viewBox="0 0 100 60">\n  <rect width="100" height="60" />\n</svg>\n:::'
+    );
+    const block = blocks(doc)[0];
+    expect(block?.block).toBe("svg");
+    expect(block?.attrs.alt).toBe("A process flow");
+    expect(block?.children[0]).toMatchObject({ type: "markdown", content: expect.stringContaining("<svg") });
+    expect(collectMmdErrors(doc)).toHaveLength(0);
+  });
+
+  it("requires accessible alt text", () => {
+    const doc = parseMmd(":::svg\n<svg></svg>\n:::");
+    expect(collectMmdErrors(doc)[0]?.reason).toContain("alt");
+  });
+});
+
 describe("parseMmd — details block", () => {
   it("parses collapsible content with a title", () => {
     const doc = parseMmd(':::details{title="Click to reveal"}\nHidden content.\n:::');

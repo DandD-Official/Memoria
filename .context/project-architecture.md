@@ -16,7 +16,8 @@ never passed through `rehype-raw`.
 ```text
 source → parseMmd() → MMD AST → renderer/editor/exporters
                          ├→ diagram references → Diagram API/preview
-                         └→ image references → Media API/authenticated bytes
+                         ├→ image references → Media API/authenticated bytes
+                         └→ inline SVG → strict SVG sanitizer → visual renderer
 ```
 
 The parser, block schema, AI instruction generator, renderer, editor insert
@@ -24,14 +25,18 @@ menu, and exporters share `lib/mmd/spec-blocks.ts` as their block contract.
 
 ## Visual system
 
-There are three visual paths:
+There are four visual paths:
 
 - `:::diagram{id="..."}` points to a DB-backed diagram edited at `/diagrams`.
 - `:::image{src="media://..." alt="..."}` points to an authenticated,
   user-uploaded SVG, PNG, JPEG, or WebP stored in `Media`.
 - `:::image{src="https://..." alt="..."}` points to a real external asset.
+- `:::svg{alt="..."}` renders a self-contained AI/user-authored SVG body
+  after strict element/attribute sanitization. This is the only inline markup
+  exception; raw HTML remains literal text everywhere else.
 
-MMD accepts SVGs as image assets; it does not execute inline raw SVG/HTML.
+MMD accepts SVGs as image assets and accepts sanitized inline SVG visuals; it
+  does not execute arbitrary inline raw SVG/HTML.
 Uploaded SVGs are size-limited and rejected when they contain scripts,
 event-handler attributes, `javascript:` URLs, or `foreignObject`.
 

@@ -29,7 +29,7 @@ const CATEGORY_HEADINGS: Record<BlockDefinition["category"], string> = {
   layout: "Layout",
   media: "Media",
   diagram: "Diagrams",
-  ai: "Pending image placeholder",
+  ai: "AI visuals and pending image placeholders",
 };
 
 /** One example syntax line per block, used in the reference list below
@@ -49,6 +49,7 @@ export const EXAMPLE_SYNTAX: Record<string, string> = {
   example: ':::example{title="Example"}\nA worked example illustrating the concept.\n:::',
   important: ':::important\nSomething likely to appear on an exam.\n:::',
   summary: ':::summary\nA short recap of this section.\n:::',
+  math: ':::math{formula="\\\\rightarrow"}\n:::',
   section: ':::section{title="Network Layer" subtitle="Delivery and Routing"}\n...content, including other blocks...\n:::',
   card: ':::card{title="OSI Model"}\n...content...\n:::',
   columns: ':::columns\n:::column\nLeft content.\n:::\n:::column\nRight content.\n:::\n:::',
@@ -57,6 +58,7 @@ export const EXAMPLE_SYNTAX: Record<string, string> = {
   gallery: ':::gallery\n![Router](https://...)\n![Switch](https://...)\n:::',
   diagram: ':::diagram{id="network-topology" caption="Basic Network Topology"}\n:::',
   "image-request": ':::image-request{purpose="Explain OSI layers" alt="Diagram of the seven OSI layers" caption="Figure 1"}\n:::',
+  svg: ':::svg{alt="A diagram of the seven OSI layers" caption="OSI model"}\n<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 360">\n  <rect x="20" y="20" width="680" height="48" rx="8" fill="#fffaf0" stroke="#9b7653"/>\n  <text x="360" y="50" text-anchor="middle" font-family="Arial" font-size="20">Application</text>\n</svg>\n:::',
 };
 
 function describeAttrs(def: BlockDefinition): string {
@@ -104,7 +106,7 @@ Use normal Markdown ("# Heading", "**bold**", "- item", tables, etc.) for ordina
 
 Use a Memoria Markdown block ONLY when it meaningfully improves organization, comprehension, or learning. A normal, well-structured Markdown document is a perfectly good result — do not force every paragraph into a callout, card, or section just because these blocks exist.
 
-Do not use raw HTML anywhere.
+Do not use raw HTML anywhere except inside a :::svg block. A :::svg body must contain only one self-contained SVG visual; it must not contain scripts, event-handler attributes, external URLs, styles, foreignObject, or other embedded HTML. For mathematical notation, use :::math{formula="..."} or inline $...$ notation; do not use raw HTML for equations.
 
 Do not invent block types that aren't listed below — an unrecognized block type will be shown to the reader as a visible error rather than rendered.
 
@@ -116,11 +118,11 @@ ${buildBlockReference()}
 
 Use an image or diagram only when it would make the concept SIGNIFICANTLY easier to understand (architecture, process flow, system components, hierarchy, relationships) — never as decoration, and never for something a short paragraph or list already explains well.
 
-Memoria supports three visual paths: reference an existing saved diagram with ":::diagram{id=\"...\"}", reference a real uploaded/external SVG or raster asset with ":::image{src=\"...\" alt=\"...\"}", or mark a needed visual for the user to supply with ":::image-request{purpose=\"...\" alt=\"...\"}". If you do not have a real asset URL supplied in the source, use image-request. Never invent a fake or fabricated image URL, emit raw HTML/SVG, or claim that an image was generated. SVG is accepted only as a stored/uploaded image asset.
+Memoria supports four visual paths: reference an existing saved diagram with ":::diagram{id=\"...\"}", emit a self-contained AI-generated visual with ":::svg{alt=\"...\"}" and SVG markup in its body, reference a real uploaded/external SVG or raster asset with ":::image{src=\"...\" alt=\"...\"}", or mark a needed visual for the user to supply with ":::image-request{purpose=\"...\" alt=\"...\"}". Use :::svg for deterministic conceptual visuals such as process flows, timelines, hierarchies, and comparisons. Use image-request when the visual needs a supplied asset or cannot be represented safely as SVG. Never invent a fake image URL or emit HTML outside the :::svg visual contract.
 
 Maintain a logical heading hierarchy (one top-level "#" title, then "##"/"###" for structure).
 
 Give every image meaningful alt text.
 
-Return the COMPLETE final document inside exactly ONE outer Markdown code fence (\`\`\`markdown ... \`\`\`). Do not include any explanation, introduction, or commentary outside that code block. If your document itself needs to show a code sample, that inner code fence is fine — Memoria only treats the outermost fence as the wrapper.`;
+Return the COMPLETE final document inside exactly ONE outer Markdown code fence (\`\`\`markdown ... \`\`\`). Do not include any explanation, introduction, or commentary outside that code block. IMPORTANT: if the document contains any triple-backtick code snippet, use FOUR backticks for the outer wrapper (\`\`\`\`markdown ... \`\`\`\`) so the inner snippet cannot close the outer fence. Use a matching-length closing fence. Memoria accepts outer fences of 3 or more backticks and strips only the matching outer pair.`;
 }

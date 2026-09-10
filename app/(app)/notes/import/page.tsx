@@ -7,6 +7,7 @@ import { FileDropzone } from "@/components/notes/file-dropzone";
 import { Button } from "@/components/ui/button";
 import { Input, Label, Textarea } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { stripCodeFences } from "@/lib/validation/reviewer";
 
 type Tab = "file" | "link" | "cloud";
 type Status = "idle" | "processing" | "failed";
@@ -118,7 +119,8 @@ export default function ImportNotePage() {
   async function saveOcrResult() {
     if (!ocrResult.trim()) return;
     setStatus("processing");
-    const response = await fetch("/api/notes", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ title: file?.name.replace(/\.[^/.]+$/, "") || "OCR import", content: ocrResult.trim() }) });
+    const content = stripCodeFences(ocrResult);
+    const response = await fetch("/api/notes", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ title: file?.name.replace(/\.[^/.]+$/, "") || "OCR import", content }) });
     const data = await response.json().catch(() => null);
     if (response.ok) navigateAfterSave(`/notes/${data.note.id}`);
     else { setStatus("failed"); setError(data?.error ?? "Couldn't save the extracted text."); }

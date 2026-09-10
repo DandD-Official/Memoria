@@ -8,6 +8,7 @@ import {
   getDiagramPlaceholderText,
   getImagePlaceholderText,
   getImageRequestPlaceholderText,
+  getSvgPlaceholderText,
   getSectionHeading,
   getUnsupportedBlockText,
   isCalloutBlock,
@@ -203,6 +204,13 @@ function renderMmdNode(node: MmdNode, depth: number): Paragraph[] {
         new Paragraph({
           indent: indent > 0 ? { left: indent } : undefined,
           children: [new TextRun({ text: getImageRequestPlaceholderText(node), italics: true, color: "8A6D2E" })],
+        }),
+      ];
+    case "svg":
+      return [
+        new Paragraph({
+          indent: indent > 0 ? { left: indent } : undefined,
+          children: [new TextRun({ text: getSvgPlaceholderText(node), italics: true, color: "525770" })],
         }),
       ];
     default: {

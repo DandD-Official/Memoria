@@ -25,9 +25,12 @@ export interface ReviewerImportAnalysis {
  * without discarding commentary or guessing which part is authoritative. */
 export function analyzeReviewerImport(text: string): ReviewerImportAnalysis {
   const trimmed = text.trim();
-  const fenceMatch = trimmed.match(/^```(?:markdown|md)?\s*\n([\s\S]*?)\n?```$/i);
-  if (fenceMatch) return { content: fenceMatch[1].trim() };
-  if (/```(?:markdown|md)?\s*\n/i.test(trimmed)) {
+  // Match an outer fence of any length >= 3, and require the closing fence
+  // to have the same length. This preserves inner ``` snippets when the AI
+  // correctly wraps the whole document in ````markdown ... ````.
+  const fenceMatch = trimmed.match(/^(`{3,})(?:markdown|md)?\s*\n([\s\S]*?)\n?\1$/i);
+  if (fenceMatch) return { content: fenceMatch[2].trim() };
+  if (/`{3,}(?:markdown|md)?\s*\n/i.test(trimmed)) {
     return {
       content: trimmed,
       warning: "This response includes text outside its Markdown fence. Memoria kept everything so you can remove the commentary safely.",

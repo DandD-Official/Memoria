@@ -19,6 +19,8 @@ import {
 import { GalleryBlock, ImageBlock } from "@/components/mmd/blocks/media-blocks";
 import { DiagramPlaceholder } from "@/components/mmd/blocks/diagram-block";
 import { ImageRequestPlaceholder } from "@/components/mmd/blocks/image-request-block";
+import { SvgBlock } from "@/components/mmd/blocks/svg-block";
+import { MathBlock } from "@/components/mmd/blocks/math-block";
 
 const CALLOUT_NAMES = new Set(["note", "tip", "warning", "danger", "info", "success"]);
 
@@ -130,6 +132,10 @@ function MmdNodeRenderer({ node }: { node: MmdNode }) {
       return <DiagramPlaceholder node={node} />;
     case "image-request":
       return <ImageRequestPlaceholder node={node} />;
+    case "svg":
+      return <SvgBlock node={node} />;
+    case "math":
+      return <MathBlock node={node} />;
     default:
       // Guards against lib/mmd/spec-blocks.ts gaining a block type that
       // nobody wired a renderer for — fails safe instead of rendering

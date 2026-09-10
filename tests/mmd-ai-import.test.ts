@@ -45,6 +45,24 @@ describe("AI import — response wrapped in exactly one outer fence", () => {
     const { cleaned } = importAiResponse(raw);
     expect(cleaned).toBe("# Title\n\nBody text.");
   });
+
+  it("uses a four-backtick outer fence when the document contains a triple-backtick snippet", () => {
+    const raw = [
+      "````markdown",
+      "# Title",
+      "",
+      "```js",
+      "const arrow = '\\u2192';",
+      "```",
+      "",
+      "Body.",
+      "````",
+    ].join("\n");
+    const { cleaned } = importAiResponse(raw);
+    expect(cleaned).toContain("```js");
+    expect(cleaned).toContain("const arrow");
+    expect(cleaned).not.toContain("````markdown");
+  });
 });
 
 describe("AI import — document with internal code blocks (outer vs. inner fence)", () => {

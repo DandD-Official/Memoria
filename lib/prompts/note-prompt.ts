@@ -65,7 +65,7 @@ ${buildMmdOutputRules()}
 SOURCE MATERIAL
 ${sourceBlock}
 
-Return the complete reformatted document as described above, inside exactly one outer \`\`\`markdown code fence.`;
+Return the complete reformatted document as described above, using the outer-fence rule above.`;
 }
 
 /**

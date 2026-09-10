@@ -62,6 +62,9 @@ export const INSERT_TEMPLATES: Record<string, InsertTemplate> = {
   summary: {
     build: (s) => fence("summary", "", s || "Summarize the section here."),
   },
+  math: {
+    build: () => fence("math", `formula="\\\\rightarrow"`, ""),
+  },
 
   section: {
     build: (s) => fence("section", `title="Section Title"`, s || "Section content goes here."),
@@ -119,6 +122,15 @@ export const INSERT_TEMPLATES: Record<string, InsertTemplate> = {
         "image-request",
         `purpose="${s || "Describe what the image should show"}" alt="Describe the image for screen readers"`,
         ""
+      ),
+  },
+
+  svg: {
+    build: (s) =>
+      fence(
+        "svg",
+        `alt="${s || "Describe the visual for screen readers"}" caption="AI-generated visual"`,
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 260" role="img" aria-label="Study visual"><rect x="20" y="20" width="680" height="220" rx="18" fill="#fffaf0" stroke="#9b7653" stroke-width="3"/><circle cx="120" cy="130" r="48" fill="#c2764a"/><path d="M100 130l14 14 28-32" fill="none" stroke="white" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/><text x="205" y="140" font-family="Arial,sans-serif" font-size="28" fill="#352b22">AI-generated SVG visual</text></svg>'
       ),
   },
 

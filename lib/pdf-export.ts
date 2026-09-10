@@ -9,6 +9,7 @@ import {
   getDiagramPlaceholderText,
   getImagePlaceholderText,
   getImageRequestPlaceholderText,
+  getSvgPlaceholderText,
   getSectionHeading,
   getUnsupportedBlockText,
   isCalloutBlock,
@@ -276,6 +277,10 @@ export function buildMarkdownPdf(title: string, markdown: string, options: Markd
         return;
       case "image-request":
         writeParagraph(getImageRequestPlaceholderText(node), 10, "italic", indent);
+        y += 4;
+        return;
+      case "svg":
+        writeParagraph(getSvgPlaceholderText(node), 10, "italic", indent);
         y += 4;
         return;
       default: {

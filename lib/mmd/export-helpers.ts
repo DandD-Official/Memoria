@@ -54,6 +54,8 @@ export function getBlockLabel(node: MmdBlockNode): string {
       return "Important";
     case "summary":
       return "Summary";
+    case "math":
+      return `Math: ${node.attrs.formula}`;
     case "card":
       return node.attrs.title || "";
     case "details":
@@ -74,6 +76,11 @@ export function getDiagramPlaceholderText(node: MmdBlockNode): string {
 
 export function getImageRequestPlaceholderText(node: MmdBlockNode): string {
   return `[Image pending — ${node.attrs.purpose}]`;
+}
+
+export function getSvgPlaceholderText(node: MmdBlockNode): string {
+  const caption = node.attrs.caption ? ` (${node.attrs.caption})` : "";
+  return `[SVG visual not included in export: ${node.attrs.alt}${caption}]`;
 }
 
 export function getImagePlaceholderText(node: MmdBlockNode): string {

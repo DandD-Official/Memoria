@@ -12,7 +12,7 @@ kept in sync.
   anything other than ordinary Markdown.
 - 100% of existing Note/Reviewer content is already valid MMD (no
   migration needed).
-- No raw HTML, ever. No block attribute is executable.
+- No raw HTML outside the explicit `:::svg` visual block. No block attribute is executable.
 - Deterministic: a given source string parses to exactly one block tree,
   regardless of surrounding content.
 - Fails safe: unknown/malformed blocks degrade to a visible, non-crashing
@@ -67,6 +67,12 @@ marker in v1 — added only if/when v2 introduces a breaking change.
 - `:::important` — no required attributes.
 - `:::summary` — no required attributes.
 
+### Math
+- `:::math{formula="..."}` — renders a safe LaTeX-style mathematical
+  expression such as `\\rightarrow` as a readable symbol. Inline `$...$`
+  notation is also recognized by the Markdown renderer and uses the same
+  safe symbol mapping. This is not a general TeX/HTML execution surface.
+
 ### Layout
 - `:::section{title="..." subtitle="..."}` — `title` required, `subtitle`
   optional. May contain any block type, depth ≤ 4.
@@ -111,6 +117,15 @@ marker in v1 — added only if/when v2 introduces a breaking change.
   "pending image" UI, and the exporters must render it as a labeled
   placeholder, not skip it silently and not render a broken image.
 
+### Inline AI SVG visual
+- `:::svg{alt="..." caption="..." align="..." size="..."}` — renders one
+  self-contained SVG supplied in the block body. `alt` is required;
+  `caption`, `align`, and `size` are optional and use the same bounded values
+  as `:::image`. This is the one MMD block where SVG markup is allowed.
+  Before rendering, Memoria reconstructs the SVG from a strict element and
+  attribute allowlist. Scripts, event handlers, external URLs, styles,
+  `foreignObject`, and other embedded HTML are rejected.
+
 ## 5. Attribute validation
 Every block type above has a fixed attribute allowlist (name + type +
 required/optional), defined once in `lib/mmd/spec-blocks.ts` (planned) and
@@ -136,6 +151,7 @@ block:
 | details | any block, depth ≤ 4 |
 | gallery | image blocks / bare image syntax only |
 | image, image-request, diagram | no body (empty between fences) |
+| svg | one self-contained SVG body; no nested MMD blocks |
 
 ## 7. Malformed input / fallback behavior
 The parser never throws for malformed MMD; it always returns a full block
