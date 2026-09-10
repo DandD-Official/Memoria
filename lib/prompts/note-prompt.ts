@@ -1,12 +1,13 @@
 import { buildMmdOutputRules } from "@/lib/mmd/ai-instructions";
 
-export type ProcessingStyle = "preserve" | "balanced" | "condensed" | "exam_focused";
+export type ProcessingStyle = "preserve" | "balanced" | "condensed" | "exam_focused" | "visual_creative";
 
 export const PROCESSING_STYLE_LABELS: Record<ProcessingStyle, string> = {
   preserve: "Preserve — keep almost everything, just improve structure",
   balanced: "Balanced — clean and organize, remove obvious redundancy",
   condensed: "Condensed — shorter reviewer, keep only what matters",
   exam_focused: "Exam Focused — prioritize concepts likely to be tested",
+  visual_creative: "Visual & Creative - use high-value visuals to make ideas memorable",
 };
 
 const STYLE_INSTRUCTIONS: Record<ProcessingStyle, string> = {
@@ -18,6 +19,8 @@ const STYLE_INSTRUCTIONS: Record<ProcessingStyle, string> = {
     "Produce a noticeably shorter reviewer. Keep only the information that is important to understand and remember; drop repetition and minor detail.",
   exam_focused:
     "Prioritize the concepts, definitions, and facts that are most likely to appear on a test. De-emphasize incidental detail that is unlikely to be assessed.",
+  visual_creative:
+    "Create a visually rich, memorable reviewer. Keep all important source facts, but actively look for concepts that become clearer as a process flow, timeline, hierarchy, comparison, cycle, map, or labeled system. Add several purposeful visuals throughout the document when the source supports them, using supported Memoria visual blocks and concise explanatory text. Prefer self-contained :::svg visuals for conceptual diagrams, and use :::image-request when a real or user-supplied image is genuinely needed. Visuals should clarify the source rather than decorate it, and must never introduce facts that are not present in the source.",
 };
 
 interface NoteForPrompt {

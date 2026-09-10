@@ -72,7 +72,7 @@ export const POST = withApiErrorHandling(async (request: Request) => {
   for (const item of extracted) {
     const titleOverride = form?.get("title");
     const title = typeof titleOverride === "string" && titleOverride.trim() ? titleOverride.trim() : item.title || item.file.name.replace(/\.[^/.]+$/, "");
-    const sourceType: NoteSourceType = item.extension === "pdf" ? "PDF" : item.extension === "docx" ? "DOCX" : item.extension === "txt" ? "TXT" : item.extension === "json" ? "MANUAL" : "MARKDOWN";
+    const sourceType: NoteSourceType = item.extension === "pdf" ? "PDF" : item.extension === "docx" ? "DOCX" : item.extension === "pptx" ? "PPTX" : item.extension === "txt" ? "TXT" : item.extension === "json" ? "MANUAL" : "MARKDOWN";
     notes.push(await createNote({ ownerId: user.id, title, description: item.description, originalFilename: item.file.name, sourceType, fileExtension: item.extension, content: item.text }));
   }
   if (!notes.length && !restored.length) return NextResponse.json({ error: errors[0]?.error ?? "No files could be imported.", errors, status: "failed", hasImageIssue, extractionPrompt: buildExtractionPrompt(extracted, errors) }, { status: 422 });

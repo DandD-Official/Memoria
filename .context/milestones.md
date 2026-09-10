@@ -1,15 +1,25 @@
 # MMD Milestone Tracking
 
-## Current status — 2026-09-08
+## Current status — 2026-09-10
 
 All implementation milestones are complete for the current v1 scope. The
-repository passes lint, all 133 automated tests, and the production build.
-The remaining release task is an environment check only: apply the Prisma
-migrations and run a signed-in browser smoke test with seeded data. The
-older historical notes below intentionally preserve the original build log;
-when they conflict with this section, this section is authoritative.
+repository now includes the native SVG diagram editor, persisted diagram
+previews, owned media uploads, visual/creative reviewer prompting, PPTX
+imports, and safe normalization of AI-authored SVG markup. The remaining
+release validation is environmental: a signed-in browser smoke test against
+a reachable seeded database.
 
-Last updated: 2026-09-08 (Books reader, sharing permissions, progress, and export redesign).
+Verification on 2026-09-10: `npm.cmd run db:deploy` applied the pending PPTX
+migration to the configured Neon database; ESLint passes; all 152 tests pass
+across 27 files; TypeScript no-emit passes; and `next build` passes. Public
+production routes respond locally, while `/api/health` reports the database
+as unavailable from this runtime and the in-app browser is unavailable, so a
+signed-in visual smoke test cannot be completed in this environment.
+
+The older historical notes below intentionally preserve the original build
+log; when they conflict with this section, this section is authoritative.
+
+Last updated: 2026-09-10 (release verification and current feature pass).
 
 ## Books redesign and permission follow-up — 2026-09-08
 
@@ -543,7 +553,7 @@ identify the approximate location, don't destroy content" requirements
 but not a full inline-annotation experience. Judged sufficient for v1.
 
 MILESTONE 16 — Final System Integration
-Status: Not started — the individual pieces (parser → renderer → editor
+Status: Implementation complete; environment smoke test pending. The individual pieces (parser → renderer → editor
 → AI prompt sync → export) have each been sanity-checked in isolation by
 hand and via the test suites above, but the brief's specific end-to-end
 workflows (create note → insert callout → insert diagram → save → reload
@@ -598,8 +608,8 @@ application code:
 5. Diagram data layer (Milestone 3, partial) — DONE; canvas editor NOT done.
 6. Export updates (Milestone 9) — DONE.
 7. Validation/tests/docs (7, 10, 11, 14, 15) — DONE.
-8. Remaining: the diagram canvas editor itself (needs `@xyflow/react`
-   actually installed and verified — recommended next step), AI image
-   generation (Milestone 6, needs a provider decision), and Milestone 16's
-   end-to-end integration pass (needs a real browser/dev server, not this
-   sandbox).
+8. The diagram canvas editor, media path, preview generation, and integration
+   implementation are complete. AI image generation remains intentionally
+   provider-free in v1; image requests use uploads, deterministic SVG
+   templates, or saved diagrams. The only remaining check is the signed-in
+   browser/dev-server smoke test against a reachable database.

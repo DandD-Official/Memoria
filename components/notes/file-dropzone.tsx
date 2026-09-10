@@ -11,7 +11,7 @@ interface FileDropzoneProps {
   multiple?: boolean;
 }
 
-export function FileDropzone({ onFileSelected, onFilesSelected, accept = ".md,.txt,.pdf,.docx,.json", multiple = false }: FileDropzoneProps) {
+export function FileDropzone({ onFileSelected, onFilesSelected, accept = ".md,.txt,.pdf,.docx,.pptx,.json", multiple = false }: FileDropzoneProps) {
   const [dragging, setDragging] = useState(false);
   const [fileName, setFileName] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -64,7 +64,7 @@ export function FileDropzone({ onFileSelected, onFilesSelected, accept = ".md,.t
         <>
           <UploadCloud className="mb-3 h-8 w-8 text-ink-faint" />
           <p className="font-medium text-ink">Drop your notes here</p>
-          <p className="mt-1 text-xs text-ink-faint">Supported: MD, TXT, PDF, DOCX, and Memoria JSON exports</p>
+          <p className="mt-1 text-xs text-ink-faint">Supported: MD, TXT, PDF, DOCX, PPTX, and Memoria JSON exports</p>
         </>
       )}
     </div>

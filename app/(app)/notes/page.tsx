@@ -11,6 +11,7 @@ import { ResourceCard } from "@/components/library/resource-card";
 
 const sourceLabels: Record<string, string> = {
   PDF: "PDF",
+  PPTX: "PowerPoint",
   MARKDOWN: "Markdown",
   TXT: "Text file",
   GOOGLE_DOCS: "Google Docs",

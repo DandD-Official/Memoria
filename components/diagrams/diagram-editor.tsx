@@ -77,7 +77,13 @@ export function DiagramEditor({ initialDiagrams }: { initialDiagrams: DiagramSum
   function redo() { const next = future.at(-1); if (!next) return; setHistory((items) => [...items, data]); setData(next); setFuture((items) => items.slice(0, -1)); }
   function clickNode(id: string) { if (connectFrom && connectFrom !== id) { const edge: DiagramEdge = { id: `edge-${Date.now()}`, source: connectFrom, target: id, directional: true, style: { strokeWidth: 2 } }; change({ ...data, edges: [...data.edges, edge] }); setConnectFrom(null); return; } setSelectedNode(id); }
   function localPoint(event: React.PointerEvent<SVGSVGElement | SVGGElement>) { const svg = (event.currentTarget.ownerSVGElement ?? event.currentTarget) as SVGSVGElement; const point = svg.createSVGPoint(); point.x = event.clientX; point.y = event.clientY; const matrix = svg.getScreenCTM(); return matrix?.inverse().transformPoint(point); }
-  function pointerDown(event: React.PointerEvent<SVGGElement>, node: DiagramNode) { const local = localPoint(event); if (local) setDrag({ id: node.id, dx: local.x - node.x, dy: local.y - node.y }); }
+  function pointerDown(event: React.PointerEvent<SVGGElement>, node: DiagramNode) {
+    const local = localPoint(event);
+    if (!local) return;
+    setHistory((items) => [...items.slice(-29), data]);
+    setFuture([]);
+    setDrag({ id: node.id, dx: local.x - node.x, dy: local.y - node.y });
+  }
   function resizeStart(event: React.PointerEvent<SVGRectElement>, node: DiagramNode) { event.stopPropagation(); const local = localPoint(event); if (!local) return; setHistory((items) => [...items.slice(-29), data]); setFuture([]); setResize({ id: node.id, startX: local.x, startY: local.y, width: node.width, height: node.height }); }
   function canvasDown(event: React.PointerEvent<SVGSVGElement>) { if (event.target !== event.currentTarget) return; setPanDrag({ x: pan.x, y: pan.y, startX: event.clientX, startY: event.clientY }); }
   function pointerMove(event: React.PointerEvent<SVGSVGElement>) { const local = localPoint(event); if (!local) return; if (panDrag) { setPan({ x: panDrag.x - (event.clientX - panDrag.startX) / zoom, y: panDrag.y - (event.clientY - panDrag.startY) / zoom }); return; } if (resize) { setData((current) => ({ ...current, nodes: current.nodes.map((node) => node.id === resize.id ? { ...node, width: Math.max(60, Math.min(600, resize.width + local.x - resize.startX)), height: Math.max(40, Math.min(400, resize.height + local.y - resize.startY)) } : node) })); return; } if (!drag) return; setData((current) => ({ ...current, nodes: current.nodes.map((node) => node.id === drag.id ? { ...node, x: Math.max(0, Math.min(W - node.width, local.x - drag.dx)), y: Math.max(0, Math.min(H - node.height, local.y - drag.dy)) } : node) })); }

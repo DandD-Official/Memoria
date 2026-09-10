@@ -20,6 +20,7 @@ const STYLES = [
 ] as const;
 
 const PROCESSING_STYLES = [
+  { value: "visual_creative", label: "Visual & Creative - add diagrams and visual explanations" },
   { value: "preserve", label: "Preserve — keep almost everything" },
   { value: "balanced", label: "Balanced — clean and organize" },
   { value: "condensed", label: "Condensed — shorter, key points only" },

@@ -61,7 +61,7 @@ lib/
   compression.ts     gzip helpers used by the two repos above
   permissions/       central ownership/share access-control checks
   validation/        Zod schemas (auth, notes, reviewers, quizzes)
-  imports/           TXT/MD/PDF/JSON parsing and user-scoped Google Docs/Notion imports
+  imports/           TXT/MD/PDF/DOCX/PPTX/JSON parsing and user-scoped Google Docs/Notion imports
   integrations/      token encryption, OAuth state signing, and connection repository
   exports/           JSON export builders
   markdown-frontmatter.ts   lossless title/description round-trip for exported .md files
@@ -80,7 +80,7 @@ This is deliberately **not** implicit ORM magic: `lib/notes-repo.ts` and `lib/re
 
 ## How the AI-assisted workflow works
 
-1. **Import** — upload a `.md`/`.txt`/`.pdf`/`.docx` file (or a Memoria `.json` export, see Round-trip below), paste content, or connect your own Google Drive/Notion workspace and choose a document. Image-heavy files pause for an explicit OCR/partial-import decision.
+1. **Import** — upload a `.md`/`.txt`/`.pdf`/`.docx`/`.pptx` file (or a Memoria `.json` export, see Round-trip below), paste content, or connect your own Google Drive/Notion workspace and choose a document. Image-heavy files pause for an explicit OCR/partial-import decision.
 2. **Generate a prompt** — select notes, pick a processing style, and Memoria builds a prompt asking for a clean **Markdown** document back (see `lib/prompts/note-prompt.ts` and `lib/prompts/quiz-prompt.ts`). Reviewers deliberately are *not* a rigid JSON schema — Markdown is far more reliable for a model to produce correctly, and Memoria renders it with full typography.
 3. **Generate or copy** — use an encrypted, user-owned OpenAI/Anthropic/Gemini key for direct generation, or copy the prompt into any AI assistant yourself.
 4. **Import the result** — paste the response back into Memoria. Reviewer content just needs to be non-trivial Markdown; quiz content is validated against a Zod schema (`lib/validation/quiz.ts`) that's deliberately lenient about common AI quirks — it strips ```` ```json ```` code fences, accepts either casing for enum values, tolerates a missing/duplicate question `id` by reassigning one, and reports the rest as clear field-level errors instead of a wall of raw Zod output.
@@ -118,7 +118,7 @@ Every API route re-derives access via `lib/permissions/index.ts::getAccessLevel`
 - Guest endpoints (`/api/guest/*`) also have hard content-size caps because they are unauthenticated.
 - Security headers (CSP, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy) are set globally in `next.config.mjs`.
 - Markdown is rendered via `react-markdown` **without** the `rehype-raw` plugin, so raw HTML in note/reviewer content (whether typed by a user or returned by an AI) is displayed as literal text rather than executed — this is what keeps rendering safe without a separate sanitization pass.
-- File uploads are capped by size, restricted to `.md`/`.txt`/`.pdf`/`.docx`/Memoria's own `.json` exports by extension, and PDFs/DOCX files are additionally verified by magic-byte sniffing rather than trusting the extension alone.
+- File uploads are capped by size, restricted to `.md`/`.txt`/`.pdf`/`.docx`/`.pptx`/Memoria's own `.json` exports by extension, and PDFs/DOCX/PPTX files are additionally verified by magic-byte and archive-content checks rather than trusting the extension alone.
 - Google/Notion OAuth state is short-lived and HMAC-signed; provider tokens are AES-256-GCM encrypted at rest and looked up by user + provider so credentials cannot be shared across accounts.
 
 ## Shipped feature status

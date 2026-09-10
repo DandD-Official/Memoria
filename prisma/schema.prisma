@@ -190,6 +190,7 @@ enum NoteSourceType {
   MARKDOWN
   TXT
   DOCX
+  PPTX
   GOOGLE_DOCS
   NOTION
   MANUAL

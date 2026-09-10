@@ -15,6 +15,7 @@ import { GuestFlashcards } from "@/components/guest/guest-flashcards";
 import { ExportMenu } from "@/components/exports/export-menu";
 
 const PROCESSING_STYLES = [
+  { value: "visual_creative", label: "Visual & Creative" },
   { value: "preserve", label: "Preserve" },
   { value: "balanced", label: "Balanced" },
   { value: "condensed", label: "Condensed" },
@@ -113,7 +114,7 @@ export function GuestReviewerFlow({ initialView = "reviewer" }: { initialView?: 
           Paste your notes below, or upload a file — either way they get embedded directly into the prompt.
           Skip this and the prompt will include a placeholder you can fill in yourself inside Claude.
         </p>
-        <FileDropzone onFileSelected={handleFileUpload} accept=".md,.txt,.pdf,.docx,.json" />
+        <FileDropzone onFileSelected={handleFileUpload} accept=".md,.txt,.pdf,.docx,.pptx,.json" />
         {uploading && <p className="mt-2 text-xs text-ink-soft">Reading file…</p>}
         {notice && <p className="mt-2 rounded-lg border border-accent/30 bg-accent-soft/40 p-2.5 text-xs text-accent-dark">{notice}</p>}
         <Textarea

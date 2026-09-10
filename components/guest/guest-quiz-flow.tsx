@@ -207,7 +207,7 @@ export function GuestQuizFlow({ activityMode = "quiz" }: { activityMode?: "quiz"
       {source === "generate" ? (
         <div className="card p-5">
           <p className="mb-3 text-sm font-medium text-ink">1. Add notes or describe your topic</p>
-          <FileDropzone onFileSelected={handleFileUpload} accept=".md,.txt,.pdf,.docx,.json" />
+          <FileDropzone onFileSelected={handleFileUpload} accept=".md,.txt,.pdf,.docx,.pptx,.json" />
           {uploading && <p className="mt-2 text-xs text-ink-soft">Reading file…</p>}
           {notice && <p className="mt-2 rounded-lg border border-accent/30 bg-accent-soft/40 p-2.5 text-xs text-accent-dark">{notice}</p>}
           <Textarea rows={6} value={notesText} onChange={(event) => setNotesText(event.target.value)} placeholder="Paste notes or describe the subject…" className="mt-3 font-mono text-sm" />

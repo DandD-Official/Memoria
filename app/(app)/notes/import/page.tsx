@@ -272,12 +272,12 @@ export default function ImportNotePage() {
       <div className="card mt-4 p-6">
         {tab === "file" ? (
           <>
-            <FileDropzone onFileSelected={setFile} onFilesSelected={setFiles} multiple accept=".md,.txt,.pdf,.docx,.json" />
+            <FileDropzone onFileSelected={setFile} onFilesSelected={setFiles} multiple accept=".md,.txt,.pdf,.docx,.pptx,.json" />
             <p className="mt-2 flex items-center gap-1.5 text-xs text-ink-faint">
-              <FileText className="h-3.5 w-3.5" /> Supports .md, .txt, .pdf, .docx, and Memoria&apos;s own exported .json files
+              <FileText className="h-3.5 w-3.5" /> Supports .md, .txt, .pdf, .docx, .pptx, and Memoria&apos;s own exported .json files
             </p>
             <p className="mt-1 text-xs text-ink-faint">
-              Only text is imported — if a PDF or Word file has images (like a scanned page), those are skipped and
+              Only text is imported — if a PDF, Word, or PowerPoint file has images or embedded visuals, those are skipped and
               you&apos;ll see a notice after importing.
             </p>
             {error && <p className="mt-3 text-sm text-danger">{error}</p>}

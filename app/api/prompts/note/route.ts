@@ -5,7 +5,7 @@ import { buildNoteReformatPrompt, buildSourcePackage, type ProcessingStyle } fro
 import { findNotesByIds } from "@/lib/notes-repo";
 import { withApiErrorHandling } from "@/lib/api/handler";
 
-const VALID_STYLES: ProcessingStyle[] = ["preserve", "balanced", "condensed", "exam_focused"];
+const VALID_STYLES: ProcessingStyle[] = ["preserve", "balanced", "condensed", "exam_focused", "visual_creative"];
 
 // POST { noteIds: string[], style: ProcessingStyle, mode: "prompt" | "package" }
 export const POST = withApiErrorHandling(async (request: Request) => {

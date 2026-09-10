@@ -4,7 +4,7 @@ import { buildNoteReformatPrompt, type ProcessingStyle } from "@/lib/prompts/not
 import { guestRateLimit } from "@/lib/guest-rate-limit";
 import { withApiErrorHandling } from "@/lib/api/handler";
 
-const VALID_STYLES: ProcessingStyle[] = ["preserve", "balanced", "condensed", "exam_focused"];
+const VALID_STYLES: ProcessingStyle[] = ["preserve", "balanced", "condensed", "exam_focused", "visual_creative"];
 
 // Guest content is capped well below the authenticated path's practical
 // limits — this endpoint is unauthenticated, so it needs its own guardrail
@@ -14,7 +14,7 @@ const MAX_GUEST_CONTENT_CHARS = 60_000;
 const bodySchema = z.object({
   title: z.string().min(1).max(200).default("My notes"),
   content: z.string().min(1).max(MAX_GUEST_CONTENT_CHARS),
-  style: z.enum(["preserve", "balanced", "condensed", "exam_focused"]).default("balanced"),
+  style: z.enum(["preserve", "balanced", "condensed", "exam_focused", "visual_creative"]).default("balanced"),
 });
 
 // Nothing here touches the database and no session is required — this is

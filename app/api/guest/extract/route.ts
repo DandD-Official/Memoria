@@ -3,7 +3,7 @@ import { extractTextFromFile, FileParseError } from "@/lib/imports/file-parser";
 import { guestRateLimit } from "@/lib/guest-rate-limit";
 import { withApiErrorHandling } from "@/lib/api/handler";
 
-// Extracts text from an uploaded .md/.txt/.pdf/.docx/.json file without
+// Extracts text from an uploaded .md/.txt/.pdf/.docx/.pptx/.json file without
 // persisting anything — used by guest mode so people without an account can
 // still get their notes into a prompt. Nothing here touches the database.
 export const POST = withApiErrorHandling(async (request: Request) => {
@@ -22,7 +22,7 @@ export const POST = withApiErrorHandling(async (request: Request) => {
       text,
       title: title || file.name.replace(/\.[^/.]+$/, ""),
       notice: hasImages
-        ? "This file contained images. Memoria only imports text, so any images were skipped — only the written content came through."
+        ? "This file contained images or embedded visuals. Memoria imports the written content, but those visuals were skipped."
         : undefined,
     });
   } catch (err) {
