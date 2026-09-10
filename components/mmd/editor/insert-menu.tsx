@@ -7,6 +7,7 @@ import { INSERT_TEMPLATES } from "@/lib/mmd/editor-templates";
 import { cn } from "@/lib/utils";
 
 const CATEGORY_LABELS: Record<BlockDefinition["category"], string> = {
+  code: "Code",
   callout: "Callouts",
   educational: "Educational",
   layout: "Layout",
@@ -17,6 +18,7 @@ const CATEGORY_LABELS: Record<BlockDefinition["category"], string> = {
 
 // Fixed display order, independent of object key iteration order.
 const CATEGORY_ORDER: BlockDefinition["category"][] = [
+  "code",
   "media",
   "diagram",
   "callout",

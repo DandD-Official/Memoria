@@ -1,20 +1,12 @@
 import type { MmdBlockNode } from "@/lib/mmd/ast";
 
 /**
- * Text-only helpers shared by lib/pdf-export.ts and lib/word-export.ts so
- * the two exporters can't drift on wording for the same block. Each
- * exporter still applies its own visual treatment (jsPDF direct drawing
- * vs. docx OOXML Paragraph/TextRun) — this file only decides WHAT text
- * to show, never HOW.
+ * Compatibility helpers for the legacy synchronous build functions in
+ * lib/pdf-export.ts and lib/word-export.ts.
  *
- * Scope note: neither exporter currently embeds real image/diagram bytes
- * (see .context/milestones.md, Export Support). Both runs entirely
- * client-side per the existing buildMarkdownPdf/buildMarkdownWord doc
- * comments; fetching external image URLs into the PDF/DOCX is a real,
- * separately-scoped feature (async, changes both functions' signatures)
- * rather than something to bolt on silently here. Until then, every
- * image/diagram/image-request block exports as a clearly labeled
- * placeholder line — never a broken image, never a fabricated one.
+ * User-facing downloads now use the canonical browser-rendered export
+ * surface. These helpers remain for backwards-compatible callers and only
+ * decide what text to show; they do not control PDF or DOCX layout.
  */
 
 const CALLOUT_LABELS: Record<string, string> = {

@@ -14,6 +14,11 @@ import {
   getUnsupportedBlockText,
   isCalloutBlock,
 } from "@/lib/mmd/export-helpers";
+import type { ExportProgressHandler } from "@/lib/export/types";
+import { createBookWordBlob, createMarkdownWordBlob, downloadBlob } from "@/lib/word-export";
+import { CODE_THEMES, getStoredCodeTheme, type CodeTheme } from "@/lib/mmd/code-themes";
+import { tokeniseCodeLine, type CodeTokenKind } from "@/lib/mmd/code-highlight";
+import { renderMathFormula } from "@/lib/mmd/math";
 
 const PAGE_MARGIN = 48;
 const LINE_HEIGHT = 16;
@@ -51,19 +56,10 @@ function drawBrandHeader(doc: jsPDF, pageWidth: number): number {
   return iconY + iconHeight + 38;
 }
 
-/**
- * Renders a Markdown string into a downloadable PDF entirely client-side —
- * no server round trip, so this works the same for guest (unsaved) content
- * as it does for saved notes/reviewers.
- *
- * This is a lightweight structural renderer (headings, paragraphs, lists,
- * blockquotes, and GFM tables), not a full Markdown-to-PDF engine — inline
- * emphasis such as bold and italic markers is stripped to plain text rather
- * than styled, which keeps this dependency-light and reliable across
- * AI-generated output.
- */
+/** Native jsPDF renderer used by the downloadable PDF export. */
 export interface MarkdownPdfOptions {
   bookCover?: { subtitle?: string | null; description?: string | null; author?: string | null };
+  onProgress?: ExportProgressHandler;
 }
 
 export function buildMarkdownPdf(title: string, markdown: string, options: MarkdownPdfOptions = {}): jsPDF {
@@ -137,8 +133,8 @@ export function buildMarkdownPdf(title: string, markdown: string, options: Markd
       margin: { left: PAGE_MARGIN + baseIndent, right: PAGE_MARGIN },
       head: [header],
       body: rows,
-      styles: { fontSize: 9, cellPadding: 5 },
-      headStyles: { fillColor: [27, 31, 59] },
+      styles: { fontSize: 9, cellPadding: 5, fillColor: false, textColor: [20, 24, 39], lineColor: [138, 143, 168], lineWidth: 0.25 },
+      headStyles: { fillColor: false, textColor: [20, 24, 39], lineColor: [138, 143, 168], lineWidth: 0.5, fontStyle: "bold" },
       didDrawPage: () => {
         y = PAGE_MARGIN;
       },
@@ -206,6 +202,62 @@ export function buildMarkdownPdf(title: string, markdown: string, options: Markd
 
   const MAX_INDENT = 60; // caps runaway indentation from deeply nested blocks
 
+  const PDF_CODE_COLORS: Record<CodeTokenKind, keyof CodeTheme> = {
+    plain: "foreground", comment: "comment", string: "string", keyword: "keyword",
+    number: "number", function: "function", type: "type", operator: "operator",
+  };
+
+  function hexRgb(hex: string): [number, number, number] {
+    const value = hex.replace("#", "");
+    return [Number.parseInt(value.slice(0, 2), 16), Number.parseInt(value.slice(2, 4), 16), Number.parseInt(value.slice(4, 6), 16)];
+  }
+
+  function codeSource(node: Extract<MmdNode, { type: "block" }>): string {
+    return node.children.filter((child): child is Extract<MmdNode, { type: "markdown" }> => child.type === "markdown").map((child) => child.content).join("\n").replace(/^\n/, "").replace(/\n$/, "");
+  }
+
+  function expandCodeTabs(line: string): string {
+    return line.replace(/\t/g, "    ");
+  }
+
+  function renderCodeBlock(node: Extract<MmdNode, { type: "block" }>, indent: number) {
+    const language = node.attrs.language || "text";
+    const theme = CODE_THEMES[node.attrs.theme as keyof typeof CODE_THEMES] ?? CODE_THEMES[getStoredCodeTheme()];
+    const lines = codeSource(node).split("\n");
+    const lineHeight = 13;
+    const headerHeight = node.attrs.title || node.attrs.language ? 18 : 0;
+    const boxHeight = Math.max(36, headerHeight + lines.length * lineHeight + 14);
+    ensureSpace(boxHeight + 12);
+    const x = PAGE_MARGIN + indent;
+    const width = contentWidth - indent;
+    doc.setFillColor(...hexRgb(theme.background));
+    doc.roundedRect(x, y - 10, width, boxHeight, 5, 5, "F");
+    if (headerHeight) {
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(8);
+      doc.setTextColor(...hexRgb(theme.foreground));
+      doc.text(node.attrs.title || "Code", x + 10, y + 2);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(...hexRgb(theme.gutter));
+      doc.text(language.toUpperCase(), x + width - 10, y + 2, { align: "right" });
+      y += headerHeight;
+    }
+    lines.forEach((line, lineIndex) => {
+      const lineY = y + lineIndex * lineHeight;
+      doc.setFont("courier", "normal");
+      doc.setFontSize(8.5);
+      doc.setTextColor(...hexRgb(theme.gutter));
+      doc.text(String(lineIndex + 1).padStart(3, " "), x + 9, lineY);
+      let cursorX = x + 38;
+      for (const token of tokeniseCodeLine(expandCodeTabs(line), language)) {
+        doc.setTextColor(...hexRgb(theme[PDF_CODE_COLORS[token.kind]]));
+        doc.text(token.value, cursorX, lineY);
+        cursorX += doc.getTextWidth(token.value);
+      }
+    });
+    y += boxHeight + 12;
+  }
+
   /**
    * Renders one MMD node (see lib/mmd/ast.ts) at the given nesting depth.
    * Plain text passes straight through to renderMarkdownLines; blocks get
@@ -232,6 +284,9 @@ export function buildMarkdownPdf(title: string, markdown: string, options: Markd
 
     // node.type === "block"
     switch (node.block) {
+      case "code":
+        renderCodeBlock(node, indent);
+        return;
       case "section": {
         const { title, subtitle } = getSectionHeading(node);
         y += 6;
@@ -281,6 +336,10 @@ export function buildMarkdownPdf(title: string, markdown: string, options: Markd
         return;
       case "svg":
         writeParagraph(getSvgPlaceholderText(node), 10, "italic", indent);
+        y += 4;
+        return;
+      case "math":
+        writeParagraph(renderMathFormula(node.attrs.formula), 12, "normal", indent);
         y += 4;
         return;
       default: {
@@ -358,12 +417,30 @@ export function buildMarkdownPdf(title: string, markdown: string, options: Markd
   return doc;
 }
 
-export function exportMarkdownToPdf(title: string, markdown: string) {
-  buildMarkdownPdf(title, markdown).save(`${sanitizeFilename(title)}.pdf`);
+async function convertWordBlobToPdf(title: string, wordBlob: Blob, onProgress?: ExportProgressHandler) {
+  onProgress?.({ phase: "preparing", message: "Preparing the Word source document…" });
+  const response = await fetch("/api/exports/word-to-pdf", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "X-Memoria-Filename": sanitizeFilename(title),
+    },
+    body: wordBlob,
+  });
+  if (!response.ok) {
+    const error = await response.json().catch(() => null) as { error?: string } | null;
+    throw new Error(error?.error ?? "Could not convert the Word document to PDF.");
+  }
+  onProgress?.({ phase: "creating", message: "Converting the Word document to PDF…" });
+  await downloadBlob(await response.blob(), title, "pdf");
 }
 
-export function exportBookToPdf(title: string, markdown: string, cover: NonNullable<MarkdownPdfOptions["bookCover"]>) {
-  buildMarkdownPdf(title, markdown, { bookCover: cover }).save(`${sanitizeFilename(title)}.pdf`);
+export async function exportMarkdownToPdf(title: string, markdown: string, onProgress?: ExportProgressHandler) {
+  await convertWordBlobToPdf(title, await createMarkdownWordBlob(title, markdown), onProgress);
+}
+
+export async function exportBookToPdf(title: string, markdown: string, cover: NonNullable<MarkdownPdfOptions["bookCover"]>, onProgress?: ExportProgressHandler) {
+  await convertWordBlobToPdf(title, await createBookWordBlob(title, markdown, cover), onProgress);
 }
 
 export interface QuizExportMetadata {

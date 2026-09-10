@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { MMD_VERSION } from "@/lib/mmd/ast";
+import { CODE_THEME_IDS } from "@/lib/mmd/code-themes";
 
 export { MMD_VERSION };
 
@@ -62,7 +63,7 @@ export type ChildPolicy =
 
 export interface BlockDefinition {
   name: string;
-  category: "callout" | "educational" | "layout" | "media" | "diagram" | "ai";
+  category: "callout" | "educational" | "layout" | "media" | "diagram" | "ai" | "code";
   /** One-line description reused by the AI prompt and the editor's insert
    * menu tooltip — see .context/ai-content-generation.md. */
   description: string;
@@ -103,6 +104,19 @@ function calloutDefs(): Record<string, BlockDefinition> {
 
 export const BLOCK_DEFS: Record<string, BlockDefinition> = {
   ...calloutDefs(),
+
+  code: {
+    name: "code",
+    category: "code",
+    description: "A syntax-highlighted code block with line numbers and tab-preserving indentation.",
+    attrs: {
+      language: safeString(50).optional(),
+      title: safeString(200).optional(),
+      theme: z.enum(CODE_THEME_IDS).optional(),
+    },
+    requiredAttrs: [],
+    childPolicy: { kind: "leaf" },
+  },
 
   // Educational blocks — leaf bodies (plain Markdown only, no further nesting).
   definition: {

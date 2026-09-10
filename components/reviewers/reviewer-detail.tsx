@@ -16,6 +16,7 @@ import { ResourceActions } from "@/components/library/resource-actions";
 import { TagEditor } from "@/components/library/tag-editor";
 import { RevisionHistory } from "@/components/library/revision-history";
 import { ExportMenu } from "@/components/exports/export-menu";
+import type { ExportProgressHandler } from "@/lib/export/types";
 
 interface ReviewerDetailProps {
   reviewer: {
@@ -68,9 +69,9 @@ export function ReviewerDetail({ reviewer, isOwner, autoSave }: ReviewerDetailPr
     }
   }
 
-  async function handleExport(format: string) {
-    if (format === "pdf") { const { exportMarkdownToPdf } = await import("@/lib/pdf-export"); exportMarkdownToPdf(title, content); return; }
-    if (format === "docx") { const { exportMarkdownToWord } = await import("@/lib/word-export"); await exportMarkdownToWord(title, content); return; }
+  async function handleExport(format: string, onProgress?: ExportProgressHandler) {
+    if (format === "pdf") { const { exportMarkdownToPdf } = await import("@/lib/pdf-export"); await exportMarkdownToPdf(title, content, onProgress); return; }
+    if (format === "docx") { const { exportMarkdownToWord } = await import("@/lib/word-export"); await exportMarkdownToWord(title, content, onProgress); return; }
     window.location.href = `/api/reviewers/export?id=${reviewer.id}&format=${format}`;
   }
 

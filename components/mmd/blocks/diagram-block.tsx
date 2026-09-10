@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Loader2, Workflow } from "lucide-react";
 import type { MmdBlockNode } from "@/lib/mmd/ast";
+import { useMmdRenderContext } from "@/components/mmd/render-context";
 
 type ResolveState = "loading" | "found" | "not-found";
 
@@ -20,14 +21,17 @@ type ResolveState = "loading" | "found" | "not-found";
  * difference to show the reader in either case.
  */
 export function DiagramPlaceholder({ node }: { node: MmdBlockNode }) {
+  const { mode, assetRegistry } = useMmdRenderContext();
   const [state, setState] = useState<ResolveState>("loading");
   const [title, setTitle] = useState<string | null>(null);
   const diagramId = node.attrs.id;
 
   useEffect(() => {
     const controller = new AbortController();
+    const finishAsset = assetRegistry?.begin(`diagram:${diagramId}`);
     if (!diagramId) {
       setState("not-found");
+      finishAsset?.();
       return;
     }
     fetch(`/api/diagrams/${encodeURIComponent(diagramId)}`, { signal: controller.signal })
@@ -39,16 +43,21 @@ export function DiagramPlaceholder({ node }: { node: MmdBlockNode }) {
         } else {
           setState("not-found");
         }
+        finishAsset?.();
       })
       .catch(() => {
         if (!controller.signal.aborted) setState("not-found");
+        finishAsset?.();
       });
-    return () => controller.abort();
-  }, [diagramId]);
+    return () => {
+      controller.abort();
+      finishAsset?.();
+    };
+  }, [assetRegistry, diagramId]);
 
   if (state === "loading") {
     return (
-      <div className="my-4 flex items-center justify-center gap-2 rounded-lg border border-line bg-ink/[0.02] p-8 text-sm text-ink-faint">
+      <div data-mmd-asset-state="loading" className="my-4 flex items-center justify-center gap-2 rounded-lg border border-line bg-ink/[0.02] p-8 text-sm text-ink-faint">
         <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
         Loading diagram…
       </div>
@@ -57,13 +66,13 @@ export function DiagramPlaceholder({ node }: { node: MmdBlockNode }) {
 
   if (state === "found") {
     return (
-      <figure className="my-4 overflow-hidden rounded-lg border border-line">
+      <figure data-mmd-asset-state="ready" className="my-4 overflow-hidden rounded-lg border border-line">
         {/* No snapshot may exist yet (a diagram saved before ever being
             rendered once from the editor) — the browser's built-in
             broken-image fallback is acceptable here since it's paired
             with the title text right below it, not the only signal. */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={`/api/diagrams/${encodeURIComponent(diagramId)}/preview`} alt={title ?? "Diagram"} loading="lazy" decoding="async" className="w-full" />
+        <img src={`/api/diagrams/${encodeURIComponent(diagramId)}/preview`} alt={title ?? "Diagram"} loading={mode === "export" ? "eager" : "lazy"} decoding={mode === "export" ? "sync" : "async"} className="w-full" />
         <figcaption className="border-t border-line bg-surface px-3 py-2 text-center text-xs text-ink-soft">
           {node.attrs.caption || title}
         </figcaption>

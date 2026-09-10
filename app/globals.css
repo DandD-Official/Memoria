@@ -1,3 +1,5 @@
+@import "./mmd-export.css";
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -234,6 +236,49 @@
   }
   .memora-markdown pre code {
     @apply bg-transparent px-0 py-0 text-white;
+  }
+  .mmd-code-block {
+    background: var(--mmd-code-bg);
+    color: var(--mmd-code-fg);
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    line-height: 1.6;
+  }
+  .mmd-code-header {
+    @apply flex items-center justify-between border-b border-white/10 px-4 py-2 text-xs font-medium;
+    color: var(--mmd-code-fg);
+    opacity: 0.9;
+  }
+  .mmd-code-language {
+    opacity: 0.65;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  .mmd-code-pre {
+    @apply m-0 overflow-x-auto p-0;
+    background: transparent;
+    color: inherit;
+    tab-size: 4;
+  }
+  .mmd-code-pre code {
+    @apply block bg-transparent p-0;
+    color: inherit;
+    font: inherit;
+  }
+  .mmd-code-line {
+    display: grid;
+    grid-template-columns: 3.25rem minmax(max-content, 1fr);
+    min-width: max-content;
+  }
+  .mmd-code-gutter {
+    @apply select-none border-r px-3 text-right;
+    border-color: rgb(255 255 255 / 0.1);
+    color: var(--mmd-code-gutter, #858ba8);
+  }
+  .mmd-code-content {
+    @apply px-4;
+    white-space: pre;
+    tab-size: 4;
   }
   .memora-markdown hr {
     @apply my-6 border-line;

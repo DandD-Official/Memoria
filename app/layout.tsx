@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { ThemeProvider, THEME_INIT_SCRIPT } from "@/components/layout/theme-provider";
+import { CodeThemeProvider } from "@/components/mmd/code-theme-context";
 
 export const metadata: Metadata = {
   title: "Memoria — Turn your notes into knowledge",
@@ -21,7 +22,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className="font-sans" suppressHydrationWarning>
         <ThemeProvider>
-          {children}
+          <CodeThemeProvider>{children}</CodeThemeProvider>
         </ThemeProvider>
       </body>
     </html>

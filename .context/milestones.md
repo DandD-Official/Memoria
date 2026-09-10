@@ -521,6 +521,25 @@ enum is expected — fixed by importing and using `BorderStyle.SINGLE`.
 Not done: real image/diagram byte embedding in exports (see above — a
 separately-scoped async feature, not a gap in this pass's scope).
 
+Export fidelity follow-up (2026-09-11): the browser-rendered MMD surface is
+the primary source for user-facing PDF exports. Word exports are intentionally
+native/editable: they use Word paragraphs, runs, tables, links, and embedded
+assets so the document remains normal text instead of a page picture. Both
+paths share the same renderer semantics and export-mode rules for details,
+columns, SVGs, diagrams, images, and media assets. The old synchronous
+builders remain deprecated compatibility APIs for existing unit or server
+callers and are no longer used by download wrappers.
+
+Added `lib/export/` canonical rendering, asset preparation, pagination, page
+capture modules; editable Word export rendering; `MmdExportSurface`; export-mode
+render context; a complete MMD fidelity fixture; structural regression tests;
+and progress/error handling in the export menu. `npm.cmd run lint`,
+`npm.cmd test` (30 files, 156 tests), and direct `next build` pass. The wrapper
+`npm.cmd run build` was blocked once by the running local Prisma/Next process
+holding the Windows query-engine DLL; it was not stopped. A signed-in browser
+visual comparison and opening a generated DOCX remain environment-specific
+checks.
+
 MILESTONE 8 — Import and Backward Compatibility
 Status: Design invariant satisfied by construction (mmd-spec.md §8) and
 re-confirmed this pass — a document with zero ":::" fences parses,

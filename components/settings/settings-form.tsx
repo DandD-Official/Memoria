@@ -5,6 +5,8 @@ import { Label } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { useTheme } from "@/components/layout/theme-provider";
 import { useRouter } from "next/navigation";
+import { CODE_THEMES, isCodeThemeId, type CodeThemeId } from "@/lib/mmd/code-themes";
+import { useCodeTheme } from "@/components/mmd/code-theme-context";
 
 interface Settings {
   appearance: "LIGHT" | "DARK" | "SYSTEM";
@@ -17,6 +19,7 @@ interface Settings {
   sidebarCollapsed: boolean;
   compactLayout: boolean;
   reduceMotion: boolean;
+  codeTheme: CodeThemeId;
 }
 
 export function SettingsForm({ initial }: { initial: Settings }) {
@@ -25,6 +28,7 @@ export function SettingsForm({ initial }: { initial: Settings }) {
   const [saved, setSaved] = useState(false);
   const lastSavedQuestionCount = useRef(initial.defaultQuestionCount);
   const { theme, setTheme } = useTheme();
+  const { codeTheme, setCodeTheme } = useCodeTheme();
   const router = useRouter();
 
   // The account's stored appearance is the source of truth the first time a
@@ -36,6 +40,9 @@ export function SettingsForm({ initial }: { initial: Settings }) {
     if (typeof window !== "undefined" && !window.localStorage.getItem("memora-theme")) {
       setTheme(initial.appearance);
     }
+    if (typeof window !== "undefined" && !window.localStorage.getItem("memora-code-theme")) {
+      setCodeTheme(isCodeThemeId(initial.codeTheme) ? initial.codeTheme : "memoria-dark");
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -43,6 +50,7 @@ export function SettingsForm({ initial }: { initial: Settings }) {
     const next = { ...settings, ...patch };
     setSettings(next);
     if (patch.appearance) setTheme(patch.appearance);
+    if (patch.codeTheme) setCodeTheme(patch.codeTheme);
     setSaving(true);
     try {
       const res = await fetch("/api/settings", {
@@ -81,6 +89,13 @@ export function SettingsForm({ initial }: { initial: Settings }) {
               {a.toLowerCase()}
             </button>
           ))}
+        </div>
+        <div className="mt-5">
+          <Label htmlFor="code-theme">Code block theme</Label>
+          <p className="mb-2 mt-1 text-xs text-ink-soft">Choose the colors used by the line-numbered :::code element in previews and exports.</p>
+          <select id="code-theme" value={codeTheme} onChange={(event) => save({ codeTheme: event.target.value as CodeThemeId })} className="h-10 w-full max-w-sm rounded-lg border border-line bg-surface px-3 text-sm text-ink">
+            {Object.entries(CODE_THEMES).map(([value, definition]) => <option key={value} value={value}>{definition.label}</option>)}
+          </select>
         </div>
         <label className="mt-4 flex items-start gap-3 rounded-lg border border-line p-3 text-sm text-ink">
           <input className="mt-0.5 h-4 w-4 accent-accent" type="checkbox" checked={settings.reduceMotion} onChange={(e) => save({ reduceMotion: e.target.checked })} />

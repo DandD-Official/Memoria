@@ -65,6 +65,9 @@ export const INSERT_TEMPLATES: Record<string, InsertTemplate> = {
   math: {
     build: () => fence("math", `formula="\\\\rightarrow"`, ""),
   },
+  code: {
+    build: (s) => fence("code", `language="typescript" title="Code"`, s || "const answer = 42;"),
+  },
 
   section: {
     build: (s) => fence("section", `title="Section Title"`, s || "Section content goes here."),

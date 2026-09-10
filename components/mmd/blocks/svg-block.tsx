@@ -42,6 +42,7 @@ export function SvgBlock({ node }: { node: MmdBlockNode }) {
       <div
         role="img"
         aria-label={alt}
+        data-export-asset="inline-svg"
         className="overflow-hidden rounded-lg border border-line bg-surface p-2 [&>svg]:block [&>svg]:h-auto [&>svg]:w-full"
         dangerouslySetInnerHTML={{ __html: markup }}
       />

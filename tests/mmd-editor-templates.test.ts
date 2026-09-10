@@ -51,7 +51,7 @@ describe("editor insert templates stay in sync with the parser schema", () => {
   });
 
   it("every BLOCK_DEFS category is a known display category", () => {
-    const validCategories = new Set(["callout", "educational", "layout", "media", "diagram", "ai"]);
+    const validCategories = new Set(["callout", "educational", "layout", "media", "diagram", "ai", "code"]);
     for (const def of Object.values(BLOCK_DEFS)) {
       expect(validCategories.has(def.category), `unexpected category on ${def.name}`).toBe(true);
     }

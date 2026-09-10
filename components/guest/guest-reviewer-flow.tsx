@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 import { extractFlashcardsFromMarkdown } from "@/lib/flashcards";
 import { GuestFlashcards } from "@/components/guest/guest-flashcards";
 import { ExportMenu } from "@/components/exports/export-menu";
+import type { ExportProgressHandler } from "@/lib/export/types";
 
 const PROCESSING_STYLES = [
   { value: "visual_creative", label: "Visual & Creative" },
@@ -98,9 +99,9 @@ export function GuestReviewerFlow({ initialView = "reviewer" }: { initialView?: 
   const isValidLength = cleanedMarkdown.trim().length >= 20;
   const flashcards = extractFlashcardsFromMarkdown(cleanedMarkdown);
 
-  async function exportReviewer(format: string) {
-    if (format === "pdf") { const { exportMarkdownToPdf } = await import("@/lib/pdf-export"); exportMarkdownToPdf(title, cleanedMarkdown); return; }
-    if (format === "docx") { const { exportMarkdownToWord } = await import("@/lib/word-export"); await exportMarkdownToWord(title, cleanedMarkdown); return; }
+  async function exportReviewer(format: string, onProgress?: ExportProgressHandler) {
+    if (format === "pdf") { const { exportMarkdownToPdf } = await import("@/lib/pdf-export"); await exportMarkdownToPdf(title, cleanedMarkdown, onProgress); return; }
+    if (format === "docx") { const { exportMarkdownToWord } = await import("@/lib/word-export"); await exportMarkdownToWord(title, cleanedMarkdown, onProgress); return; }
     const body = format === "json" ? JSON.stringify({ format: "memoria-reviewer-export", version: "1", title, style: "COMPLETE", content: cleanedMarkdown }) : serializeWithFrontmatter(title, undefined, cleanedMarkdown);
     const blob = new Blob([body], { type: format === "json" ? "application/json" : "text/markdown" });
     const url = URL.createObjectURL(blob); const anchor = document.createElement("a"); anchor.href = url; anchor.download = `${title.replace(/[^a-z0-9-_]+/gi, "-").toLowerCase()}.${format}`; anchor.click(); URL.revokeObjectURL(url);

@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 180" role="img" aria-label="Export fixture image">
+  <rect width="480" height="180" rx="18" fill="#fceacb" stroke="#c1801e" stroke-width="4"/>
+  <circle cx="90" cy="90" r="42" fill="#e8a33d"/>
+  <path d="M70 90h40M90 70v40" stroke="#1b1f3b" stroke-width="8" stroke-linecap="round"/>
+  <text x="155" y="82" fill="#1b1f3b" font-family="Georgia, serif" font-size="28">Local fixture</text>
+  <text x="155" y="117" fill="#4a4f6a" font-family="Arial, sans-serif" font-size="18">image bytes included</text>
+</svg>

@@ -19,7 +19,7 @@ import {
  * a new block is added to spec-blocks.ts without anyone deciding how it
  * should export — see the "every block is either labeled or explicitly
  * handled" test below. */
-const EXPLICITLY_HANDLED_IN_EXPORTERS = new Set(["section", "columns", "column", "diagram", "image", "gallery", "image-request", "svg"]);
+const EXPLICITLY_HANDLED_IN_EXPORTERS = new Set(["section", "columns", "column", "diagram", "image", "gallery", "image-request", "svg", "code"]);
 
 function firstBlock(source: string): MmdBlockNode {
   const doc = parseMmd(source);

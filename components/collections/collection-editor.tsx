@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input, Label, Textarea } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import type { ExportProgressHandler } from "@/lib/export/types";
 
 type ResourceType = "NOTE" | "REVIEWER" | "QUIZ";
 interface CollectionItem { id: string; resourceType: ResourceType; resourceId: string }
@@ -85,13 +86,13 @@ export function CollectionEditor({ initialCollection, access, rows }: { initialC
     finally { setSaving(false); }
   }
 
-  async function exportBook(format: string) {
+  async function exportBook(format: string, onProgress?: ExportProgressHandler) {
     if (format === "json") { window.location.href = `/api/collections/${collection.id}/export?format=json`; return; }
     const response = await fetch(`/api/collections/${collection.id}/export`);
     const data = await response.json().catch(() => null);
     if (!response.ok) { setError(data?.error ?? "Couldn't export this Book."); return; }
-    if (format === "pdf") { const { exportBookToPdf } = await import("@/lib/pdf-export"); exportBookToPdf(data.title, data.markdown, { subtitle: data.subtitle, description: data.description, author: data.ownerName }); }
-    if (format === "docx") { const { exportBookToWord } = await import("@/lib/word-export"); await exportBookToWord(data.title, data.markdown, { subtitle: data.subtitle, description: data.description, author: data.ownerName }); }
+    if (format === "pdf") { const { exportBookToPdf } = await import("@/lib/pdf-export"); await exportBookToPdf(data.title, data.markdown, { subtitle: data.subtitle, description: data.description, author: data.ownerName }, onProgress); }
+    if (format === "docx") { const { exportBookToWord } = await import("@/lib/word-export"); await exportBookToWord(data.title, data.markdown, { subtitle: data.subtitle, description: data.description, author: data.ownerName }, onProgress); }
   }
 
   async function deleteBook() {

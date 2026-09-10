@@ -1,7 +1,10 @@
+"use client";
+
 import type { ReactNode } from "react";
 import { ChevronRight } from "lucide-react";
 import type { MmdBlockNode } from "@/lib/mmd/ast";
 import { cn } from "@/lib/utils";
+import { useMmdRenderContext } from "@/components/mmd/render-context";
 
 /** :::section{title="..." subtitle="..."} — a titled section, structural
  * only (no border/background of its own) so nesting other blocks inside
@@ -62,8 +65,9 @@ export function ColumnBlock({ children }: { children: ReactNode }) {
 /** :::details{title="..."} — native <details>/<summary> for built-in
  * keyboard accessibility (Space/Enter toggles, no custom JS needed). */
 export function DetailsBlock({ node, children }: { node: MmdBlockNode; children: ReactNode }) {
+  const { mode } = useMmdRenderContext();
   return (
-    <details className="group my-4 rounded-lg border border-line bg-surface p-4">
+    <details data-export-block="details" open={mode === "export" ? true : undefined} className="group my-4 rounded-lg border border-line bg-surface p-4">
       <summary className="flex cursor-pointer list-none items-center gap-2 font-medium text-ink [&::-webkit-details-marker]:hidden">
         <ChevronRight
           className="h-4 w-4 shrink-0 text-ink-soft transition-transform group-open:rotate-90"

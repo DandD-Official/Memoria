@@ -7,6 +7,7 @@ import { isProviderConfigured } from "@/lib/integrations/config";
 import { AccountSettings } from "@/components/settings/account-settings";
 import { AiConnections } from "@/components/settings/ai-connections";
 import { DEFAULT_AI_MODELS } from "@/lib/ai/providers";
+import { isCodeThemeId } from "@/lib/mmd/code-themes";
 
 export default async function SettingsPage() {
   const user = await requireUser();
@@ -38,6 +39,7 @@ export default async function SettingsPage() {
             sidebarCollapsed: settings.sidebarCollapsed,
             compactLayout: settings.compactLayout,
             reduceMotion: settings.reduceMotion,
+            codeTheme: isCodeThemeId(settings.codeTheme) ? settings.codeTheme : "memoria-dark",
           }}
         />
       </div>

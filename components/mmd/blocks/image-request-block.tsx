@@ -52,7 +52,7 @@ export function ImageRequestPlaceholder({ node }: { node: MmdBlockNode }) {
           <p className="mt-1 text-ink">{purpose}</p>
           {mediaId && <figure className="mt-3"><img src={`/api/media/${mediaId}`} alt={alt} loading="lazy" decoding="async" className="max-h-80 rounded-lg border border-line" />{caption && <figcaption className="mt-1 text-xs text-ink-faint">{caption}</figcaption>}</figure>}
           {replaceBlock ? (
-            <div className="mt-3 flex flex-wrap items-center gap-2">
+            <div data-export-ignore className="mt-3 flex flex-wrap items-center gap-2">
               <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-md bg-action px-2.5 py-1.5 text-xs font-medium text-action-foreground has-[:disabled]:opacity-60">
                 <Upload className="h-3.5 w-3.5" />
                 {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Upload SVG or image"}

@@ -21,6 +21,7 @@ import { DiagramPlaceholder } from "@/components/mmd/blocks/diagram-block";
 import { ImageRequestPlaceholder } from "@/components/mmd/blocks/image-request-block";
 import { SvgBlock } from "@/components/mmd/blocks/svg-block";
 import { MathBlock } from "@/components/mmd/blocks/math-block";
+import { CodeBlock } from "@/components/mmd/blocks/code-block";
 
 const CALLOUT_NAMES = new Set(["note", "tip", "warning", "danger", "info", "success"]);
 
@@ -57,6 +58,8 @@ function MmdNodeRenderer({ node }: { node: MmdNode }) {
   }
 
   switch (node.block) {
+    case "code":
+      return <CodeBlock node={node} />;
     case "definition":
       return (
         <DefinitionBlock node={node}>

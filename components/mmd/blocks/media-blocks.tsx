@@ -4,16 +4,13 @@ import { useState } from "react";
 import { ImageOff, Maximize2, X } from "lucide-react";
 import type { MmdBlockNode, MmdNode } from "@/lib/mmd/ast";
 import { cn } from "@/lib/utils";
+import { useMmdRenderContext } from "@/components/mmd/render-context";
 
 /**
  * Visual assets may be external URLs or authenticated user-owned media.
- * MMD audit — no Media model, no blob storage integration). `media://`
- * ids therefore cannot be resolved to a real URL today; only external
- * http(s) URLs render. This is intentionally NOT a broken-image state —
- * it's a distinct "not available yet" placeholder so it's never confused
- * with a genuinely missing/deleted image once the media system exists.
- * Revisit once .context/diagram-system.md's "Media abstraction" section
- * is implemented.
+ * `media://<id>` references use the existing authenticated media route so
+ * the export preparation phase can fetch and embed the same bytes shown in
+ * the preview.
  */
 function resolveImageSrc(src: string): { url: string } | { unresolved: true } {
   if (src.startsWith("http://") || src.startsWith("https://")) return { url: src };
@@ -47,11 +44,26 @@ function UnresolvedImage({ alt, caption }: { alt: string; caption?: string }) {
 
 /** :::image{src="..." alt="..." caption="..." align="..." size="..."} */
 export function ImageBlock({ node }: { node: MmdBlockNode }) {
+  const { mode } = useMmdRenderContext();
   const { src, alt, caption, align = "center", size = "medium" } = node.attrs;
   const resolved = resolveImageSrc(src);
   const [open, setOpen] = useState(false);
 
   if ("unresolved" in resolved) return <UnresolvedImage alt={alt} caption={caption} />;
+
+  const image = (
+    // eslint-disable-next-line @next/next/no-img-element -- external/unknown-origin MMD image URLs, not part of the Next.js image pipeline
+    <img src={resolved.url} alt={alt} loading={mode === "export" ? "eager" : "lazy"} decoding={mode === "export" ? "sync" : "async"} className="w-full" />
+  );
+
+  if (mode === "export") {
+    return (
+      <figure data-export-block="image" className={cn("my-4", SIZE_CLASS[size] ?? SIZE_CLASS.medium, ALIGN_CLASS[align] ?? ALIGN_CLASS.center)}>
+        <div className="block w-full overflow-hidden rounded-lg border border-line">{image}</div>
+        {caption && <figcaption className="mt-1.5 text-center text-xs text-ink-soft">{caption}</figcaption>}
+      </figure>
+    );
+  }
 
   return (
     <>
@@ -63,8 +75,7 @@ export function ImageBlock({ node }: { node: MmdBlockNode }) {
           onClick={() => setOpen(true)}
           className="block w-full cursor-zoom-in overflow-hidden rounded-lg border border-line"
         >
-          {/* eslint-disable-next-line @next/next/no-img-element -- external/unknown-origin MMD image URLs, not part of the Next.js image pipeline */}
-          <img src={resolved.url} alt={alt} loading="lazy" decoding="async" className="w-full" />
+          {image}
         </button>
         {caption && <figcaption className="mt-1.5 text-center text-xs text-ink-soft">{caption}</figcaption>}
       </figure>
@@ -96,6 +107,7 @@ function extractGalleryImages(children: MmdNode[]): GalleryImage[] {
  * lightbox. Bare Markdown images and any other body text render normally
  * via InlineMarkdown alongside the grid (handled by the caller). */
 export function GalleryBlock({ node }: { node: MmdBlockNode }) {
+  const { mode } = useMmdRenderContext();
   const images = extractGalleryImages(node.children);
   const [openIndex, setOpenIndex] = useState<number | null>(null);
 
@@ -103,24 +115,26 @@ export function GalleryBlock({ node }: { node: MmdBlockNode }) {
 
   return (
     <>
-      <div className="my-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
+      <div data-export-block="gallery" className="my-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
         {images.map((img, i) => {
           const resolved = resolveImageSrc(img.src);
           if ("unresolved" in resolved) {
             return <UnresolvedImage key={i} alt={img.alt} caption={img.caption} />;
           }
-          return (
-            <button
-              key={i}
-              type="button"
-              onClick={() => setOpenIndex(i)}
-              className="group relative aspect-square overflow-hidden rounded-lg border border-line"
-            >
+          const tileContents = (
+            <>
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={resolved.url} alt={img.alt} loading="lazy" decoding="async" className="h-full w-full object-cover" />
-              <span className="absolute inset-0 flex items-center justify-center bg-ink/0 opacity-0 transition group-hover:bg-ink/20 group-hover:opacity-100">
+              <img src={resolved.url} alt={img.alt} loading={mode === "export" ? "eager" : "lazy"} decoding={mode === "export" ? "sync" : "async"} className="h-full w-full object-cover" />
+              <span data-export-ignore className="absolute inset-0 flex items-center justify-center bg-ink/0 opacity-0 transition group-hover:bg-ink/20 group-hover:opacity-100">
                 <Maximize2 className="h-5 w-5 text-white" aria-hidden="true" />
               </span>
+            </>
+          );
+          return mode === "export" ? (
+            <div key={i} className="relative aspect-square overflow-hidden rounded-lg border border-line">{tileContents}</div>
+          ) : (
+            <button key={i} type="button" onClick={() => setOpenIndex(i)} className="group relative aspect-square overflow-hidden rounded-lg border border-line">
+              {tileContents}
             </button>
           );
         })}

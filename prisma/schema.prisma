@@ -133,6 +133,7 @@ model UserSettings {
   sidebarCollapsed     Boolean    @default(false)
   compactLayout        Boolean    @default(false)
   reduceMotion         Boolean    @default(false)
+  codeTheme             String     @default("memoria-dark")
   updatedAt            DateTime   @updatedAt
 
   @@map("user_settings")

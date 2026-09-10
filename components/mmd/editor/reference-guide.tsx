@@ -7,6 +7,7 @@ import { EXAMPLE_SYNTAX } from "@/lib/mmd/ai-instructions";
 import { cn } from "@/lib/utils";
 
 const CATEGORY_LABELS: Record<BlockDefinition["category"], string> = {
+  code: "Code blocks",
   callout: "Callouts",
   educational: "Educational blocks",
   layout: "Layout",
@@ -16,6 +17,7 @@ const CATEGORY_LABELS: Record<BlockDefinition["category"], string> = {
 };
 
 const CATEGORY_ORDER: BlockDefinition["category"][] = [
+  "code",
   "callout",
   "educational",
   "layout",

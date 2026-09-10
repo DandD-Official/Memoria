@@ -15,6 +15,7 @@ import { BLOCK_DEFS, type BlockDefinition } from "@/lib/mmd/spec-blocks";
  */
 
 const CATEGORY_ORDER: BlockDefinition["category"][] = [
+  "code",
   "callout",
   "educational",
   "layout",
@@ -24,6 +25,7 @@ const CATEGORY_ORDER: BlockDefinition["category"][] = [
 ];
 
 const CATEGORY_HEADINGS: Record<BlockDefinition["category"], string> = {
+  code: "Code blocks",
   callout: "Callouts",
   educational: "Educational blocks",
   layout: "Layout",
@@ -38,6 +40,7 @@ const CATEGORY_HEADINGS: Record<BlockDefinition["category"], string> = {
  * and required-ness still come from BLOCK_DEFS, so the two can't drift
  * on what attributes exist, only on the example wording. */
 export const EXAMPLE_SYNTAX: Record<string, string> = {
+  code: ':::code{language="typescript" title="Example"}\nconst answer = 42;\nconsole.log(answer);\n:::',
   note: ':::note\nUseful additional information.\n:::',
   tip: ':::tip\nA helpful shortcut or piece of advice.\n:::',
   warning: ':::warning{title="Exam Reminder"}\nSomething the reader should be careful about.\n:::',
@@ -102,7 +105,7 @@ export function buildMmdOutputRules(): string {
 
 Your output must use standard Markdown and the supported Memoria Markdown (MMD) extensions below.
 
-Use normal Markdown ("# Heading", "**bold**", "- item", tables, etc.) for ordinary document structure.
+Use normal Markdown ("# Heading", "**bold**", "- item", tables, etc.) for ordinary document structure. For source code, use the editable :::code block with a language attribute instead of a triple-backtick fence so Memoria can show line numbers, syntax colors, and preserved indentation.
 
 Use a Memoria Markdown block ONLY when it meaningfully improves organization, comprehension, or learning. A normal, well-structured Markdown document is a perfectly good result — do not force every paragraph into a callout, card, or section just because these blocks exist.
 

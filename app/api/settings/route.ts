@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { requireUserOrNull } from "@/lib/auth/session";
 import { withApiErrorHandling } from "@/lib/api/handler";
+import { CODE_THEME_IDS } from "@/lib/mmd/code-themes";
 
 const updateSettingsSchema = z.object({
   appearance: z.enum(["LIGHT", "DARK", "SYSTEM"]).optional(),
@@ -15,6 +16,7 @@ const updateSettingsSchema = z.object({
   sidebarCollapsed: z.boolean().optional(),
   compactLayout: z.boolean().optional(),
   reduceMotion: z.boolean().optional(),
+  codeTheme: z.enum(CODE_THEME_IDS).optional(),
 });
 
 export const GET = withApiErrorHandling(async () => {
