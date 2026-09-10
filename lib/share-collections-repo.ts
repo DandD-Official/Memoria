@@ -37,21 +37,21 @@ export async function findCollectionForOwner(ownerId: string, id: string) {
 
 export type BookAccess = Extract<Permission, "VIEW" | "EDIT" | "OWNER">;
 
-export function resolveBookAccess(input: { viewerUserId?: string; ownerId: string; memberPermission?: Permission; isPublished: boolean; linkPermission: Permission }): BookAccess | null {
+export function resolveBookAccess(input: { viewerUserId?: string; ownerId: string; memberPermission?: Permission; isPublished: boolean; linkPermission: Permission; linkRequiresPassword?: boolean }): BookAccess | null {
   if (input.viewerUserId === input.ownerId) return "OWNER";
   if (input.memberPermission === "EDIT") return "EDIT";
   if (input.memberPermission === "VIEW") return "VIEW";
   if (!input.isPublished) return null;
-  return input.linkPermission === "EDIT" ? "EDIT" : "VIEW";
+  return input.linkPermission === "EDIT" && !input.linkRequiresPassword ? "EDIT" : "VIEW";
 }
 
 export async function getBookAccess(userId: string, id: string): Promise<BookAccess | null> {
   const book = await prisma.shareCollection.findUnique({
     where: { id },
-    select: { ownerId: true, isPublished: true, linkPermission: true, members: { where: { userId }, select: { permission: true } } },
+    select: { ownerId: true, isPublished: true, linkPermission: true, passwordHash: true, members: { where: { userId }, select: { permission: true } } },
   });
   if (!book) return null;
-  return resolveBookAccess({ viewerUserId: userId, ownerId: book.ownerId, memberPermission: book.members[0]?.permission, isPublished: book.isPublished, linkPermission: book.linkPermission });
+  return resolveBookAccess({ viewerUserId: userId, ownerId: book.ownerId, memberPermission: book.members[0]?.permission, isPublished: book.isPublished, linkPermission: book.linkPermission, linkRequiresPassword: Boolean(book.passwordHash) });
 }
 
 export async function findCollectionForEditor(userId: string, id: string) {
@@ -61,7 +61,13 @@ export async function findCollectionForEditor(userId: string, id: string) {
       OR: [
         { ownerId: userId },
         { members: { some: { userId, permission: "EDIT" } } },
-        { isPublished: true, linkPermission: "EDIT" },
+        {
+          isPublished: true,
+          linkPermission: "EDIT",
+          passwordHash: null,
+          OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
+          members: { none: { userId, permission: "VIEW" } },
+        },
       ],
     },
     include: { items: { orderBy: { position: "asc" } }, members: { include: { user: { select: { name: true, email: true } } }, orderBy: { createdAt: "asc" } } },
@@ -74,7 +80,9 @@ export async function getCollectionEditorData(userId: string, id: string) {
   const collection = await findCollectionForEditor(userId, id);
   if (!collection) return { collection: null, access: null, rows: { NOTE: [], REVIEWER: [], QUIZ: [] } };
 
-  const access: BookAccess = collection.ownerId === userId ? "OWNER" : "EDIT";
+  const memberPermission = collection.members.find((member) => member.userId === userId)?.permission;
+  const access = resolveBookAccess({ viewerUserId: userId, ownerId: collection.ownerId, memberPermission, isPublished: collection.isPublished, linkPermission: collection.linkPermission, linkRequiresPassword: Boolean(collection.passwordHash) });
+  if (access !== "OWNER" && access !== "EDIT") return { collection: null, access: null, rows: { NOTE: [], REVIEWER: [], QUIZ: [] } };
   const includedIds = (type: ResourceType) => collection.items.filter((item) => item.resourceType === type).map((item) => item.resourceId);
   const ownerFilter = access === "OWNER" ? { ownerId: collection.ownerId } : undefined;
   const [notes, reviewers, quizzes] = await Promise.all([
@@ -207,7 +215,7 @@ export async function getPublicCollectionBySlug(slug: string, allowProtected = f
   const memberPermission = "members" in collection && Array.isArray(collection.members) ? collection.members[0]?.permission : undefined;
   const isPrivateAccess = collection.ownerId === viewerUserId || Boolean(memberPermission);
   if ((!collection.isPublished && !isPrivateAccess) || (collection.expiresAt && collection.expiresAt <= new Date()) || (collection.passwordHash && !allowProtected && !isPrivateAccess)) return null;
-  const viewerPermission = resolveBookAccess({ viewerUserId, ownerId: collection.ownerId, memberPermission, isPublished: collection.isPublished, linkPermission: collection.linkPermission });
+  const viewerPermission = resolveBookAccess({ viewerUserId, ownerId: collection.ownerId, memberPermission, isPublished: collection.isPublished, linkPermission: collection.linkPermission, linkRequiresPassword: Boolean(collection.passwordHash) });
   if (!viewerPermission) return null;
 
   const noteIds = collection.items.filter((i) => i.resourceType === "NOTE").map((i) => i.resourceId);

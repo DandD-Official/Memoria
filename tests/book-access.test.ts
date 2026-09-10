@@ -16,4 +16,9 @@ describe("Book access", () => {
     expect(resolveBookAccess({ viewerUserId: "visitor", ownerId: "owner", isPublished: true, linkPermission: "EDIT" })).toBe("EDIT");
     expect(resolveBookAccess({ viewerUserId: "visitor", ownerId: "owner", isPublished: false, linkPermission: "EDIT" })).toBeNull();
   });
+
+  it("does not grant public editor access through a password-protected link", () => {
+    expect(resolveBookAccess({ viewerUserId: "visitor", ownerId: "owner", isPublished: true, linkPermission: "EDIT", linkRequiresPassword: true })).toBe("VIEW");
+    expect(resolveBookAccess({ viewerUserId: "editor", ownerId: "owner", memberPermission: "EDIT", isPublished: true, linkPermission: "EDIT", linkRequiresPassword: true })).toBe("EDIT");
+  });
 });

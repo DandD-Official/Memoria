@@ -39,11 +39,17 @@ export function BookShareDialog(props: BookShareDialogProps) {
   async function updateBook(body: Record<string, unknown>) {
     setBusy("link");
     setError(null);
-    const response = await fetch(`/api/collections/${props.bookId}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-    const data = await response.json().catch(() => null);
-    setBusy(null);
-    if (!response.ok) { setError(data?.error ?? "Couldn't update sharing."); return false; }
-    return true;
+    try {
+      const response = await fetch(`/api/collections/${props.bookId}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+      const data = await response.json().catch(() => null);
+      if (!response.ok) { setError(data?.error ?? "Couldn't update sharing."); return false; }
+      return true;
+    } catch {
+      setError("We couldn't reach the server. Check your connection and try again.");
+      return false;
+    } finally {
+      setBusy(null);
+    }
   }
 
   async function setLinkEnabled(enabled: boolean) {
@@ -107,8 +113,8 @@ export function BookShareDialog(props: BookShareDialogProps) {
         <div className="mt-5 space-y-4">
           <div className="flex items-start justify-between gap-4 rounded-card border border-line bg-surface p-4">
             <div><p className="text-sm font-semibold text-ink">Anyone with the link</p><p className="mt-1 text-xs leading-relaxed text-ink-soft">{props.linkEnabled ? "The link is active." : "Only people already added to the Book can open it."}</p></div>
-            <button type="button" role="switch" aria-checked={props.linkEnabled} disabled={busy === "link"} onClick={() => void setLinkEnabled(!props.linkEnabled)} className={cn("relative mt-0.5 h-6 w-11 shrink-0 rounded-full transition-colors", props.linkEnabled ? "bg-action" : "bg-ink/20")}>
-              <span className={cn("absolute top-1 h-4 w-4 rounded-full bg-white shadow-sm transition-transform", props.linkEnabled ? "translate-x-6" : "translate-x-1")} />
+            <button type="button" role="switch" aria-checked={props.linkEnabled} disabled={busy === "link"} onClick={() => void setLinkEnabled(!props.linkEnabled)} className={cn("relative mt-0.5 h-6 w-11 shrink-0 rounded-full transition-colors focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-paper disabled:cursor-wait disabled:opacity-60", props.linkEnabled ? "bg-action" : "bg-ink/20")}>
+              <span className={cn("absolute left-0 top-1 h-4 w-4 rounded-full bg-white shadow-sm transition-transform", props.linkEnabled ? "translate-x-6" : "translate-x-1")} />
               <span className="sr-only">{props.linkEnabled ? "Disable link" : "Enable link"}</span>
             </button>
           </div>
