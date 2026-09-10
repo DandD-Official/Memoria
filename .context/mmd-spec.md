@@ -38,7 +38,8 @@ Rules:
   (`:::image{...}\n:::`) — there is no separate self-closing syntax, to
   keep exactly one grammar rule for "block."
 - Nesting: a block's body may contain other MMD blocks **one level deep**
-  only, except `:::section` and `:::columns`/`:::column`, which may
+  only, with `:::code` allowed as a focused nested example in content
+  blocks. `:::section` and `:::columns`/`:::column` may
   contain any other block type (including each other) up to a hard depth
   limit of 4. This bounds worst-case recursive-parser and renderer cost
   and keeps deeply nested content from becoming fragile, per the brief.
@@ -58,14 +59,16 @@ marker in v1 — added only if/when v2 introduces a breaking change.
 ### Callouts
 `:::note`, `:::tip`, `:::warning`, `:::danger`, `:::info`, `:::success`
 - Attributes: `title` (optional, string).
-- Body: Markdown + nested callouts/definitions/examples one level deep.
+- Body: Markdown + nested callouts/definitions/examples/code one level deep.
 
 ### Educational blocks
-- `:::definition{term="..."}` — `term` **required**.
-- `:::key-concept` — no required attributes.
-- `:::example{title="..."}` — `title` optional.
-- `:::important` — no required attributes.
-- `:::summary` — no required attributes.
+- `:::definition{term="..."}` — `term` **required**; may contain one nested
+  `:::code` block for a focused example.
+- `:::key-concept` — no required attributes; may contain one nested `:::code`.
+- `:::example{title="..."}` — `title` optional; may contain one nested
+  `:::code` block.
+- `:::important` and `:::summary` — no required attributes; each may contain
+  one nested `:::code` block.
 
 ### Math
 - `:::math{formula="..."}` — renders a safe LaTeX-style mathematical
@@ -79,7 +82,8 @@ marker in v1 — added only if/when v2 introduces a breaking change.
 - `:::card{title="..." subtitle="..." icon="..." type="..."}` — all
   attributes optional. `type` is a closed enum (`default`, `outline`,
   `highlight`) purely for visual variant — no behavioral effect, to obey
-  "only attributes with a real implementation purpose."
+  "only attributes with a real implementation purpose." Cards may contain
+  a nested `:::code` block alongside their other supported content.
 - `:::columns` containing exactly `:::column` children (2–3 columns);
   anything else inside `:::columns` other than `:::column` blocks and
   whitespace is a validation error for that block (falls back per §7).
@@ -142,10 +146,10 @@ block:
 ## 6. Nesting rules (summary table)
 | Block | Can contain |
 |---|---|
-| note/tip/warning/danger/info/success | Markdown, definition, key-concept, example, important, summary (1 level) |
-| definition/key-concept/example/important/summary | Markdown only (no nested custom blocks) |
+| note/tip/warning/danger/info/success | Markdown, definition, key-concept, example, important, summary, code (1 level) |
+| definition/key-concept/example/important/summary | Markdown and code (1 level) |
 | section | any block, depth ≤ 4 |
-| card | Markdown, callouts, definition/example (1 level) |
+| card | Markdown, callouts, definition/example, code (1 level) |
 | columns | column (only) |
 | column | any block except columns (depth ≤ 4, shares section's limit) |
 | details | any block, depth ≤ 4 |

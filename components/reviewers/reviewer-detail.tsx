@@ -12,7 +12,7 @@ import { MarkdownEditor } from "@/components/markdown/editor";
 import { ShareDialog } from "@/components/sharing/share-dialog";
 import { DeleteReviewerButton } from "@/components/reviewers/delete-reviewer-button";
 import { formatDate } from "@/lib/utils";
-import { ResourceActions } from "@/components/library/resource-actions";
+import { ResourceDetailActions, ResourceFavoriteButton, ResourceUtilityActions } from "@/components/library/resource-actions";
 import { TagEditor } from "@/components/library/tag-editor";
 import { RevisionHistory } from "@/components/library/revision-history";
 import { ExportMenu } from "@/components/exports/export-menu";
@@ -81,25 +81,26 @@ export function ReviewerDetail({ reviewer, isOwner, autoSave }: ReviewerDetailPr
         <ArrowLeft className="h-4 w-4" /> Back to reviewers
       </Link>
 
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <Badge tone="accent">{reviewer.style}</Badge>
-        <div className="flex flex-wrap items-center justify-end gap-2">
-          <ExportMenu options={[{ value: "pdf", label: "PDF document" }, { value: "docx", label: "Word document" }, { value: "md", label: "Markdown" }, { value: "json", label: "Memoria JSON" }]} onExport={handleExport} />
-          <Link
-            href={`/quizzes?fromReviewer=${reviewer.id}`}
-            className="inline-flex h-8 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg bg-accent px-3 text-sm font-medium text-ink hover:bg-accent-dark hover:text-white"
-          >
-            <Sparkles className="h-3.5 w-3.5" /> Create quiz
-          </Link>
-          {isOwner && !editing && (
-            <Button variant="outline" size="sm" onClick={() => setEditing(true)}>
-              <Pencil className="h-3.5 w-3.5" /> Edit
-            </Button>
-          )}
-          {isOwner && <ShareDialog resourceType="REVIEWER" resourceId={reviewer.id} />}
-          {isOwner && <ResourceActions resourceType="REVIEWER" resourceId={reviewer.id} archived={reviewer.archived} favorite={reviewer.favorite} />}
-          {isOwner && <RevisionHistory resourceType="REVIEWER" resourceId={reviewer.id} />}
-          {isOwner && <DeleteReviewerButton reviewerId={reviewer.id} />}
+      <div className="mb-7 border-b border-line pb-5">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0">
+            <Badge tone="accent">{reviewer.style}</Badge>
+            {!editing && <h1 className="mt-3 break-words font-display text-2xl text-ink">{title}</h1>}
+            {!editing && reviewer.description && <p className="mt-1 text-ink-soft">{reviewer.description}</p>}
+            {!editing && <p className="mt-1 text-xs text-ink-faint">Last updated {formatDate(reviewer.updatedAt)}{reviewer.noteCount > 0 && ` · Built from ${reviewer.noteCount} ${reviewer.noteCount === 1 ? "note" : "notes"}`}</p>}
+          </div>
+          <ResourceDetailActions
+            edit={isOwner && !editing ? <Button variant="primary" size="sm" onClick={() => setEditing(true)}><Pencil className="h-3.5 w-3.5" /> Edit</Button> : undefined}
+            study={<Link href={`/quizzes?fromReviewer=${reviewer.id}`} className="inline-flex min-h-9 w-full items-center gap-1.5 rounded-control bg-accent px-3 text-sm font-medium text-ink hover:bg-accent-dark hover:text-white"><Sparkles className="h-3.5 w-3.5" /> Create quiz</Link>}
+            favorite={isOwner ? <ResourceFavoriteButton resourceType="REVIEWER" resourceId={reviewer.id} favorite={reviewer.favorite} /> : <span />}
+            share={isOwner ? <ShareDialog resourceType="REVIEWER" resourceId={reviewer.id} /> : undefined}
+            tools={<>
+              <ExportMenu options={[{ value: "pdf", label: "PDF document" }, { value: "docx", label: "Word document" }, { value: "md", label: "Markdown" }, { value: "json", label: "Memoria JSON" }]} onExport={handleExport} />
+              {isOwner && <ResourceUtilityActions resourceType="REVIEWER" resourceId={reviewer.id} archived={reviewer.archived} />}
+              {isOwner && <RevisionHistory resourceType="REVIEWER" resourceId={reviewer.id} />}
+              {isOwner && <DeleteReviewerButton reviewerId={reviewer.id} />}
+            </>}
+          />
         </div>
       </div>
 
@@ -116,14 +117,7 @@ export function ReviewerDetail({ reviewer, isOwner, autoSave }: ReviewerDetailPr
         </>
       ) : (
         <>
-          <h1 className="break-words font-display text-2xl text-ink">{title}</h1>
           {isOwner && <TagEditor resourceType="REVIEWER" resourceId={reviewer.id} />}
-          {reviewer.description && <p className="mt-1 text-ink-soft">{reviewer.description}</p>}
-          <p className="mt-1 text-xs text-ink-faint">
-            Last updated {formatDate(reviewer.updatedAt)}
-            {reviewer.noteCount > 0 && ` · Built from ${reviewer.noteCount} ${reviewer.noteCount === 1 ? "note" : "notes"}`}
-          </p>
-
           <div className="mt-6 border-t border-line pt-6">
             <MarkdownRenderer content={content} />
           </div>

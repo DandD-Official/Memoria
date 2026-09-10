@@ -34,4 +34,38 @@ describe("editable MMD code blocks", () => {
   it("exposes the supported settings themes", () => {
     expect(CODE_THEME_IDS).toEqual(["memoria-dark", "github-light", "dracula", "solarized-light"]);
   });
+
+  it.each([
+    ["note", ":::note\nA note with a runnable example.\n:::code{language=\"typescript\"}\nconst answer = 42;\n:::\n:::"],
+    ["card", ":::card{title=\"Example\"}\n:::code{language=\"typescript\"}\nconst answer = 42;\n:::\n:::"],
+    ["definition", ":::definition{term=\"Answer\"}\n:::code{language=\"typescript\"}\nconst answer = 42;\n:::\n:::"],
+    ["section", ":::section{title=\"Example\"}\n:::code{language=\"typescript\"}\nconst answer = 42;\n:::\n:::"],
+    ["details", ":::details{title=\"Show example\"}\n:::code{language=\"typescript\"}\nconst answer = 42;\n:::\n:::"],
+  ])("supports a code block inside a %s block", (parent, source) => {
+    const document = parseMmd(source);
+    expect(document.children[0]).toMatchObject({ type: "block", block: parent });
+    expect(document.children[0]).not.toMatchObject({ type: "mmd-error" });
+    if (document.children[0]?.type === "block") {
+      expect(document.children[0].children.some((child) => child.type === "block" && child.block === "code")).toBe(true);
+    }
+  });
+
+  it("supports code inside a column without invalidating the columns layout", () => {
+    const document = parseMmd([
+      ":::columns",
+      ":::column",
+      ":::code{language=\"typescript\"}",
+      "const left = true;",
+      ":::",
+      ":::",
+      ":::column",
+      ":::code{language=\"typescript\"}",
+      "const right = true;",
+      ":::",
+      ":::",
+      ":::",
+    ].join("\n"));
+    expect(document.children[0]).toMatchObject({ type: "block", block: "columns" });
+    expect(document.children[0]).not.toMatchObject({ type: "mmd-error" });
+  });
 });

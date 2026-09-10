@@ -75,7 +75,12 @@ export interface BlockDefinition {
 const CALLOUT_NAMES = ["note", "tip", "warning", "danger", "info", "success"] as const;
 const CALLOUT_CHILD_POLICY: ChildPolicy = {
   kind: "restricted",
-  allow: ["definition", "key-concept", "example", "important", "summary"],
+  allow: ["definition", "key-concept", "example", "important", "summary", "code"],
+};
+
+const EDUCATIONAL_CHILD_POLICY: ChildPolicy = {
+  kind: "restricted",
+  allow: ["code"],
 };
 
 const CALLOUT_DESCRIPTIONS: Record<(typeof CALLOUT_NAMES)[number], string> = {
@@ -125,7 +130,7 @@ export const BLOCK_DEFS: Record<string, BlockDefinition> = {
     description: "Defines a single term. Requires `term`.",
     attrs: { term: safeString(200) },
     requiredAttrs: ["term"],
-    childPolicy: { kind: "leaf" },
+    childPolicy: EDUCATIONAL_CHILD_POLICY,
   },
   "key-concept": {
     name: "key-concept",
@@ -133,7 +138,7 @@ export const BLOCK_DEFS: Record<string, BlockDefinition> = {
     description: "Flags an idea that is central to the topic.",
     attrs: {},
     requiredAttrs: [],
-    childPolicy: { kind: "leaf" },
+    childPolicy: EDUCATIONAL_CHILD_POLICY,
   },
   example: {
     name: "example",
@@ -141,7 +146,7 @@ export const BLOCK_DEFS: Record<string, BlockDefinition> = {
     description: "A worked example illustrating a concept.",
     attrs: { title: safeString(200).optional() },
     requiredAttrs: [],
-    childPolicy: { kind: "leaf" },
+    childPolicy: EDUCATIONAL_CHILD_POLICY,
   },
   important: {
     name: "important",
@@ -149,7 +154,7 @@ export const BLOCK_DEFS: Record<string, BlockDefinition> = {
     description: "Content that frequently appears in exams or is easy to forget.",
     attrs: {},
     requiredAttrs: [],
-    childPolicy: { kind: "leaf" },
+    childPolicy: EDUCATIONAL_CHILD_POLICY,
   },
   summary: {
     name: "summary",
@@ -157,7 +162,7 @@ export const BLOCK_DEFS: Record<string, BlockDefinition> = {
     description: "A short recap of the preceding section.",
     attrs: {},
     requiredAttrs: [],
-    childPolicy: { kind: "leaf" },
+    childPolicy: EDUCATIONAL_CHILD_POLICY,
   },
   math: {
     name: "math",
@@ -190,7 +195,7 @@ export const BLOCK_DEFS: Record<string, BlockDefinition> = {
     requiredAttrs: [],
     childPolicy: {
       kind: "restricted",
-      allow: ["note", "tip", "warning", "danger", "info", "success", "definition", "example"],
+      allow: ["note", "tip", "warning", "danger", "info", "success", "definition", "example", "code"],
     },
   },
   columns: {

@@ -12,7 +12,7 @@ import { ShareDialog } from "@/components/sharing/share-dialog";
 import { MarkdownEditor } from "@/components/markdown/editor";
 import { MarkdownRenderer } from "@/components/markdown/renderer";
 import { formatDate } from "@/lib/utils";
-import { ResourceActions } from "@/components/library/resource-actions";
+import { ResourceDetailActions, ResourceFavoriteButton, ResourceUtilityActions } from "@/components/library/resource-actions";
 import { TagEditor } from "@/components/library/tag-editor";
 import { RevisionHistory } from "@/components/library/revision-history";
 import { ExportMenu } from "@/components/exports/export-menu";
@@ -100,38 +100,28 @@ export function NoteDetail({ note, canEdit, isOwner, autoSave }: NoteDetailProps
         <ArrowLeft className="h-4 w-4" /> Back to notes
       </Link>
 
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <Badge tone="neutral">{note.sourceType}</Badge>
-        <div className="flex flex-wrap items-center justify-end gap-2">
-          {canEdit && !isEditing && (
-            <Button variant="primary" size="sm" className="shrink-0 whitespace-nowrap" onClick={() => { setSaved(false); setIsEditing(true); }}>
-              <Pencil className="h-3.5 w-3.5" /> Edit note
-            </Button>
-          )}
-          <ExportMenu options={[{ value: "pdf", label: "PDF document" }, { value: "docx", label: "Word document" }, { value: "md", label: "Markdown" }, { value: "json", label: "Memoria JSON" }]} onExport={handleExport} />
-          <Button variant="secondary" size="sm" className="shrink-0 whitespace-nowrap" onClick={() => router.push(`/reviewers?fromNote=${note.id}`)}>
-            <Sparkles className="h-3.5 w-3.5" /> Build reviewer
-          </Button>
-          <Button variant="secondary" size="sm" className="shrink-0 whitespace-nowrap" onClick={() => router.push(`/quizzes?fromNote=${note.id}`)}>
-            <ListChecks className="h-3.5 w-3.5" /> Create quiz
-          </Button>
-          {isOwner && <ShareDialog resourceType="NOTE" resourceId={note.id} />}
-          {isOwner && <ResourceActions resourceType="NOTE" resourceId={note.id} archived={note.archived} favorite={note.favorite} />}
-          {isOwner && <RevisionHistory resourceType="NOTE" resourceId={note.id} />}
-          {isOwner && (
-            <ConfirmDialog
-              trigger={
-                <Button variant="ghost" size="sm">
-                  <Trash2 className="h-3.5 w-3.5 text-danger" />
-                </Button>
-              }
-              title="Delete this note?"
-              description="This can't be undone. Reviewers built from this note will keep their content."
-              confirmLabel="Delete"
-              destructive
-              onConfirm={handleDelete}
-            />
-          )}
+      <div className="mb-7 border-b border-line pb-5">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0">
+            <Badge tone="neutral">{note.sourceType}</Badge>
+            {!isEditing && <h1 className="mt-3 break-words font-display text-2xl text-ink">{title}</h1>}
+            {!isEditing && <p className="mt-1 text-xs text-ink-faint">Last updated {formatDate(note.updatedAt)}</p>}
+          </div>
+          <ResourceDetailActions
+            edit={canEdit && !isEditing ? <Button variant="primary" size="sm" onClick={() => { setSaved(false); setIsEditing(true); }}><Pencil className="h-3.5 w-3.5" /> Edit</Button> : undefined}
+            study={<>
+              <Button variant="secondary" size="sm" onClick={() => router.push(`/reviewers?fromNote=${note.id}`)}><Sparkles className="h-3.5 w-3.5" /> Build reviewer</Button>
+              <Button variant="secondary" size="sm" onClick={() => router.push(`/quizzes?fromNote=${note.id}`)}><ListChecks className="h-3.5 w-3.5" /> Create quiz</Button>
+            </>}
+            favorite={isOwner ? <ResourceFavoriteButton resourceType="NOTE" resourceId={note.id} favorite={note.favorite} /> : <span />}
+            share={isOwner ? <ShareDialog resourceType="NOTE" resourceId={note.id} /> : undefined}
+            tools={<>
+              <ExportMenu options={[{ value: "pdf", label: "PDF document" }, { value: "docx", label: "Word document" }, { value: "md", label: "Markdown" }, { value: "json", label: "Memoria JSON" }]} onExport={handleExport} />
+              {isOwner && <ResourceUtilityActions resourceType="NOTE" resourceId={note.id} archived={note.archived} />}
+              {isOwner && <RevisionHistory resourceType="NOTE" resourceId={note.id} />}
+              {isOwner && <ConfirmDialog trigger={<Button variant="ghost" size="sm"><Trash2 className="h-3.5 w-3.5 text-danger" /> Delete</Button>} title="Delete this note?" description="This can't be undone. Reviewers built from this note will keep their content." confirmLabel="Delete" destructive onConfirm={handleDelete} />}
+            </>}
+          />
         </div>
       </div>
 
@@ -152,9 +142,7 @@ export function NoteDetail({ note, canEdit, isOwner, autoSave }: NoteDetailProps
         </>
       ) : (
         <>
-          <h1 className="break-words font-display text-2xl text-ink">{title}</h1>
-          <p className="mt-1 text-xs text-ink-faint">Last updated {formatDate(note.updatedAt)}</p>
-          <div className="mt-4 rounded-card border border-line bg-surface p-6">
+          <div className="rounded-card border border-line bg-surface p-6">
             <MarkdownRenderer content={content} />
           </div>
         </>
