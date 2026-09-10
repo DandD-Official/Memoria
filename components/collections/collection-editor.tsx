@@ -16,7 +16,7 @@ type ResourceType = "NOTE" | "REVIEWER" | "QUIZ";
 interface CollectionItem { id: string; resourceType: ResourceType; resourceId: string }
 interface Collection {
   id: string; title: string; subtitle: string | null; description: string | null; tocTitle: string;
-  slug: string; isPublished: boolean; linkPermission: BookSharePermission; expiresAt: string | null;
+  slug: string; isPublished: boolean; linkPermission: BookSharePermission; allowExport: boolean; expiresAt: string | null;
   passwordProtected: boolean; items: CollectionItem[]; members: BookMember[];
 }
 interface PickerRow { id: string; title: string }
@@ -27,7 +27,7 @@ const TABS: { type: ResourceType; label: string; icon: typeof FileText }[] = [
   { type: "QUIZ", label: "Quizzes", icon: ListChecks },
 ];
 
-export function CollectionEditor({ initialCollection, access, rows }: { initialCollection: Collection; access: "OWNER" | "EDIT"; rows: Record<ResourceType, PickerRow[]> }) {
+export function CollectionEditor({ initialCollection, access, canExport, rows }: { initialCollection: Collection; access: "OWNER" | "EDIT"; canExport: boolean; rows: Record<ResourceType, PickerRow[]> }) {
   const router = useRouter();
   const [collection, setCollection] = useState(initialCollection);
   const [tab, setTab] = useState<ResourceType>("NOTE");
@@ -106,7 +106,7 @@ export function CollectionEditor({ initialCollection, access, rows }: { initialC
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <Link href="/books" className="inline-flex min-h-10 items-center gap-2 text-sm font-medium text-ink-soft hover:text-ink"><ArrowLeft className="h-4 w-4" />All Books</Link>
         <div className="flex items-center gap-2">
-          <ExportMenu options={[{ value: "pdf", label: "PDF document" }, { value: "docx", label: "Word document" }, { value: "json", label: "Memoria JSON" }]} onExport={exportBook} />
+          {canExport && <ExportMenu options={[{ value: "pdf", label: "PDF document" }, { value: "docx", label: "Word document" }, { value: "json", label: "Memoria JSON" }]} onExport={exportBook} />}
           {isOwner && <Button size="sm" onClick={() => setShareOpen(true)}><Share2 className="h-4 w-4" />Share</Button>}
         </div>
       </div>
@@ -151,7 +151,7 @@ export function CollectionEditor({ initialCollection, access, rows }: { initialC
         <div className="mt-5 space-y-4"><div><Label htmlFor="book-title">Title</Label><Input id="book-title" value={title} onChange={(event) => setTitle(event.target.value)} /></div><div><Label htmlFor="book-subtitle">Subtitle (optional)</Label><Input id="book-subtitle" value={subtitle} onChange={(event) => setSubtitle(event.target.value)} placeholder="A short line beneath the title" /></div><div><Label htmlFor="book-toc-title">Contents heading</Label><Input id="book-toc-title" value={tocTitle} onChange={(event) => setTocTitle(event.target.value)} /></div><div><Label htmlFor="book-description">Description</Label><Textarea id="book-description" rows={5} value={description} onChange={(event) => setDescription(event.target.value)} /></div><Button className="w-full" loading={saving} disabled={!title.trim() || !tocTitle.trim()} onClick={() => void saveDetails()}>Save details</Button></div>
         {isOwner && <div className="mt-8 border-t border-line pt-5"><p className="text-sm font-medium text-ink">Danger zone</p><p className="mt-1 text-sm text-ink-soft">Deleting a Book cannot be undone.</p><Button variant="ghost" className="mt-3 text-danger hover:bg-danger/10" onClick={() => void deleteBook()}><Trash2 className="h-4 w-4" />Delete Book</Button></div>}
       </section>}
-      {isOwner && <BookShareDialog bookId={collection.id} publicPath={publicPath} open={shareOpen} onOpenChange={setShareOpen} linkEnabled={collection.isPublished} linkPermission={collection.linkPermission} passwordProtected={collection.passwordProtected} members={collection.members} onChanged={(changes) => setCollection((current) => ({ ...current, ...(changes.linkEnabled === undefined ? {} : { isPublished: changes.linkEnabled }), ...(changes.linkPermission === undefined ? {} : { linkPermission: changes.linkPermission }), ...(changes.passwordProtected === undefined ? {} : { passwordProtected: changes.passwordProtected }), ...(changes.members === undefined ? {} : { members: changes.members }) }))} />}
+      {isOwner && <BookShareDialog bookId={collection.id} publicPath={publicPath} open={shareOpen} onOpenChange={setShareOpen} linkEnabled={collection.isPublished} linkPermission={collection.linkPermission} linkAllowExport={collection.allowExport} passwordProtected={collection.passwordProtected} members={collection.members} onChanged={(changes) => setCollection((current) => ({ ...current, ...(changes.linkEnabled === undefined ? {} : { isPublished: changes.linkEnabled }), ...(changes.linkPermission === undefined ? {} : { linkPermission: changes.linkPermission }), ...(changes.linkAllowExport === undefined ? {} : { allowExport: changes.linkAllowExport }), ...(changes.passwordProtected === undefined ? {} : { passwordProtected: changes.passwordProtected }), ...(changes.members === undefined ? {} : { members: changes.members }) }))} />}
     </div>
   );
 }

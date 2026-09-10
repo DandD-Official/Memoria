@@ -27,7 +27,8 @@ methods support `VIEW` and `EDIT`. User-facing copy must never call link sharing
 The UI still uses the additive `ShareCollection*` compatibility tables while the
 future dedicated Book migration is prepared. This preserves all existing data and
 public slugs. The compatibility additions are `subtitle`, `tocTitle`,
-`linkPermission`, `isFavorite`, member `permission`, and
+`linkPermission`, link `allowExport`, `isFavorite`, member `permission`,
+member `allowExport`, and
 `ShareCollectionProgress` for per-user last chapter and access time.
 
 Do not remove or rename the legacy API paths or export payload format until a
@@ -39,6 +40,9 @@ separate data migration has copied and verified every existing row.
 - An added person resolves to their stored `VIEW` or `EDIT`, even while the link
   is disabled.
 - A non-member receives the link permission only while the link is enabled.
+- Export is a separate capability: owners can allow it for the public link and
+  independently for each invited account. Existing member rows preserve their
+  previous export behavior; new invitations default to no export access.
 - Link editors must sign into Memoria to mutate a Book. Anonymous visitors can
   read an enabled link but cannot issue authenticated editor mutations.
 - Only owners may change sharing, members, favorites, passwords/expiry, or delete
@@ -56,6 +60,7 @@ the Book resumes at that chapter and the contents page marks it as Continue.
 Book PDF and DOCX exports use dedicated cover-page templates followed by the
 custom contents heading and chapters in Book order. The internal JSON export
 keeps the legacy `memoria-collection-export` format identifier for compatibility.
+Export endpoints enforce the same link/member capability checks as the UI.
 
 ## Migration
 

@@ -604,6 +604,7 @@ model ShareCollection {
   tocTitle     String    @default("Contents")
   isPublished  Boolean   @default(false)
   linkPermission Permission @default(VIEW)
+  allowExport  Boolean   @default(true)
   isFavorite   Boolean   @default(false)
   passwordHash Bytes?
   expiresAt    DateTime?
@@ -626,6 +627,7 @@ model ShareCollectionMember {
   userId       String
   user         User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   permission   Permission      @default(VIEW)
+  allowExport  Boolean         @default(false)
   createdAt    DateTime        @default(now())
 
   @@unique([collectionId, userId])

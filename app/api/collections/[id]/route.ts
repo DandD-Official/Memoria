@@ -12,6 +12,7 @@ const updateSchema = z.object({
   tocTitle: z.string().min(1).max(80).optional(),
   isPublished: z.boolean().optional(),
   linkPermission: z.enum(["VIEW", "EDIT"]).optional(),
+  allowExport: z.boolean().optional(),
   isFavorite: z.boolean().optional(),
   password: z.string().max(128).nullable().optional(),
   expiresAt: z.string().datetime().nullable().optional(),
@@ -47,7 +48,7 @@ export const PATCH = withApiErrorHandling(async (request: Request, context: Rout
   try {
     const access = await getBookAccess(user.id, params.id);
     if (!access || access === "VIEW") return NextResponse.json({ error: "You don't have permission to edit this Book." }, { status: 403 });
-    const changesOwnerOnly = parsed.data.isPublished !== undefined || parsed.data.linkPermission !== undefined || parsed.data.password !== undefined || parsed.data.expiresAt !== undefined || parsed.data.isFavorite !== undefined;
+    const changesOwnerOnly = parsed.data.isPublished !== undefined || parsed.data.linkPermission !== undefined || parsed.data.allowExport !== undefined || parsed.data.password !== undefined || parsed.data.expiresAt !== undefined || parsed.data.isFavorite !== undefined;
     if (changesOwnerOnly && access !== "OWNER") return NextResponse.json({ error: "Only the Book owner can change sharing or favorites." }, { status: 403 });
     const { password, expiresAt, ...fields } = parsed.data;
     const passwordHash = password === undefined ? undefined : password ? Buffer.from(await bcrypt.hash(password, 12), "utf8") : null;

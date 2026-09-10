@@ -54,6 +54,25 @@ export async function getBookAccess(userId: string, id: string): Promise<BookAcc
   return resolveBookAccess({ viewerUserId: userId, ownerId: book.ownerId, memberPermission: book.members[0]?.permission, isPublished: book.isPublished, linkPermission: book.linkPermission, linkRequiresPassword: Boolean(book.passwordHash) });
 }
 
+/** Export is a separate capability from reading or editing a Book. An
+ * explicitly invited member uses their own setting; public-link export is
+ * only available when the link is enabled, unexpired, unpassworded, and the
+ * owner has enabled exports for that link. */
+export async function canExportBook(userId: string, id: string): Promise<boolean> {
+  const book = await prisma.shareCollection.findUnique({
+    where: { id },
+    select: { ownerId: true, isPublished: true, allowExport: true, passwordHash: true, expiresAt: true, members: { where: { userId }, select: { allowExport: true } } },
+  });
+  if (!book) return false;
+  return resolveBookExportAccess({ viewerUserId: userId, ownerId: book.ownerId, memberAllowExport: book.members[0]?.allowExport, hasMember: book.members.length > 0, isPublished: book.isPublished, allowExport: book.allowExport, hasPassword: Boolean(book.passwordHash), expiresAt: book.expiresAt });
+}
+
+export function resolveBookExportAccess(input: { viewerUserId?: string; ownerId: string; memberAllowExport?: boolean; hasMember: boolean; isPublished: boolean; allowExport: boolean; hasPassword: boolean; expiresAt?: Date | null; now?: Date }) {
+  if (input.viewerUserId === input.ownerId) return true;
+  if (input.hasMember) return input.memberAllowExport === true;
+  return input.isPublished && input.allowExport && !input.hasPassword && (!input.expiresAt || input.expiresAt > (input.now ?? new Date()));
+}
+
 export async function findCollectionForEditor(userId: string, id: string) {
   return prisma.shareCollection.findFirst({
     where: {
@@ -78,11 +97,11 @@ export async function findCollectionForEditor(userId: string, id: string) {
  * or the Book's already-included resources for an editor. */
 export async function getCollectionEditorData(userId: string, id: string) {
   const collection = await findCollectionForEditor(userId, id);
-  if (!collection) return { collection: null, access: null, rows: { NOTE: [], REVIEWER: [], QUIZ: [] } };
+  if (!collection) return { collection: null, access: null, canExport: false, rows: { NOTE: [], REVIEWER: [], QUIZ: [] } };
 
   const memberPermission = collection.members.find((member) => member.userId === userId)?.permission;
   const access = resolveBookAccess({ viewerUserId: userId, ownerId: collection.ownerId, memberPermission, isPublished: collection.isPublished, linkPermission: collection.linkPermission, linkRequiresPassword: Boolean(collection.passwordHash) });
-  if (access !== "OWNER" && access !== "EDIT") return { collection: null, access: null, rows: { NOTE: [], REVIEWER: [], QUIZ: [] } };
+  if (access !== "OWNER" && access !== "EDIT") return { collection: null, access: null, canExport: false, rows: { NOTE: [], REVIEWER: [], QUIZ: [] } };
   const includedIds = (type: ResourceType) => collection.items.filter((item) => item.resourceType === type).map((item) => item.resourceId);
   const ownerFilter = access === "OWNER" ? { ownerId: collection.ownerId } : undefined;
   const [notes, reviewers, quizzes] = await Promise.all([
@@ -90,13 +109,13 @@ export async function getCollectionEditorData(userId: string, id: string) {
     prisma.reviewer.findMany({ where: ownerFilter ?? { id: { in: includedIds("REVIEWER") } }, orderBy: { updatedAt: "desc" }, select: { id: true, title: true } }),
     prisma.quiz.findMany({ where: ownerFilter ?? { id: { in: includedIds("QUIZ") } }, orderBy: { updatedAt: "desc" }, select: { id: true, title: true } }),
   ]);
-  return { collection, access, rows: { NOTE: notes, REVIEWER: reviewers, QUIZ: quizzes } };
+  return { collection, access, canExport: await canExportBook(userId, id), rows: { NOTE: notes, REVIEWER: reviewers, QUIZ: quizzes } };
 }
 
 export async function updateCollection(
   userId: string,
   id: string,
-  data: { title?: string; subtitle?: string | null; description?: string; tocTitle?: string; isPublished?: boolean; linkPermission?: "VIEW" | "EDIT"; isFavorite?: boolean; passwordHash?: Buffer | null; expiresAt?: Date | null }
+  data: { title?: string; subtitle?: string | null; description?: string; tocTitle?: string; isPublished?: boolean; linkPermission?: "VIEW" | "EDIT"; allowExport?: boolean; isFavorite?: boolean; passwordHash?: Buffer | null; expiresAt?: Date | null }
 ) {
   const existing = await findCollectionForEditor(userId, id);
   if (!existing) throw new Error("Book not found.");
@@ -193,6 +212,7 @@ export interface PublicCollection {
   viewerPermission: BookAccess;
   lastReadItemId: string | null;
   isPrivateAccess: boolean;
+  canExport: boolean;
 }
 
 /**
@@ -207,16 +227,27 @@ export async function getPublicCollectionBySlug(slug: string, allowProtected = f
       owner: { select: { name: true } },
       items: { orderBy: { position: "asc" } },
       feedback: { orderBy: { createdAt: "asc" }, select: { id: true, authorName: true, authorUserId: true, message: true, createdAt: true, updatedAt: true, parentId: true } },
-      members: viewerUserId ? { where: { userId: viewerUserId }, select: { id: true, permission: true } } : false,
+      members: viewerUserId ? { where: { userId: viewerUserId }, select: { id: true, permission: true, allowExport: true } } : false,
       progress: viewerUserId ? { where: { userId: viewerUserId }, select: { lastItemId: true } } : false,
     },
   });
   if (!collection) return null;
   const memberPermission = "members" in collection && Array.isArray(collection.members) ? collection.members[0]?.permission : undefined;
+  const memberAllowExport = "members" in collection && Array.isArray(collection.members) ? collection.members[0]?.allowExport : undefined;
   const isPrivateAccess = collection.ownerId === viewerUserId || Boolean(memberPermission);
   if ((!collection.isPublished && !isPrivateAccess) || (collection.expiresAt && collection.expiresAt <= new Date()) || (collection.passwordHash && !allowProtected && !isPrivateAccess)) return null;
   const viewerPermission = resolveBookAccess({ viewerUserId, ownerId: collection.ownerId, memberPermission, isPublished: collection.isPublished, linkPermission: collection.linkPermission, linkRequiresPassword: Boolean(collection.passwordHash) });
   if (!viewerPermission) return null;
+  const canExport = resolveBookExportAccess({
+    viewerUserId,
+    ownerId: collection.ownerId,
+    memberAllowExport,
+    hasMember: Boolean(memberPermission),
+    isPublished: collection.isPublished,
+    allowExport: collection.allowExport,
+    hasPassword: Boolean(collection.passwordHash) && !isPrivateAccess && !allowProtected,
+    expiresAt: collection.expiresAt,
+  });
 
   const noteIds = collection.items.filter((i) => i.resourceType === "NOTE").map((i) => i.resourceId);
   const reviewerIds = collection.items.filter((i) => i.resourceType === "REVIEWER").map((i) => i.resourceId);
@@ -255,6 +286,7 @@ export async function getPublicCollectionBySlug(slug: string, allowProtected = f
     viewerPermission,
     lastReadItemId: "progress" in collection && Array.isArray(collection.progress) ? collection.progress[0]?.lastItemId ?? null : null,
     isPrivateAccess,
+    canExport,
   };
 }
 

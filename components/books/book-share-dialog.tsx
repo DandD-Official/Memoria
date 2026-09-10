@@ -14,6 +14,7 @@ export interface BookMember {
   name: string;
   email: string;
   permission: BookSharePermission;
+  allowExport: boolean;
 }
 
 interface BookShareDialogProps {
@@ -23,15 +24,17 @@ interface BookShareDialogProps {
   onOpenChange: (open: boolean) => void;
   linkEnabled: boolean;
   linkPermission: BookSharePermission;
+  linkAllowExport: boolean;
   passwordProtected: boolean;
   members: BookMember[];
-  onChanged: (changes: { linkEnabled?: boolean; linkPermission?: BookSharePermission; passwordProtected?: boolean; members?: BookMember[] }) => void;
+  onChanged: (changes: { linkEnabled?: boolean; linkPermission?: BookSharePermission; linkAllowExport?: boolean; passwordProtected?: boolean; members?: BookMember[] }) => void;
 }
 
 export function BookShareDialog(props: BookShareDialogProps) {
   const [method, setMethod] = useState<"link" | "people">("link");
   const [email, setEmail] = useState("");
   const [personPermission, setPersonPermission] = useState<BookSharePermission>("VIEW");
+  const [personAllowExport, setPersonAllowExport] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -60,6 +63,10 @@ export function BookShareDialog(props: BookShareDialogProps) {
     if (await updateBook({ linkPermission: permission })) props.onChanged({ linkPermission: permission });
   }
 
+  async function setLinkAllowExport(allowExport: boolean) {
+    if (await updateBook({ allowExport })) props.onChanged({ linkAllowExport: allowExport });
+  }
+
   async function clearPassword() {
     if (await updateBook({ password: null })) props.onChanged({ passwordProtected: false });
   }
@@ -74,23 +81,36 @@ export function BookShareDialog(props: BookShareDialogProps) {
     if (!email.trim()) return;
     setBusy("person");
     setError(null);
-    const response = await fetch(`/api/collections/${props.bookId}/members`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: email.trim(), permission: personPermission }) });
+    const response = await fetch(`/api/collections/${props.bookId}/members`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: email.trim(), permission: personPermission, allowExport: personAllowExport }) });
     const data = await response.json().catch(() => null);
     setBusy(null);
     if (!response.ok) { setError(data?.error ?? "Couldn't add this person."); return; }
-    const next: BookMember = { id: data.member.id, name: data.member.user.name, email: data.member.user.email, permission: data.member.permission };
+    const next: BookMember = { id: data.member.id, name: data.member.user.name, email: data.member.user.email, permission: data.member.permission, allowExport: data.member.allowExport };
     props.onChanged({ members: [...props.members.filter((member) => member.id !== next.id), next] });
     setEmail("");
+    setPersonAllowExport(false);
   }
 
   async function changePerson(memberId: string, permission: BookSharePermission) {
     setBusy(memberId);
     setError(null);
-    const response = await fetch(`/api/collections/${props.bookId}/members`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ memberId, permission }) });
+    const member = props.members.find((item) => item.id === memberId);
+    const response = await fetch(`/api/collections/${props.bookId}/members`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ memberId, permission, allowExport: member?.allowExport ?? false }) });
     const data = await response.json().catch(() => null);
     setBusy(null);
     if (!response.ok) { setError(data?.error ?? "Couldn't change access."); return; }
-    props.onChanged({ members: props.members.map((member) => member.id === memberId ? { ...member, permission: data.member.permission } : member) });
+    props.onChanged({ members: props.members.map((member) => member.id === memberId ? { ...member, permission: data.member.permission, allowExport: data.member.allowExport } : member) });
+  }
+
+  async function changePersonExport(memberId: string, allowExport: boolean) {
+    setBusy(memberId);
+    setError(null);
+    const member = props.members.find((item) => item.id === memberId);
+    const response = await fetch(`/api/collections/${props.bookId}/members`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ memberId, permission: member?.permission ?? "VIEW", allowExport }) });
+    const data = await response.json().catch(() => null);
+    setBusy(null);
+    if (!response.ok) { setError(data?.error ?? "Couldn't change export access."); return; }
+    props.onChanged({ members: props.members.map((item) => item.id === memberId ? { ...item, allowExport: data.member.allowExport } : item) });
   }
 
   async function removePerson(memberId: string) {
@@ -121,6 +141,8 @@ export function BookShareDialog(props: BookShareDialogProps) {
 
           <div><Label htmlFor="book-link-access">Access</Label><Select id="book-link-access" value={props.linkPermission} disabled={busy === "link"} onChange={(event) => void setLinkPermission(event.target.value as BookSharePermission)}><option value="VIEW">Viewer — can read</option><option value="EDIT">Editor — can arrange and edit the Book</option></Select>{props.linkPermission === "EDIT" && <p className="mt-1.5 text-xs text-ink-faint">Link editors must sign in to Memoria before making changes.</p>}</div>
 
+          <label className="flex min-h-10 items-center gap-2 text-sm text-ink"><input type="checkbox" checked={props.linkAllowExport} disabled={busy === "link"} onChange={(event) => void setLinkAllowExport(event.target.checked)} className="h-4 w-4 accent-accent" />Allow people with this link to export the Book</label>
+
           <div className={cn("flex min-w-0 items-center gap-2 rounded-card border border-line bg-paper p-2", !props.linkEnabled && "opacity-55")}>
             <span className="min-w-0 flex-1 truncate pl-2 text-sm text-ink-soft">{props.publicPath}</span>
             <Button size="sm" variant="outline" disabled={!props.linkEnabled} onClick={() => void copyLink()}>{copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}{copied ? "Copied" : "Copy link"}</Button>
@@ -130,15 +152,16 @@ export function BookShareDialog(props: BookShareDialogProps) {
         </div>
       ) : (
         <div className="mt-5">
-          <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_9.5rem_auto] sm:items-end">
+          <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_9.5rem_8rem_auto] sm:items-end">
             <div><Label htmlFor="book-person-email">Email</Label><Input id="book-person-email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} onKeyDown={(event) => event.key === "Enter" && void addPerson()} placeholder="person@example.com" /></div>
             <div><Label htmlFor="book-person-access">Access</Label><Select id="book-person-access" value={personPermission} onChange={(event) => setPersonPermission(event.target.value as BookSharePermission)}><option value="VIEW">Viewer</option><option value="EDIT">Editor</option></Select></div>
+            <label className="flex min-h-9 items-center gap-2 text-xs text-ink-soft"><input type="checkbox" checked={personAllowExport} onChange={(event) => setPersonAllowExport(event.target.checked)} className="h-4 w-4 accent-accent" />Allow export</label>
             <Button onClick={() => void addPerson()} loading={busy === "person"} disabled={!email.trim()}><UserPlus className="h-4 w-4" />Add</Button>
           </div>
 
           <div className="mt-5">
             <p className="text-xs font-semibold uppercase tracking-[0.12em] text-ink-faint">People in this Book</p>
-            {props.members.length === 0 ? <p className="mt-3 rounded-card border border-dashed border-line p-5 text-center text-sm text-ink-faint">No one has been added yet.</p> : <div className="mt-2 divide-y divide-line rounded-card border border-line">{props.members.map((member) => <div key={member.id} className="flex flex-col gap-3 p-3 sm:flex-row sm:items-center"><div className="flex min-w-0 flex-1 items-center gap-3"><span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent-soft text-sm font-semibold text-accent-dark">{(member.name || member.email).charAt(0).toUpperCase()}</span><div className="min-w-0"><p className="truncate text-sm font-medium text-ink">{member.name || member.email}</p><p className="truncate text-xs text-ink-faint">{member.email}</p></div></div><div className="flex items-center gap-2"><Select aria-label={`Access for ${member.email}`} value={member.permission} disabled={busy === member.id} onChange={(event) => void changePerson(member.id, event.target.value as BookSharePermission)} className="h-9 min-w-28"><option value="VIEW">Viewer</option><option value="EDIT">Editor</option></Select><button type="button" disabled={busy === member.id} onClick={() => void removePerson(member.id)} className="inline-flex h-9 w-9 items-center justify-center rounded-control text-ink-faint hover:bg-danger/10 hover:text-danger" aria-label={`Remove ${member.email}`}><X className="h-4 w-4" /></button></div></div>)}</div>}
+            {props.members.length === 0 ? <p className="mt-3 rounded-card border border-dashed border-line p-5 text-center text-sm text-ink-faint">No one has been added yet.</p> : <div className="mt-2 divide-y divide-line rounded-card border border-line">{props.members.map((member) => <div key={member.id} className="flex flex-col gap-3 p-3 sm:flex-row sm:items-center"><div className="flex min-w-0 flex-1 items-center gap-3"><span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent-soft text-sm font-semibold text-accent-dark">{(member.name || member.email).charAt(0).toUpperCase()}</span><div className="min-w-0"><p className="truncate text-sm font-medium text-ink">{member.name || member.email}</p><p className="truncate text-xs text-ink-faint">{member.email}</p></div></div><div className="flex flex-wrap items-center gap-2"><Select aria-label={`Access for ${member.email}`} value={member.permission} disabled={busy === member.id} onChange={(event) => void changePerson(member.id, event.target.value as BookSharePermission)} className="h-9 min-w-28"><option value="VIEW">Viewer</option><option value="EDIT">Editor</option></Select><label className="flex min-h-9 items-center gap-1.5 text-xs text-ink-soft"><input type="checkbox" checked={member.allowExport} disabled={busy === member.id} onChange={(event) => void changePersonExport(member.id, event.target.checked)} className="h-4 w-4 accent-accent" />Export</label><button type="button" disabled={busy === member.id} onClick={() => void removePerson(member.id)} className="inline-flex h-9 w-9 items-center justify-center rounded-control text-ink-faint hover:bg-danger/10 hover:text-danger" aria-label={`Remove ${member.email}`}><X className="h-4 w-4" /></button></div></div>)}</div>}
           </div>
         </div>
       )}

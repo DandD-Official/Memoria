@@ -14,6 +14,8 @@ import { cn, formatRelativeTime } from "@/lib/utils";
 import type { QuizQuestion } from "@/lib/validation/quiz";
 import type { PublicCollection } from "@/lib/share-collections-repo";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
+import { ExportMenu } from "@/components/exports/export-menu";
+import type { ExportProgressHandler } from "@/lib/export/types";
 
 export function PublicCollectionView({ collection }: { collection: PublicCollection }) {
   const firstItemId = collection.lastReadItemId && collection.items.some((item) => item.id === collection.lastReadItemId) ? collection.lastReadItemId : collection.items[0]?.id ?? null;
@@ -37,6 +39,15 @@ export function PublicCollectionView({ collection }: { collection: PublicCollect
     if (collection.viewerUserId) void fetch(`/api/collections/${collection.id}/progress`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ lastItemId: itemId }) });
   }
 
+  async function exportBook(format: string, onProgress?: ExportProgressHandler) {
+    if (format === "json") { window.location.href = `/api/collections/public/${collection.slug}/export?format=json`; return; }
+    const response = await fetch(`/api/collections/public/${collection.slug}/export`);
+    const data = await response.json().catch(() => null);
+    if (!response.ok) throw new Error(data?.error ?? "Couldn't export this Book.");
+    if (format === "pdf") { const { exportBookToPdf } = await import("@/lib/pdf-export"); await exportBookToPdf(data.title, data.markdown, { subtitle: data.subtitle, description: data.description, author: data.ownerName }, onProgress); }
+    if (format === "docx") { const { exportBookToWord } = await import("@/lib/word-export"); await exportBookToWord(data.title, data.markdown, { subtitle: data.subtitle, description: data.description, author: data.ownerName }, onProgress); }
+  }
+
   return (
     <div className="min-h-screen bg-paper">
       <header className="border-b border-line bg-surface/90 backdrop-blur">
@@ -46,6 +57,7 @@ export function PublicCollectionView({ collection }: { collection: PublicCollect
               <ArrowLeft className="h-4 w-4" /><BookMarked className="h-4 w-4 text-accent-dark" /> Back to Memoria
             </Link>
             <div className="flex flex-wrap items-center gap-2">
+              {collection.canExport && <ExportMenu options={[{ value: "pdf", label: "PDF document" }, { value: "docx", label: "Word document" }, { value: "json", label: "Memoria JSON" }]} onExport={exportBook} />}
               <Badge tone={collection.viewerPermission === "VIEW" ? "neutral" : "accent"}>{collection.viewerPermission === "OWNER" ? "Owner" : collection.viewerPermission === "EDIT" ? "Editor" : "Viewer"}</Badge>
               {collection.viewerPermission === "EDIT" || collection.viewerPermission === "OWNER" ? collection.viewerUserId ? <Link href={`/books/${collection.id}`} className="inline-flex h-9 items-center gap-2 rounded-control border border-line px-3 text-sm font-medium text-ink hover:bg-surface-muted"><Pencil className="h-4 w-4" />Edit</Link> : <Link href={`/login?callbackUrl=${encodeURIComponent(`/c/${collection.slug}`)}`} className="inline-flex h-9 items-center gap-2 rounded-control border border-line px-3 text-sm font-medium text-ink hover:bg-surface-muted"><LogIn className="h-4 w-4" />Sign in to edit</Link> : null}
               <ThemeToggle />
