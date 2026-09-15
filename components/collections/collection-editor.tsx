@@ -9,6 +9,7 @@ import { ExportMenu } from "@/components/exports/export-menu";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { FullscreenView } from "@/components/ui/fullscreen-view";
 import { Input, Label, Textarea } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import type { ExportProgressHandler } from "@/lib/export/types";
@@ -125,7 +126,7 @@ export function CollectionEditor({ initialCollection, access, canExport, rows }:
         ].map((item) => <button key={item.key} type="button" aria-current={view === item.key ? "page" : undefined} onClick={() => setView(item.key)} className={cn("inline-flex min-h-10 shrink-0 items-center gap-2 rounded-control px-4 text-sm font-medium transition-colors", view === item.key ? "bg-surface text-ink shadow-sm" : "text-ink-soft hover:text-ink")}><item.icon className="h-4 w-4" />{item.label}</button>)}
       </nav>
 
-      {view === "book" && <section aria-label="Book preview" className="relative overflow-hidden rounded-[1.35rem] border border-line-strong bg-action p-2 shadow-card-hover sm:p-3">
+      {view === "book" && <FullscreenView title={collection.title} description="Full-screen Book preview"><section aria-label="Book preview" className="relative overflow-hidden rounded-[1.35rem] border border-line-strong bg-action p-2 shadow-card-hover sm:p-3">
         <div className="pointer-events-none absolute inset-y-3 left-1/2 z-10 hidden w-8 -translate-x-1/2 bg-gradient-to-r from-transparent via-ink/15 to-transparent md:block" aria-hidden="true" />
         <div className="grid min-h-[31rem] overflow-hidden rounded-[0.9rem] md:grid-cols-2">
           <article className="relative flex min-w-0 flex-col justify-between overflow-hidden bg-surface-muted px-6 py-8 text-ink sm:px-10 sm:py-12 md:rounded-l-[0.75rem] md:border-r md:border-line">
@@ -138,7 +139,7 @@ export function CollectionEditor({ initialCollection, access, canExport, rows }:
             <div className="mt-8">{collection.items.length === 0 ? <div className="rounded-lg border border-dashed border-line p-8 text-center"><BookOpen className="mx-auto h-6 w-6 text-accent-dark" /><p className="mt-3 font-display text-lg">The pages are waiting.</p><p className="mt-1 text-xs leading-relaxed text-ink-faint">Add your first Memory in the Chapters section.</p></div> : <ol className="space-y-1">{collection.items.map((item, index) => { const row = rowFor(item); const Icon = TABS.find((entry) => entry.type === item.resourceType)?.icon ?? FileText; return <li key={item.id} className="group flex min-w-0 items-center gap-3 border-b border-line py-3"><span className="w-7 shrink-0 font-display text-lg text-accent-dark">{String(index + 1).padStart(2, "0")}</span><Icon className="h-4 w-4 shrink-0 text-ink-faint" /><span className="min-w-0 flex-1 truncate text-sm font-medium">{row?.title ?? "Unavailable chapter"}</span><div className="flex shrink-0 opacity-60 transition-opacity group-hover:opacity-100"><button type="button" aria-label={`Move ${row?.title ?? "chapter"} up`} disabled={index === 0} onClick={() => void moveItem(item.id, -1)} className="rounded p-1 hover:bg-ink/5 disabled:opacity-20"><ChevronUp className="h-4 w-4" /></button><button type="button" aria-label={`Move ${row?.title ?? "chapter"} down`} disabled={index === collection.items.length - 1} onClick={() => void moveItem(item.id, 1)} className="rounded p-1 hover:bg-ink/5 disabled:opacity-20"><ChevronDown className="h-4 w-4" /></button></div></li>; })}</ol>}</div>
           </article>
         </div>
-      </section>}
+      </section></FullscreenView>}
 
       {view === "chapters" && <section className="rounded-card border border-line bg-surface p-5 shadow-sm">
           <div className="flex items-start gap-3"><span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-control bg-accent-soft text-accent-dark"><GripVertical className="h-4 w-4" /></span><div><h2 className="font-display text-xl text-ink">Build the chapters</h2><p className="mt-1 text-sm text-ink-soft">{isOwner ? "Choose material and arrange it in reading order." : "Reorder or remove the chapters already in this Book."}</p></div></div>

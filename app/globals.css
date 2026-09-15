@@ -158,13 +158,6 @@
 }
 
 @layer components {
-  /* Signature "highlighter" underline used sparingly for emphasis in copy */
-  .highlight-mark {
-    background-image: linear-gradient(transparent 62%, theme("colors.accent.soft") 62%);
-    background-repeat: no-repeat;
-    background-position: 0 100%;
-  }
-
   .card {
     @apply min-w-0 border border-line bg-surface shadow-card;
     border-radius: var(--radius-surface);
@@ -304,7 +297,7 @@
     @apply my-0;
   }
   .memora-markdown code {
-    @apply rounded bg-ink/5 px-1.5 py-0.5 font-mono text-[0.85em] text-ink;
+    @apply rounded px-1.5 py-0.5 font-mono text-[0.85em] text-ink;
   }
   .memora-markdown pre {
     @apply my-4 overflow-x-auto rounded-card bg-action p-4 text-action-foreground;
@@ -372,6 +365,13 @@
   }
   .memora-markdown tbody tr:nth-child(even) {
     @apply bg-ink/[0.025];
+  }
+  /* Exported tables use borders only; keep the reading surface unfilled. */
+  [data-export-surface="mmd"] .responsive-table__viewport,
+  [data-export-surface="mmd"] .memora-markdown table,
+  [data-export-surface="mmd"] .memora-markdown thead,
+  [data-export-surface="mmd"] .memora-markdown tbody tr:nth-child(even) {
+    background: transparent;
   }
   .memora-markdown img {
     @apply my-5 max-w-full rounded-card border border-line bg-surface shadow-sm;

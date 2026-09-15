@@ -1,19 +1,9 @@
+"use client";
+
 import type { MmdBlockNode } from "@/lib/mmd/ast";
 import { sanitizeSvgMarkup } from "@/lib/svg/sanitize";
-import { cn } from "@/lib/utils";
-
-const SIZE_CLASS: Record<string, string> = {
-  small: "max-w-xs",
-  medium: "max-w-2xl",
-  large: "max-w-4xl",
-  full: "max-w-full",
-};
-
-const ALIGN_CLASS: Record<string, string> = {
-  left: "mr-auto",
-  center: "mx-auto",
-  right: "ml-auto",
-};
+import { FullscreenView } from "@/components/ui/fullscreen-view";
+import { useMmdRenderContext } from "@/components/mmd/render-context";
 
 function svgSource(node: MmdBlockNode): string {
   return node.children
@@ -24,8 +14,9 @@ function svgSource(node: MmdBlockNode): string {
 
 /** :::svg{alt="..." caption="..." align="..." size="..."} */
 export function SvgBlock({ node }: { node: MmdBlockNode }) {
+  const { mode } = useMmdRenderContext();
   const markup = sanitizeSvgMarkup(svgSource(node));
-  const { alt, caption, align = "center", size = "large" } = node.attrs;
+  const { alt, caption } = node.attrs;
 
   if (!markup) {
     return (
@@ -37,15 +28,30 @@ export function SvgBlock({ node }: { node: MmdBlockNode }) {
     );
   }
 
+  const visual = (
+    <div
+      role="img"
+      aria-label={alt}
+      data-export-asset="inline-svg"
+      className="min-w-0 w-full max-w-full overflow-hidden rounded-lg border border-line bg-surface p-2 [&>svg]:mx-auto [&>svg]:block [&>svg]:h-auto [&>svg]:w-full [&>svg]:max-w-full"
+      dangerouslySetInnerHTML={{ __html: markup }}
+    />
+  );
+
+  if (mode === "export") {
+    return (
+      <figure data-export-block="svg" className="my-4 w-full max-w-full">
+        {visual}
+        {caption && <figcaption className="mt-1.5 text-center text-xs text-ink-soft">{caption}</figcaption>}
+      </figure>
+    );
+  }
+
   return (
-    <figure className={cn("my-4", SIZE_CLASS[size] ?? SIZE_CLASS.large, ALIGN_CLASS[align] ?? ALIGN_CLASS.center)}>
-      <div
-        role="img"
-        aria-label={alt}
-        data-export-asset="inline-svg"
-        className="overflow-hidden rounded-lg border border-line bg-surface p-2 [&>svg]:block [&>svg]:h-auto [&>svg]:w-full"
-        dangerouslySetInnerHTML={{ __html: markup }}
-      />
+    <figure className="my-4 w-full max-w-full">
+      <FullscreenView title={alt || "SVG visual"} description={caption || "Expanded SVG visual"} iconOnly>
+        {visual}
+      </FullscreenView>
       {caption && <figcaption className="mt-1.5 text-center text-xs text-ink-soft">{caption}</figcaption>}
     </figure>
   );

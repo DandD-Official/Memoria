@@ -18,7 +18,7 @@ export function Hero() {
           </p>
           <h1 className="font-display text-[2.75rem] leading-[1.08] tracking-tight text-ink sm:text-6xl">
             Turn scattered notes into{" "}
-            <span className="highlight-mark animate-highlight-sweep italic">structured knowledge</span>.
+            <span className="italic">structured knowledge</span>.
           </h1>
           <p className="mt-6 max-w-lg text-lg leading-relaxed text-ink-soft">
             Import your notes, organize them into clean reviewers, and test yourself with quizzes and exams

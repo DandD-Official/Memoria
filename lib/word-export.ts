@@ -252,10 +252,42 @@ export async function createBookWordBlob(title: string, markdown: string, metada
 }
 
 export async function downloadBlob(blob: Blob, filename: string, extension: "docx" | "pdf") {
+  const safeFilename = `${sanitize(filename)}.${extension}`;
+  const mimeType = extension === "docx"
+    ? "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    : "application/pdf";
+
+  // Mobile browsers often ignore a blob link unless it is shared as a file.
+  // Keep a normal download fallback for desktop browsers and older mobile OSes.
+  if (
+    typeof File !== "undefined" &&
+    typeof navigator !== "undefined" &&
+    typeof navigator.share === "function" &&
+    typeof navigator.canShare === "function"
+  ) {
+    try {
+      const file = new File([blob], safeFilename, { type: blob.type || mimeType });
+      if (navigator.canShare({ files: [file] })) {
+        await navigator.share({ files: [file], title: safeFilename });
+        return;
+      }
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") return;
+    }
+  }
+
   const url = URL.createObjectURL(blob);
   const anchor = window.document.createElement("a");
-  anchor.href = url; anchor.download = `${sanitize(filename)}.${extension}`; anchor.click();
-  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+  anchor.href = url;
+  anchor.download = safeFilename;
+  anchor.rel = "noopener";
+  anchor.style.display = "none";
+  window.document.body.appendChild(anchor);
+  anchor.click();
+  window.setTimeout(() => {
+    anchor.remove();
+    URL.revokeObjectURL(url);
+  }, 1500);
 }
 
 /** @deprecated Use exportMarkdownToWord for the canonical visual browser export. */
@@ -348,7 +380,7 @@ async function inlineRuns(value: string, context: EditableWordContext): Promise<
     } else if (match[4] !== undefined || match[5] !== undefined) {
       runs.push(textRun(match[4] ?? match[5] ?? "", { bold: true }));
     } else if (match[6] !== undefined) {
-      runs.push(textRun(match[6], { font: "Courier New", shading: { type: ShadingType.SOLID, fill: "F0EEE8" } }));
+      runs.push(textRun(match[6], { font: "Courier New" }));
     } else {
       runs.push(textRun(match[7] ?? "", { italics: true }));
     }
@@ -372,6 +404,7 @@ async function wordTable(rows: string[][], context: EditableWordContext): Promis
   const tableRows = await Promise.all(rows.map(async (row) => new TableRow({
     children: await Promise.all(Array.from({ length: columnCount }, async (_, columnIndex) => new TableCell({
       width: { size: Math.floor(100 / columnCount), type: WidthType.PERCENTAGE },
+      shading: { type: ShadingType.NIL },
       children: [new Paragraph({ children: await inlineRuns(row[columnIndex] ?? "", context), spacing: { before: 40, after: 40 } })],
     }))),
   })));

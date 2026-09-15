@@ -13,11 +13,12 @@ interface DialogProps {
   children: React.ReactNode;
   footer?: React.ReactNode;
   className?: string;
+  fullScreen?: boolean;
 }
 
 const focusable = 'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
-export function Dialog({ open, onOpenChange, title, description, children, footer, className }: DialogProps) {
+export function Dialog({ open, onOpenChange, title, description, children, footer, className, fullScreen = false }: DialogProps) {
   const titleId = useId();
   const descriptionId = useId();
   const panelRef = useRef<HTMLDivElement>(null);
@@ -56,7 +57,7 @@ export function Dialog({ open, onOpenChange, title, description, children, foote
 
   if (!open || typeof document === "undefined") return null;
   return createPortal(
-    <div className="fixed inset-0 z-[100] flex items-end justify-center p-0 sm:items-center sm:p-5" role="presentation">
+    <div className={cn("fixed inset-0 z-[100] flex items-end justify-center sm:items-center", fullScreen ? "p-0" : "p-0 sm:p-5")} role="presentation">
       <button type="button" className="absolute inset-0 animate-overlay-in bg-ink/45 backdrop-blur-[2px]" onClick={() => onOpenChange(false)} aria-label="Close dialog" tabIndex={-1} />
       <div
         ref={panelRef}
@@ -65,7 +66,13 @@ export function Dialog({ open, onOpenChange, title, description, children, foote
         aria-labelledby={titleId}
         aria-describedby={description ? descriptionId : undefined}
         tabIndex={-1}
-        className={cn("relative max-h-[min(42rem,calc(100dvh-1rem))] w-full max-w-lg animate-panel-in overflow-y-auto rounded-t-panel border border-line bg-surface-raised p-5 shadow-dialog sm:rounded-panel sm:p-6", className)}
+        className={cn(
+          "relative w-full animate-panel-in overflow-y-auto border border-line bg-surface-raised shadow-dialog",
+          fullScreen
+            ? "h-full max-h-[100dvh] max-w-none rounded-none border-0 p-5 sm:p-8"
+            : "max-h-[min(42rem,calc(100dvh-1rem))] max-w-lg rounded-t-panel p-5 sm:rounded-panel sm:p-6",
+          className
+        )}
       >
         <div className="pr-10">
           <h2 id={titleId} className="font-display text-xl font-medium tracking-[-0.01em] text-ink">{title}</h2>

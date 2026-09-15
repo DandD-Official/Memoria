@@ -7,6 +7,7 @@ import { MarkdownRenderer } from "@/components/markdown/renderer";
 import { QuestionInput } from "@/components/quizzes/question-input";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { FullscreenView } from "@/components/ui/fullscreen-view";
 import { Dialog } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Textarea, Input, Label } from "@/components/ui/input";
@@ -74,7 +75,7 @@ export function PublicCollectionView({ collection }: { collection: PublicCollect
           <button type="button" aria-current={readerView === "feedback" ? "page" : undefined} onClick={() => setReaderView("feedback")} className={cn("inline-flex min-h-10 flex-1 items-center justify-center gap-2 rounded-control px-4 text-sm font-medium transition-colors sm:flex-none", readerView === "feedback" ? "bg-surface text-ink shadow-sm" : "text-ink-soft hover:text-ink")}><MessageSquare className="h-4 w-4" />Discussion</button>
         </nav>
 
-        {readerView === "book" && <section className="relative overflow-hidden rounded-[1.35rem] border border-line-strong bg-action p-2 shadow-card-hover sm:p-3">
+        {readerView === "book" && <FullscreenView title={collection.title} description="Full-screen Book reader"><section className="relative overflow-hidden rounded-[1.35rem] border border-line-strong bg-action p-2 shadow-card-hover sm:p-3">
           <div className="pointer-events-none absolute inset-y-3 left-[35%] z-10 hidden w-8 -translate-x-1/2 bg-gradient-to-r from-transparent via-ink/15 to-transparent lg:block" aria-hidden="true" />
           <div className="grid min-h-[42rem] overflow-hidden rounded-[0.9rem] lg:grid-cols-[35%_65%]">
             <aside className={cn("min-w-0 bg-surface-muted px-5 py-8 text-ink sm:px-8 sm:py-10 lg:block lg:border-r lg:border-line", mobilePage === "contents" ? "block" : "hidden")}>
@@ -96,7 +97,7 @@ export function PublicCollectionView({ collection }: { collection: PublicCollect
               </>}
             </article>
           </div>
-        </section>}
+        </section></FullscreenView>}
 
         {readerView === "feedback" && <FeedbackSection slug={collection.slug} viewerUserId={collection.viewerUserId} feedback={feedback} onSubmitted={(f) => setFeedback((prev) => [...prev, f])} onChanged={setFeedback} />}
       </main>

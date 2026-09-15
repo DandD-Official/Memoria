@@ -135,6 +135,7 @@ export function buildMarkdownPdf(title: string, markdown: string, options: Markd
       body: rows,
       styles: { fontSize: 9, cellPadding: 5, fillColor: false, textColor: [20, 24, 39], lineColor: [138, 143, 168], lineWidth: 0.25 },
       headStyles: { fillColor: false, textColor: [20, 24, 39], lineColor: [138, 143, 168], lineWidth: 0.5, fontStyle: "bold" },
+      alternateRowStyles: { fillColor: false },
       didDrawPage: () => {
         y = PAGE_MARGIN;
       },
@@ -417,30 +418,59 @@ export function buildMarkdownPdf(title: string, markdown: string, options: Markd
   return doc;
 }
 
-async function convertWordBlobToPdf(title: string, wordBlob: Blob, onProgress?: ExportProgressHandler) {
+async function convertWordBlobToPdf(
+  title: string,
+  wordBlob: Blob,
+  fallback: () => jsPDF,
+  onProgress?: ExportProgressHandler,
+) {
   onProgress?.({ phase: "preparing", message: "Preparing the Word source document…" });
-  const response = await fetch("/api/exports/word-to-pdf", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-      "X-Memoria-Filename": sanitizeFilename(title),
-    },
-    body: wordBlob,
-  });
-  if (!response.ok) {
-    const error = await response.json().catch(() => null) as { error?: string } | null;
-    throw new Error(error?.error ?? "Could not convert the Word document to PDF.");
+
+  try {
+    const response = await fetch("/api/exports/word-to-pdf", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "X-Memoria-Filename": sanitizeFilename(title),
+      },
+      body: wordBlob,
+    });
+
+    if (response.ok) {
+      onProgress?.({ phase: "creating", message: "Converting the Word document to PDF…" });
+      await downloadBlob(await response.blob(), title, "pdf");
+      return;
+    }
+
+    // Keep real client errors visible, but use the local renderer when the
+    // deployment cannot run Word or LibreOffice (typically a 5xx response).
+    if (response.status < 500) {
+      const error = await response.json().catch(() => null) as { error?: string } | null;
+      throw new Error(error?.error ?? "Could not convert the Word document to PDF.");
+    }
+  } catch (error) {
+    // A failed/unavailable conversion endpoint should not prevent export.
+    // TypeError is the browser's usual fetch-network error across devices.
+    if (error instanceof Error && !(error instanceof TypeError) && !/failed to fetch|networkerror|load failed/i.test(error.message)) {
+      throw error;
+    }
   }
-  onProgress?.({ phase: "creating", message: "Converting the Word document to PDF…" });
-  await downloadBlob(await response.blob(), title, "pdf");
+
+  onProgress?.({ phase: "creating", message: "Creating a device-compatible PDF…" });
+  await downloadBlob(fallback().output("blob"), title, "pdf");
 }
 
 export async function exportMarkdownToPdf(title: string, markdown: string, onProgress?: ExportProgressHandler) {
-  await convertWordBlobToPdf(title, await createMarkdownWordBlob(title, markdown), onProgress);
+  await convertWordBlobToPdf(title, await createMarkdownWordBlob(title, markdown), () => buildMarkdownPdf(title, markdown), onProgress);
 }
 
 export async function exportBookToPdf(title: string, markdown: string, cover: NonNullable<MarkdownPdfOptions["bookCover"]>, onProgress?: ExportProgressHandler) {
-  await convertWordBlobToPdf(title, await createBookWordBlob(title, markdown, cover), onProgress);
+  await convertWordBlobToPdf(
+    title,
+    await createBookWordBlob(title, markdown, cover),
+    () => buildMarkdownPdf(title, markdown, { bookCover: cover }),
+    onProgress,
+  );
 }
 
 export interface QuizExportMetadata {
