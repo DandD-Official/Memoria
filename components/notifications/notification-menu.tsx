@@ -104,11 +104,11 @@ export function NotificationMenu({ initialUnreadCount }: { initialUnreadCount: n
         className={`relative flex h-9 w-9 items-center justify-center rounded-full border transition-colors ${unreadCount > 0 ? "border-danger/40 bg-danger/10 text-danger" : "border-line bg-surface text-ink-soft hover:text-ink"}`}
       >
         <Bell className="h-4 w-4" />
-        {unreadCount > 0 && <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full border-2 border-paper bg-danger" />}
+        {unreadCount > 0 && <span className="absolute -end-0.5 -top-0.5 h-2.5 w-2.5 rounded-full border-2 border-paper bg-danger" aria-hidden="true" />}
       </button>
 
       {open && (
-        <div role="menu" className="absolute right-0 top-11 z-50 w-[min(22rem,calc(100vw-2rem))] overflow-hidden rounded-xl border border-line bg-surface shadow-card-hover">
+        <div role="menu" className="absolute end-0 top-11 z-50 w-[min(22rem,calc(100vw-2rem))] overflow-hidden rounded-xl border border-line bg-surface shadow-card-hover">
           <div className="flex items-center justify-between border-b border-line px-4 py-3">
             <div>
               <p className="font-display text-base text-ink">Notifications</p>
@@ -135,8 +135,8 @@ export function NotificationMenu({ initialUnreadCount }: { initialUnreadCount: n
             ) : (
               items.map((item) => (
                 <button key={item.id} type="button" role="menuitem" onClick={() => void openNotification(item)} className={`relative block w-full rounded-lg px-3 py-2.5 text-left transition-colors hover:bg-ink/5 ${item.readAt ? "" : "bg-accent-soft/25"}`}>
-                  {!item.readAt && <span className="absolute right-3 top-3.5 h-2 w-2 rounded-full bg-accent" />}
-                  <p className="pr-5 text-sm font-medium text-ink">{item.title}</p>
+                  {!item.readAt && <span className="absolute end-3 top-3.5 h-2 w-2 rounded-full bg-accent" aria-hidden="true" />}
+                  <p className="pe-5 text-sm font-medium text-ink">{item.title}</p>
                   {item.message && <p className="mt-0.5 line-clamp-2 text-xs text-ink-soft">{item.message}</p>}
                   <p className="mt-1 text-[11px] text-ink-faint">{formatRelativeTime(item.createdAt)}</p>
                 </button>

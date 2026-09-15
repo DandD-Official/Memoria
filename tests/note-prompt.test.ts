@@ -10,7 +10,9 @@ describe("visual and creative reviewer prompting", () => {
     expect(prompt).toContain("visually rich, memorable reviewer");
     expect(prompt).toContain("process flow, timeline, hierarchy, comparison");
     expect(prompt).toContain(":::svg");
-    expect(prompt).toContain(":::image-request");
+    expect(prompt).toContain("self-contained HTML/SVG");
+    expect(prompt).not.toContain(":::image-request");
+    expect(prompt).not.toContain(":::diagram");
     expect(prompt).toContain("must never introduce facts");
     expect(prompt).toContain("MEMORIA MARKDOWN OUTPUT RULES");
   });
@@ -22,6 +24,6 @@ describe("visual and creative reviewer prompting", () => {
     );
 
     expect(sourcePackage).toContain("Visual & Creative");
-    expect(sourcePackage).toContain("purposeful visuals");
+    expect(sourcePackage).toContain("purposeful self-contained HTML/SVG visuals");
   });
 });

@@ -57,7 +57,7 @@ export function Dialog({ open, onOpenChange, title, description, children, foote
   if (!open || typeof document === "undefined") return null;
   return createPortal(
     <div className="fixed inset-0 z-[100] flex items-end justify-center p-0 sm:items-center sm:p-5" role="presentation">
-      <button className="absolute inset-0 animate-overlay-in bg-ink/45 backdrop-blur-[2px]" onClick={() => onOpenChange(false)} aria-hidden="true" tabIndex={-1} />
+      <button type="button" className="absolute inset-0 animate-overlay-in bg-ink/45 backdrop-blur-[2px]" onClick={() => onOpenChange(false)} aria-label="Close dialog" tabIndex={-1} />
       <div
         ref={panelRef}
         role="dialog"
@@ -71,8 +71,8 @@ export function Dialog({ open, onOpenChange, title, description, children, foote
           <h2 id={titleId} className="font-display text-xl font-medium tracking-[-0.01em] text-ink">{title}</h2>
           {description && <p id={descriptionId} className="mt-2 text-sm leading-relaxed text-ink-soft">{description}</p>}
         </div>
-        <button type="button" onClick={() => onOpenChange(false)} className="absolute right-4 top-4 inline-flex h-10 w-10 items-center justify-center rounded-control text-ink-faint transition-colors hover:bg-ink/5 hover:text-ink" aria-label="Close dialog">
-          <X className="h-4 w-4" />
+        <button type="button" onClick={() => onOpenChange(false)} className="absolute end-4 top-4 inline-flex h-10 w-10 items-center justify-center rounded-control text-ink-faint transition-colors hover:bg-ink/5 hover:text-ink" aria-label="Close dialog">
+          <X className="h-4 w-4" aria-hidden="true" />
         </button>
         <div className="mt-5">{children}</div>
         {footer && <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">{footer}</div>}

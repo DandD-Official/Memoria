@@ -109,13 +109,14 @@ model AiConnection {
   userId    String
   user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
   provider  AiProvider
+  label     String?
   apiKey    Bytes
   model     String?
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
 
-  @@unique([userId, provider])
   @@index([userId])
+  @@index([userId, provider])
   @@map("ai_connections")
 }
 

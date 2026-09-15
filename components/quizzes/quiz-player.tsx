@@ -148,7 +148,7 @@ export function QuizPlayer({ quizId, title, questions: rawQuestions, testMode, s
       </div>
 
       <div className="mb-4 h-1.5 w-full overflow-hidden rounded-full bg-ink/10">
-        <div className="h-full bg-accent transition-all" style={{ width: `${((index + 1) / questions.length) * 100}%` }} />
+        <div className="h-full bg-accent transition-[width] duration-150 ease-out" style={{ width: `${((index + 1) / questions.length) * 100}%` }} />
       </div>
       <p className="mb-4 text-xs text-ink-faint">
         Question {index + 1} of {questions.length} · {answeredCount} answered

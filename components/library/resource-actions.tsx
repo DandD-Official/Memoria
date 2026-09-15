@@ -45,7 +45,7 @@ function ActionMenu({ label, icon, children }: { label: string; icon: ReactNode;
       {open && (
         <>
           <button type="button" className="fixed inset-0 z-20 cursor-default" aria-label={`Close ${label} menu`} onClick={() => setOpen(false)} />
-          <div role="menu" className="absolute right-0 top-11 z-30 min-w-56 rounded-card border border-line bg-surface-raised p-2 shadow-card-hover">
+          <div role="menu" aria-label={`${label} actions`} className="absolute end-0 top-11 z-30 min-w-56 rounded-card border border-line bg-surface-raised p-2 shadow-card-hover">
             <div className="space-y-1 [&>a]:w-full [&>button]:w-full [&>div]:w-full">{children}</div>
           </div>
         </>
@@ -132,7 +132,7 @@ export function ResourceDetailActions({ edit, study, favorite, share, tools }: {
         {share}
         <ActionMenu label="Tools" icon={<Wrench className="h-3.5 w-3.5" />}>{tools}</ActionMenu>
       </div>
-      <div className="flex items-center gap-1.5 sm:hidden">
+      <div className="sticky top-[4.25rem] z-20 flex w-full items-center gap-1.5 rounded-card border border-line bg-paper/90 p-1 backdrop-blur sm:hidden">
         {edit}
         <Button variant="secondary" size="sm" onClick={() => setStudyOpen(true)}><Sparkles className="h-3.5 w-3.5" /> Study</Button>
         {favorite}

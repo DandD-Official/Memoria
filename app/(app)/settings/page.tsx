@@ -14,7 +14,7 @@ export default async function SettingsPage() {
   const [settings, connections, aiConnections] = await Promise.all([
     prisma.userSettings.upsert({ where: { userId: user.id }, create: { userId: user.id }, update: {} }),
     connectionStatuses(user.id),
-    prisma.aiConnection.findMany({ where: { userId: user.id }, select: { provider: true, model: true, updatedAt: true }, orderBy: { provider: "asc" } }),
+    prisma.aiConnection.findMany({ where: { userId: user.id }, select: { id: true, provider: true, label: true, model: true, updatedAt: true }, orderBy: { updatedAt: "desc" } }),
   ]);
 
   return (

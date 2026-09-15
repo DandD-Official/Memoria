@@ -1,6 +1,7 @@
 import type { AiProvider } from "@prisma/client";
 
 const REQUEST_TIMEOUT_MS = 90_000;
+const RETRY_DELAYS_MS = [250, 750];
 
 export const DEFAULT_AI_MODELS: Record<AiProvider, string> = {
   OPENAI: "gpt-5-mini",
@@ -8,17 +9,44 @@ export const DEFAULT_AI_MODELS: Record<AiProvider, string> = {
   GEMINI: "gemini-3.7-flash",
 };
 
-async function requestJson(url: string, init: RequestInit): Promise<unknown> {
-  const response = await fetch(url, {
-    ...init,
-    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
-    cache: "no-store",
-  });
-  const payload = await response.json().catch(() => null) as { error?: { message?: string }; message?: string } | null;
-  if (!response.ok) {
-    throw new Error(payload?.error?.message || payload?.message || `The AI provider returned ${response.status}.`);
+class ProviderRequestError extends Error {
+  constructor(message: string, readonly status: number) {
+    super(message);
+    this.name = "ProviderRequestError";
   }
-  return payload;
+}
+
+function isRetryableProviderError(status: number, message: string): boolean {
+  return [408, 409, 425, 429, 500, 502, 503, 504, 529].includes(status) || /high demand|overload|capacity|temporarily unavailable|try again later/i.test(message);
+}
+
+async function requestJson(url: string, init: RequestInit): Promise<unknown> {
+  for (let attempt = 0; attempt <= RETRY_DELAYS_MS.length; attempt += 1) {
+    try {
+      const response = await fetch(url, {
+        ...init,
+        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+        cache: "no-store",
+      });
+      const payload = await response.json().catch(() => null) as { error?: { message?: string }; message?: string } | null;
+      if (response.ok) return payload;
+
+      const message = payload?.error?.message || payload?.message || `The AI provider returned ${response.status}.`;
+      if (!isRetryableProviderError(response.status, message) || attempt === RETRY_DELAYS_MS.length) {
+        throw new ProviderRequestError(message, response.status);
+      }
+
+      const retryAfter = Number(response.headers.get("retry-after"));
+      const delay = Number.isFinite(retryAfter) && retryAfter > 0 ? Math.min(retryAfter * 1000, 5000) : RETRY_DELAYS_MS[attempt];
+      await new Promise((resolve) => setTimeout(resolve, delay));
+    } catch (error) {
+      if (error instanceof ProviderRequestError) throw error;
+      if (attempt === RETRY_DELAYS_MS.length) throw error;
+      await new Promise((resolve) => setTimeout(resolve, RETRY_DELAYS_MS[attempt]));
+    }
+  }
+
+  throw new Error("The AI provider request could not be completed.");
 }
 
 function openAiText(payload: unknown): string {
@@ -27,22 +55,45 @@ function openAiText(payload: unknown): string {
   return data.output?.flatMap((item) => item.content ?? []).filter((item) => item.type === "output_text").map((item) => item.text ?? "").join("") ?? "";
 }
 
+function chatCompletionText(payload: unknown): string {
+  const data = payload as {
+    choices?: Array<{
+      message?: { content?: string | Array<{ text?: string }> };
+    }>;
+  };
+  const content = data.choices?.[0]?.message?.content;
+  if (typeof content === "string") return content;
+  return content?.map((part) => part.text ?? "").join("") ?? "";
+}
+
+function providerEndpoint(baseUrl: string, path: string): string {
+  return `${baseUrl.replace(/\/+$/, "")}/${path}`;
+}
+
 export async function generateWithProvider(input: {
   provider: AiProvider;
   apiKey: string;
   model?: string | null;
   prompt: string;
+  /** Optional OpenAI-compatible base URL, used by shared gateway providers. */
+  baseUrl?: string | null;
 }): Promise<string> {
   const model = input.model?.trim() || DEFAULT_AI_MODELS[input.provider];
   let payload: unknown;
 
   if (input.provider === "OPENAI") {
-    payload = await requestJson("https://api.openai.com/v1/responses", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${input.apiKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ model, input: input.prompt, store: false }),
-    });
-    const text = openAiText(payload);
+    const baseUrl = input.baseUrl?.trim();
+    payload = await requestJson(
+      baseUrl ? providerEndpoint(baseUrl, "chat/completions") : "https://api.openai.com/v1/responses",
+      {
+        method: "POST",
+        headers: { Authorization: `Bearer ${input.apiKey}`, "Content-Type": "application/json" },
+        body: JSON.stringify(baseUrl
+          ? { model, messages: [{ role: "user", content: input.prompt }], max_tokens: 8192 }
+          : { model, input: input.prompt, store: false }),
+      },
+    );
+    const text = baseUrl ? chatCompletionText(payload) : openAiText(payload);
     if (text) return text;
   }
 

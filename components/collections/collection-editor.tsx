@@ -8,6 +8,7 @@ import { BookShareDialog, type BookMember, type BookSharePermission } from "@/co
 import { ExportMenu } from "@/components/exports/export-menu";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Input, Label, Textarea } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import type { ExportProgressHandler } from "@/lib/export/types";
@@ -96,7 +97,6 @@ export function CollectionEditor({ initialCollection, access, canExport, rows }:
   }
 
   async function deleteBook() {
-    if (!window.confirm(`Delete “${collection.title}”? This can't be undone.`)) return;
     try { await request(`/api/collections/${collection.id}`, { method: "DELETE" }); router.replace("/books"); }
     catch (caught) { setError(caught instanceof Error ? caught.message : "Couldn't delete this Book."); }
   }
@@ -149,7 +149,7 @@ export function CollectionEditor({ initialCollection, access, canExport, rows }:
       {view === "details" && <section className="mx-auto max-w-2xl rounded-card border border-line bg-surface p-5 shadow-sm sm:p-6">
         <h2 className="font-display text-xl text-ink">Book details</h2><p className="mt-1 text-sm text-ink-soft">These words appear on the cover and opening pages.</p>
         <div className="mt-5 space-y-4"><div><Label htmlFor="book-title">Title</Label><Input id="book-title" value={title} onChange={(event) => setTitle(event.target.value)} /></div><div><Label htmlFor="book-subtitle">Subtitle (optional)</Label><Input id="book-subtitle" value={subtitle} onChange={(event) => setSubtitle(event.target.value)} placeholder="A short line beneath the title" /></div><div><Label htmlFor="book-toc-title">Contents heading</Label><Input id="book-toc-title" value={tocTitle} onChange={(event) => setTocTitle(event.target.value)} /></div><div><Label htmlFor="book-description">Description</Label><Textarea id="book-description" rows={5} value={description} onChange={(event) => setDescription(event.target.value)} /></div><Button className="w-full" loading={saving} disabled={!title.trim() || !tocTitle.trim()} onClick={() => void saveDetails()}>Save details</Button></div>
-        {isOwner && <div className="mt-8 border-t border-line pt-5"><p className="text-sm font-medium text-ink">Danger zone</p><p className="mt-1 text-sm text-ink-soft">Deleting a Book cannot be undone.</p><Button variant="ghost" className="mt-3 text-danger hover:bg-danger/10" onClick={() => void deleteBook()}><Trash2 className="h-4 w-4" />Delete Book</Button></div>}
+        {isOwner && <div className="mt-8 border-t border-line pt-5"><p className="text-sm font-medium text-ink">Danger zone</p><p className="mt-1 text-sm text-ink-soft">Deleting a Book cannot be undone.</p><ConfirmDialog trigger={<Button variant="ghost" className="mt-3 text-danger hover:bg-danger/10"><Trash2 className="h-4 w-4" />Delete Book</Button>} title="Delete this Book?" description={`“${collection.title}” and its reading order will be removed. This cannot be undone.`} confirmLabel="Delete Book" destructive onConfirm={deleteBook} /></div>}
       </section>}
       {isOwner && <BookShareDialog bookId={collection.id} publicPath={publicPath} open={shareOpen} onOpenChange={setShareOpen} linkEnabled={collection.isPublished} linkPermission={collection.linkPermission} linkAllowExport={collection.allowExport} passwordProtected={collection.passwordProtected} members={collection.members} onChanged={(changes) => setCollection((current) => ({ ...current, ...(changes.linkEnabled === undefined ? {} : { isPublished: changes.linkEnabled }), ...(changes.linkPermission === undefined ? {} : { linkPermission: changes.linkPermission }), ...(changes.linkAllowExport === undefined ? {} : { allowExport: changes.linkAllowExport }), ...(changes.passwordProtected === undefined ? {} : { passwordProtected: changes.passwordProtected }), ...(changes.members === undefined ? {} : { members: changes.members }) }))} />}
     </div>

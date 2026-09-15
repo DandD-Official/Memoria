@@ -19,7 +19,7 @@ TASK
 Extract every readable word, heading, label, table, equation, and diagram annotation from the attached source image(s). Preserve the original reading order, wording, and structure. Do not summarize, omit, or invent missing text. If something is unclear or illegible, write [UNCLEAR: ...] instead of guessing.
 
 VISUALS
-If a source contains a diagram, chart, process flow, timeline, hierarchy, or other visual and you can faithfully reconstruct its visible structure and labels, represent it as one self-contained :::svg block with meaningful alt text. Do not invent values, labels, relationships, or styling that are not visible in the source. If it cannot be faithfully reconstructed as SVG, preserve the readable annotations and use :::image-request{purpose="..." alt="..."} to identify the visual that still needs to be supplied.
+If a source contains a chart, process flow, timeline, hierarchy, or other visual and you can faithfully reconstruct its visible structure and labels, represent it as one self-contained HTML/SVG visual inside a :::svg block with meaningful alt text. Do not invent values, labels, relationships, or styling that are not visible in the source. If it cannot be faithfully reconstructed as SVG, preserve the readable annotations and write [VISUAL NOT RECONSTRUCTED: ...] instead of requesting an image.
 
 ${buildMmdOutputRules()}
 

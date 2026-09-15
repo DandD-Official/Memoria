@@ -8,6 +8,7 @@ import { MmdReplacementProvider } from "@/components/mmd/replacement-context";
 import { ResponsiveTable } from "@/components/ui/responsive-table";
 import { MmdRenderProvider, type MmdRenderMode } from "@/components/mmd/render-context";
 import type { MmdAssetRegistry } from "@/lib/export/asset-registry";
+import { TableCellContent } from "@/components/markdown/table-cell";
 
 /**
  * Renders Memoria Markdown (MMD) — see .context/mmd-spec.md. This is the
@@ -43,6 +44,7 @@ export function MmdRenderer({
               table: ({ children, ...props }) => (
                 <ResponsiveTable><table {...props}>{children}</table></ResponsiveTable>
               ),
+              td: ({ children, ...props }) => <td {...props}><TableCellContent>{children}</TableCellContent></td>,
             }}
           >{content}</ReactMarkdown>
         </div>

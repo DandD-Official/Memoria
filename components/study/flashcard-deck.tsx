@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, Download, Pencil, RefreshCw, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Input, Label, Textarea } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
@@ -54,10 +55,11 @@ export function FlashcardDeck({ title, cards: initialCards, tracked }: { title: 
     setSaving(false); if (response.ok) setEditing(false);
   }
   async function removeCard() {
-    if (!card || !window.confirm("Delete this flashcard?")) return;
+    if (!card) return;
     setSaving(true);
     const response = await fetch(`/api/flashcards/${card.id}`, { method: "DELETE" });
-    if (response.ok) { setCards((current) => current.filter((item) => item.id !== card.id)); setFlipped(false); }
+    if (!response.ok) { const data = await response.json().catch(() => null); setSaving(false); throw new Error(data?.error ?? "Could not delete this flashcard."); }
+    setCards((current) => current.filter((item) => item.id !== card.id)); setFlipped(false);
     setSaving(false);
   }
   function exportCsv() {
@@ -76,7 +78,7 @@ export function FlashcardDeck({ title, cards: initialCards, tracked }: { title: 
       <p className="mb-3 text-xs text-ink-faint">Card {index + 1} of {cards.length}</p>
       {editing ? <div className="card space-y-3 p-5"><div><Label htmlFor="card-front">Front</Label><Input id="card-front" value={front} onChange={(event) => setFront(event.target.value)} /></div><div><Label htmlFor="card-back">Back</Label><Textarea id="card-back" rows={5} value={back} onChange={(event) => setBack(event.target.value)} /></div><div className="flex justify-end gap-2"><Button variant="ghost" onClick={() => setEditing(false)}>Cancel</Button><Button loading={saving} disabled={!front.trim() || !back.trim()} onClick={() => void saveEdit()}>Save</Button></div></div> : <button type="button" onClick={() => setFlipped((value) => !value)} className={cn("card flex min-h-[220px] w-full items-center justify-center p-8 text-center transition-colors", flipped ? "bg-accent-soft/40" : "bg-surface")}><span className="font-display text-lg text-ink">{flipped ? card.back : card.front}</span></button>}
       <p className="mt-2 text-center text-xs text-ink-faint">Tap the card to flip it</p>
-      {tracked && !editing && <div className="mt-2 flex justify-center gap-2"><Button variant="ghost" size="sm" onClick={beginEdit}><Pencil className="h-3.5 w-3.5" /> Edit</Button><Button variant="ghost" size="sm" disabled={saving} onClick={() => void removeCard()}><Trash2 className="h-3.5 w-3.5" /> Delete</Button></div>}
+      {tracked && !editing && <div className="mt-2 flex justify-center gap-2"><Button variant="ghost" size="sm" onClick={beginEdit}><Pencil className="h-3.5 w-3.5" /> Edit</Button><ConfirmDialog trigger={<Button variant="ghost" size="sm" disabled={saving}><Trash2 className="h-3.5 w-3.5" /> Delete</Button>} title="Delete this flashcard?" description="This card will be removed from the deck and your study history." confirmLabel="Delete card" destructive onConfirm={removeCard} /></div>}
       {flipped && <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-4"><Button variant="outline" disabled={saving} onClick={() => grade(1)}>Again</Button><Button variant="outline" disabled={saving} onClick={() => grade(2)}>Hard</Button><Button variant="outline" disabled={saving} onClick={() => grade(3)}>Good</Button><Button disabled={saving} onClick={() => grade(4)}>Easy</Button></div>}
     </>}
   </div>;

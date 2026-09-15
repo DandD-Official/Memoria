@@ -2,6 +2,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { ResponsiveTable } from "@/components/ui/responsive-table";
 import { remarkMmdMath } from "@/lib/mmd/math";
+import { TableCellContent } from "@/components/markdown/table-cell";
 
 /**
  * Renders a run of ordinary Markdown. Used both for top-level content and
@@ -27,6 +28,7 @@ export function InlineMarkdown({ content }: { content: string }) {
             <table {...props}>{children}</table>
           </ResponsiveTable>
         ),
+        td: ({ children, ...props }) => <td {...props}><TableCellContent>{children}</TableCellContent></td>,
       }}
     >
       {content}

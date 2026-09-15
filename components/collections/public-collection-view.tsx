@@ -6,6 +6,8 @@ import { BookMarked, MessageSquare, ChevronLeft, ChevronRight, RefreshCw, ArrowL
 import { MarkdownRenderer } from "@/components/markdown/renderer";
 import { QuestionInput } from "@/components/quizzes/question-input";
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { Dialog } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Textarea, Input, Label } from "@/components/ui/input";
 import { gradeQuiz } from "@/lib/quiz-grading";
@@ -241,6 +243,9 @@ function FeedbackSection({
   const [sent, setSent] = useState(false);
   const [replyTo, setReplyTo] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [editDraft, setEditDraft] = useState("");
+  const [editOpen, setEditOpen] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
 
   async function submit(content: string, parentId?: string) {
     const target = parentId ?? "root";
@@ -276,24 +281,38 @@ function FeedbackSection({
   }
 
   async function editComment(id: string, current: string) {
-    const next = window.prompt("Edit your comment", current)?.trim();
-    if (!next || next === current) return;
     setEditingId(id);
-    const response = await fetch(`/api/feedback/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ message: next }) });
-    if (response.ok) onChanged((rows) => rows.map((row) => row.id === id ? { ...row, message: next, updatedAt: new Date() } : row));
-    setEditingId(null);
+    setEditDraft(current);
+    setError(null);
+    setEditOpen(true);
   }
 
   async function deleteComment(id: string) {
-    if (!window.confirm("Delete this comment and its replies?")) return;
     const response = await fetch(`/api/feedback/${id}`, { method: "DELETE" });
-    if (response.ok) onChanged((rows) => rows.filter((row) => row.id !== id && row.parentId !== id));
+    if (!response.ok) { const data = await response.json().catch(() => null); throw new Error(data?.error ?? "Could not delete this comment."); }
+    onChanged((rows) => rows.filter((row) => row.id !== id && row.parentId !== id));
   }
 
   async function reportComment(id: string) {
-    const reason = window.prompt("Why are you reporting this comment? (optional)") ?? undefined;
-    const response = await fetch(`/api/feedback/${id}/report`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ reason }) });
-    if (response.ok) window.alert("Report submitted. Thank you.");
+    setNotice(null);
+    const response = await fetch(`/api/feedback/${id}/report`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({}) });
+    const data = await response.json().catch(() => null);
+    if (response.ok) { setNotice("Report submitted. Thank you."); window.setTimeout(() => setNotice(null), 2500); }
+    else setError({ target: id, message: data?.error ?? "Could not submit the report." });
+  }
+
+  async function saveEdit() {
+    if (!editingId || !editDraft.trim()) return;
+    const id = editingId;
+    setSending(`edit-${id}`);
+    setError(null);
+    const response = await fetch(`/api/feedback/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ message: editDraft.trim() }) });
+    const data = await response.json().catch(() => null);
+    setSending(null);
+    if (!response.ok) { setError({ target: `edit-${id}`, message: data?.error ?? "Could not update the comment." }); return; }
+    onChanged((rows) => rows.map((row) => row.id === id ? { ...row, message: editDraft.trim(), updatedAt: new Date() } : row));
+    setEditOpen(false);
+    setEditingId(null);
   }
 
   return (
@@ -302,6 +321,7 @@ function FeedbackSection({
         <MessageSquare className="h-4 w-4" /> Feedback
       </h2>
       <p className="mt-1 text-sm text-ink-soft">Start a discussion or reply to another person&apos;s feedback.</p>
+      {notice && <p className="mt-3 inline-flex rounded-control border border-success/25 bg-success/10 px-3 py-2 text-sm text-success" role="status">{notice}</p>}
 
       <div className="card mt-4 p-5">
         {!viewerUserId && <><Label htmlFor="feedback-name">Name (optional)</Label><Input id="feedback-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Anonymous" className="mt-1.5" /></>}
@@ -340,7 +360,7 @@ function FeedbackSection({
                 >
                   Reply
                 </button>
-                {viewerUserId === f.authorUserId ? <><button disabled={editingId === f.id} onClick={() => editComment(f.id, f.message)} className="text-ink-soft hover:underline">Edit</button><button onClick={() => deleteComment(f.id)} className="text-danger hover:underline">Delete</button></> : viewerUserId && <button onClick={() => reportComment(f.id)} className="text-ink-faint hover:text-danger">Report</button>}
+                {viewerUserId === f.authorUserId ? <><button type="button" disabled={editingId === f.id} onClick={() => void editComment(f.id, f.message)} className="text-ink-soft hover:underline">Edit</button><ConfirmDialog trigger={<button type="button" className="text-danger hover:underline">Delete</button>} title="Delete this comment?" description="This comment and its replies will be removed from the discussion." confirmLabel="Delete comment" destructive onConfirm={() => deleteComment(f.id)} /></> : viewerUserId && <button type="button" onClick={() => void reportComment(f.id)} className="text-ink-faint hover:text-danger">Report</button>}
               </div>
               {replyTo === f.id && (
                 <div id={`reply-form-${f.id}`} className="mt-3 rounded-lg border border-accent/30 bg-accent-soft/15 p-3">
@@ -360,6 +380,12 @@ function FeedbackSection({
           ))}
         </div>
       )}
+
+      <Dialog open={editOpen} onOpenChange={(next) => { if (!sending?.startsWith("edit-")) { setEditOpen(next); if (!next) setEditingId(null); } }} title="Edit your comment" description="Keep the conversation clear and useful." className="max-w-lg" footer={<><Button variant="ghost" onClick={() => { setEditOpen(false); setEditingId(null); }}>Cancel</Button><Button onClick={() => void saveEdit()} loading={Boolean(editingId && sending === `edit-${editingId}`)} disabled={!editDraft.trim()}>Save comment</Button></>}>
+        <Label htmlFor="edit-feedback-message">Comment</Label>
+        <Textarea id="edit-feedback-message" autoFocus rows={4} value={editDraft} onChange={(event) => setEditDraft(event.target.value)} aria-invalid={error?.target === `edit-${editingId}`} />
+        {error?.target === `edit-${editingId}` && <p className="mt-2 text-sm text-danger" role="alert">{error.message}</p>}
+      </Dialog>
 
       <p className="mt-8 text-center text-xs text-ink-faint">
         Made with <Badge tone="accent">Memoria</Badge>

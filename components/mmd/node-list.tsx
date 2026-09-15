@@ -25,6 +25,16 @@ import { CodeBlock } from "@/components/mmd/blocks/code-block";
 
 const CALLOUT_NAMES = new Set(["note", "tip", "warning", "danger", "info", "success"]);
 
+function nestedBlocks(node: Extract<MmdNode, { type: "block" }>): MmdNode[] {
+  return node.children.filter((child) => child.type !== "markdown");
+}
+
+function nestedGalleryBlocks(node: Extract<MmdNode, { type: "block" }>): MmdNode[] {
+  return node.children
+    .filter((child): child is Extract<MmdNode, { type: "block" }> => child.type === "block" && child.block === "image")
+    .flatMap(nestedBlocks);
+}
+
 /**
  * Renders a list of MmdNode siblings. This is the single place that maps
  * a block name to its React component — see .context/project-architecture.md
@@ -59,7 +69,7 @@ function MmdNodeRenderer({ node }: { node: MmdNode }) {
 
   switch (node.block) {
     case "code":
-      return <CodeBlock node={node} />;
+      return <><CodeBlock node={node} /><MmdNodeList nodes={nestedBlocks(node)} /></>;
     case "definition":
       return (
         <DefinitionBlock node={node}>
@@ -121,7 +131,7 @@ function MmdNodeRenderer({ node }: { node: MmdNode }) {
         </DetailsBlock>
       );
     case "image":
-      return <ImageBlock node={node} />;
+      return <><ImageBlock node={node} /><MmdNodeList nodes={nestedBlocks(node)} /></>;
     case "gallery":
       return (
         <>
@@ -129,16 +139,17 @@ function MmdNodeRenderer({ node }: { node: MmdNode }) {
           {/* Non-image content inside the gallery body (bare Markdown
               images, stray text) still renders normally below the grid. */}
           <MmdNodeList nodes={node.children.filter((c) => c.type !== "block" || c.block !== "image")} />
+          <MmdNodeList nodes={nestedGalleryBlocks(node)} />
         </>
       );
     case "diagram":
-      return <DiagramPlaceholder node={node} />;
+      return <><DiagramPlaceholder node={node} /><MmdNodeList nodes={nestedBlocks(node)} /></>;
     case "image-request":
-      return <ImageRequestPlaceholder node={node} />;
+      return <><ImageRequestPlaceholder node={node} /><MmdNodeList nodes={nestedBlocks(node)} /></>;
     case "svg":
-      return <SvgBlock node={node} />;
+      return <><SvgBlock node={node} /><MmdNodeList nodes={nestedBlocks(node)} /></>;
     case "math":
-      return <MathBlock node={node} />;
+      return <><MathBlock node={node} /><MmdNodeList nodes={nestedBlocks(node)} /></>;
     default:
       // Guards against lib/mmd/spec-blocks.ts gaining a block type that
       // nobody wired a renderer for — fails safe instead of rendering

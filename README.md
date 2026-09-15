@@ -2,7 +2,7 @@
 
 A full-stack study platform that turns your notes into structured reviewers, quizzes, and exams — built with Next.js 15, TypeScript, Prisma, and NextAuth.
 
-Memoria can generate ready-to-use prompts for a manual copy/paste workflow, or users can connect their own OpenAI, Anthropic, or Gemini API key for one-click generation. Provider keys are encrypted at rest and AI output is validated before it is saved.
+Memoria can generate ready-to-use prompts for a manual copy/paste workflow, or run generation with the deployment's shared AI key or a user's own OpenAI, Anthropic, or Gemini keys. Provider keys are encrypted at rest and AI output is validated before it is saved.
 
 ## Stack
 
@@ -82,7 +82,7 @@ This is deliberately **not** implicit ORM magic: `lib/notes-repo.ts` and `lib/re
 
 1. **Import** — upload a `.md`/`.txt`/`.pdf`/`.docx`/`.pptx` file (or a Memoria `.json` export, see Round-trip below), paste content, or connect your own Google Drive/Notion workspace and choose a document. Image-heavy files pause for an explicit OCR/partial-import decision.
 2. **Generate a prompt** — select notes, pick a processing style, and Memoria builds a prompt asking for a clean **Markdown** document back (see `lib/prompts/note-prompt.ts` and `lib/prompts/quiz-prompt.ts`). Reviewers deliberately are *not* a rigid JSON schema — Markdown is far more reliable for a model to produce correctly, and Memoria renders it with full typography.
-3. **Generate or copy** — use an encrypted, user-owned OpenAI/Anthropic/Gemini key for direct generation, or copy the prompt into any AI assistant yourself.
+3. **Generate or copy** — choose the deployment's shared AI key or your encrypted, user-owned OpenAI/Anthropic/Gemini keys for direct generation, or copy the prompt into any AI assistant yourself. Each source supports multiple keys and tries the next key when one fails.
 4. **Import the result** — paste the response back into Memoria. Reviewer content just needs to be non-trivial Markdown; quiz content is validated against a Zod schema (`lib/validation/quiz.ts`) that's deliberately lenient about common AI quirks — it strips ```` ```json ```` code fences, accepts either casing for enum values, tolerates a missing/duplicate question `id` by reassigning one, and reports the rest as clear field-level errors instead of a wall of raw Zod output.
 5. **Study** — turn the result into flashcards, quizzes, and exams, and track attempts over time.
 
@@ -96,7 +96,7 @@ Exports use an explicit white-page, dark-text template independent of the app th
 
 ## Guest / quick mode (`/guest`)
 
-No account, nothing saved. Guests can create reviewers, flashcards, quizzes, and exams; generate an AI prompt or import quiz JSON directly; and choose Review mode (instant per-question feedback) or Exam mode (feedback after submission). Reviewer output automatically exposes flashcards. Everything stays client-side except the stateless prompt-generation and file-text-extraction endpoints under `/api/guest/*`.
+No account, nothing saved. Guests can create reviewers, flashcards, quizzes, and exams; generate an AI prompt or import quiz JSON directly; and choose Review mode (instant per-question feedback) or Exam mode (feedback after submission). Reviewer output automatically exposes flashcards. Everything stays client-side except the stateless prompt-generation, file-text-extraction, and shared-key generation endpoints under `/api/guest/*` and `/api/ai/general`.
 
 ## Data model
 
@@ -130,6 +130,7 @@ Every API route re-derives access via `lib/permissions/index.ts::getAccessLevel`
 - Google Drive: set `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`, then add the callback shown by the app to the Google OAuth client. Each person authorizes their own read-only Drive connection.
 - Notion: set `NOTION_CLIENT_ID` and `NOTION_CLIENT_SECRET`, configure the app callback, and let each person select their own workspace during OAuth.
 - AI generation: users add their own OpenAI, Anthropic, or Gemini key during onboarding or under Settings. `INTEGRATION_ENCRYPTION_KEY` must be set so OAuth tokens and AI keys are encrypted at rest.
+- Shared AI generation: set `AI_SYSTEM_PROVIDER`, `AI_SYSTEM_MODEL`, and `AI_SYSTEM_API_KEYS` in the server environment. The key list accepts comma- or newline-separated values and is tried in order. For an OpenAI-compatible gateway such as AI/ML API, set `AI_SYSTEM_BASE_URL` to its `/v1` URL; the app then uses `/chat/completions`. `POST /api/ai/general` is available without a session for shared-key generation; signed-in users can pass `source: "personal"` for their saved keys or `source: "system"` for the shared pool. The existing `/api/ai/generate` route remains an alias.
 - All connections are optional and can be revoked or relinked from Settings.
 
 The study system persists editable flashcards, schedules reviews with spaced repetition, records study sessions, presents a due-card queue, and exports cards as Anki-compatible CSV. Mastery tests use prior graded attempts to prioritize questions the learner has missed most often.

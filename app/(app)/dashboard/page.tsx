@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { FileInput, Layers, ListChecks, PlayCircle, FileText, TrendingUp } from "lucide-react";
+import { FileInput, Layers, ListChecks, PlayCircle, FileText, TrendingUp, ArrowRight } from "lucide-react";
 import { prisma } from "@/lib/db";
 import { requireUser } from "@/lib/auth/session";
 import { Card } from "@/components/ui/card";
@@ -10,8 +10,8 @@ import { formatRelativeTime } from "@/lib/utils";
 
 const quickActions = [
   { href: "/notes/import", label: "Import Memory", description: "Bring in notes or documents", icon: FileInput },
-  { href: "/reviewers", label: "Build reviewer", description: "Shape material for revision", icon: Layers },
-  { href: "/quizzes", label: "Create quiz", description: "Turn material into questions", icon: ListChecks },
+  { href: "/reviewers", label: "Build a reviewer", description: "Shape material for revision", icon: Layers },
+  { href: "/quizzes", label: "Create a quiz", description: "Turn material into questions", icon: ListChecks },
   { href: "/study", label: "Start studying", description: "Continue a focused session", icon: PlayCircle },
 ];
 
@@ -38,23 +38,38 @@ export default async function DashboardPage() {
 
   return (
     <PageShell>
-      <section className="relative overflow-hidden rounded-panel border border-line bg-surface-raised px-5 py-7 shadow-card sm:px-8 sm:py-9">
-        <div className="pointer-events-none absolute -right-16 -top-24 h-64 w-64 rounded-full bg-accent-soft/75 blur-3xl" aria-hidden="true" />
-        <div className="pointer-events-none absolute bottom-0 left-8 h-px w-32 bg-gradient-to-r from-accent to-transparent" aria-hidden="true" />
-        <div className="relative max-w-2xl">
+      <section aria-labelledby="dashboard-title" className="relative overflow-hidden rounded-panel border border-line bg-surface-raised px-5 py-7 shadow-card sm:px-8 sm:py-9">
+        <div className="pointer-events-none absolute -end-16 -top-24 h-64 w-64 rounded-full bg-accent-soft/75 blur-3xl" aria-hidden="true" />
+        <div className="pointer-events-none absolute bottom-0 inset-inline-start-8 h-px w-32 bg-gradient-to-r from-accent to-transparent" aria-hidden="true" />
+        <div className="relative max-w-3xl">
           <p className="eyebrow">Your learning workspace</p>
-          <h1 className="mt-2 font-display text-display-lg font-medium text-ink">Welcome back{user.name ? `, ${user.name.split(" ")[0]}` : ""}</h1>
-          <p className="mt-3 text-sm leading-relaxed text-ink-soft sm:text-base">Turn today&apos;s notes into knowledge you can return to, connect, and remember.</p>
+          <h1 id="dashboard-title" className="mt-2 max-w-2xl font-display text-display-lg font-medium text-ink">Welcome back{user.name ? `, ${user.name.split(" ")[0]}` : ""}</h1>
+          <p className="mt-3 max-w-2xl text-pretty text-sm leading-relaxed text-ink-soft sm:text-base">Turn today&apos;s notes into knowledge you can return to, connect, and remember.</p>
+          <div className="mt-6 flex flex-wrap items-center gap-3">
+            <Link href="/notes/import" className="inline-flex min-h-10 items-center justify-center gap-2 rounded-control border border-action bg-action px-4 text-sm font-semibold text-action-foreground shadow-sm motion-safe:transition-[background-color,box-shadow,scale] motion-safe:duration-150 motion-safe:ease-out hover:bg-action/90 active:scale-[0.96]">
+              <FileInput className="h-4 w-4" aria-hidden="true" />
+              Import Memory
+            </Link>
+            <Link href="/study" className="inline-flex min-h-10 items-center justify-center gap-2 rounded-control border border-line-strong bg-surface px-4 text-sm font-medium text-ink motion-safe:transition-[background-color,border-color,scale] motion-safe:duration-150 motion-safe:ease-out hover:border-ink-faint hover:bg-surface-muted active:scale-[0.96]">
+              Open study desk
+              <ArrowRight className="h-4 w-4" aria-hidden="true" />
+            </Link>
+          </div>
         </div>
       </section>
 
       <section aria-labelledby="quick-actions-title">
-        <h2 id="quick-actions-title" className="sr-only">Quick actions</h2>
+        <div className="mb-4 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <h2 id="quick-actions-title" className="section-heading">Start with a workflow</h2>
+            <p className="mt-1 text-sm leading-relaxed text-ink-soft">Choose the next step that fits your study session.</p>
+          </div>
+        </div>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {quickActions.map((action) => (
             <Link key={action.href} href={action.href} className="card interactive-card group flex min-h-24 items-center gap-3 p-4">
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-control border border-accent/20 bg-accent-soft">
-                <action.icon className="h-[1.125rem] w-[1.125rem] text-accent-dark transition-transform duration-200 group-hover:scale-110" aria-hidden="true" />
+                <action.icon className="h-[1.125rem] w-[1.125rem] text-accent-dark" aria-hidden="true" />
               </div>
               <div>
                 <span className="block text-sm font-semibold text-ink">{action.label}</span>
@@ -66,10 +81,16 @@ export default async function DashboardPage() {
       </section>
 
       {memoryCount > 0 && (
-        <section aria-label="Learning overview" className="grid gap-3 sm:grid-cols-3">
-          <Card variant="muted" className="p-4"><p className="eyebrow text-ink-faint">Library</p><p className="mt-2 font-display text-3xl text-ink">{memoryCount}</p><p className="mt-1 text-xs text-ink-soft">Memories and study resources</p></Card>
-          <Card variant="muted" className="p-4"><p className="eyebrow text-ink-faint">Practice</p><p className="mt-2 font-display text-3xl text-ink">{quizAttemptCount}</p><p className="mt-1 text-xs text-ink-soft">Assessments completed</p></Card>
-          <Card variant="muted" className="p-4"><p className="eyebrow text-ink-faint">Recent recall</p><p className="mt-2 flex items-center gap-2 font-display text-3xl text-ink">{avgScore !== null ? `${avgScore}%` : "—"}{avgScore !== null && <TrendingUp className="h-4 w-4 text-success" aria-hidden="true" />}</p><p className="mt-1 text-xs text-ink-soft">Average across recent quizzes</p></Card>
+        <section aria-labelledby="progress-title">
+          <div className="mb-4">
+            <h2 id="progress-title" className="section-heading">Your progress</h2>
+            <p className="mt-1 text-sm leading-relaxed text-ink-soft">A quick look at your learning momentum.</p>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-3">
+            <Card variant="muted" className="p-4"><p className="eyebrow text-ink-faint">Library</p><p className="mt-2 font-display text-3xl tabular-nums text-ink">{memoryCount}</p><p className="mt-1 text-xs text-ink-soft">Memories and study resources</p></Card>
+            <Card variant="muted" className="p-4"><p className="eyebrow text-ink-faint">Practice</p><p className="mt-2 font-display text-3xl tabular-nums text-ink">{quizAttemptCount}</p><p className="mt-1 text-xs text-ink-soft">Assessments completed</p></Card>
+            <Card variant="muted" className="p-4"><p className="eyebrow text-ink-faint">Recent recall</p><p className="mt-2 flex items-center gap-2 font-display text-3xl tabular-nums text-ink">{avgScore !== null ? `${avgScore}%` : "—"}{avgScore !== null && <TrendingUp className="h-4 w-4 text-success" aria-hidden="true" />}</p><p className="mt-1 text-xs text-ink-soft">Average across recent quizzes</p></Card>
+          </div>
         </section>
       )}
 

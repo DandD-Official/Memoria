@@ -33,7 +33,7 @@ const ALIGN_CLASS: Record<string, string> = {
 
 function UnresolvedImage({ alt, caption }: { alt: string; caption?: string }) {
   return (
-    <figure className="my-4 flex flex-col items-center rounded-lg border border-dashed border-line bg-ink/[0.02] p-6 text-center">
+    <figure className="my-5 flex flex-col items-center rounded-card border border-dashed border-line bg-ink/[0.02] p-7 text-center">
       <ImageOff className="h-6 w-6 text-ink-faint" aria-hidden="true" />
       <p className="mt-2 text-sm text-ink-soft">Image storage isn&apos;t set up yet.</p>
       <p className="mt-0.5 text-xs text-ink-faint">{alt}</p>
@@ -73,11 +73,12 @@ export function ImageBlock({ node }: { node: MmdBlockNode }) {
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="block w-full cursor-zoom-in overflow-hidden rounded-lg border border-line"
+          aria-label={`Open image: ${alt}`}
+          className="group block w-full cursor-zoom-in overflow-hidden rounded-card border border-line bg-surface transition-[border-color,box-shadow] hover:border-accent hover:shadow-card-hover focus-visible:ring-2 focus-visible:ring-accent"
         >
           {image}
         </button>
-        {caption && <figcaption className="mt-1.5 text-center text-xs text-ink-soft">{caption}</figcaption>}
+        {caption && <figcaption className="mt-2 text-center text-xs leading-relaxed text-ink-soft">{caption}</figcaption>}
       </figure>
       {open && <GalleryLightbox image={{ src, alt, caption }} onClose={() => setOpen(false)} />}
     </>
@@ -115,7 +116,7 @@ export function GalleryBlock({ node }: { node: MmdBlockNode }) {
 
   return (
     <>
-      <div data-export-block="gallery" className="my-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
+      <div data-export-block="gallery" className="my-5 grid min-w-0 grid-cols-2 gap-3 sm:grid-cols-3">
         {images.map((img, i) => {
           const resolved = resolveImageSrc(img.src);
           if ("unresolved" in resolved) {
@@ -133,7 +134,7 @@ export function GalleryBlock({ node }: { node: MmdBlockNode }) {
           return mode === "export" ? (
             <div key={i} className="relative aspect-square overflow-hidden rounded-lg border border-line">{tileContents}</div>
           ) : (
-            <button key={i} type="button" onClick={() => setOpenIndex(i)} className="group relative aspect-square overflow-hidden rounded-lg border border-line">
+            <button key={i} type="button" onClick={() => setOpenIndex(i)} aria-label={`Open image ${i + 1}: ${img.alt}`} className="group relative aspect-square overflow-hidden rounded-card border border-line bg-surface focus-visible:ring-2 focus-visible:ring-accent">
               {tileContents}
             </button>
           );
@@ -163,7 +164,7 @@ function GalleryLightbox({ image, onClose }: { image: GalleryImage; onClose: () 
         type="button"
         onClick={onClose}
         aria-label="Close"
-        className="absolute right-4 top-4 rounded-full bg-surface/10 p-2 text-white hover:bg-surface/20"
+        className="absolute end-4 top-4 inline-flex h-10 w-10 items-center justify-center rounded-full bg-surface/10 p-2 text-white hover:bg-surface/20 focus-visible:ring-2 focus-visible:ring-white"
       >
         <X className="h-5 w-5" aria-hidden="true" />
       </button>

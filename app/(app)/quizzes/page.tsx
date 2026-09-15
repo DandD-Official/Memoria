@@ -8,6 +8,7 @@ import { LibraryNavigation } from "@/components/library/library-navigation";
 import { TagList } from "@/components/library/tag-list";
 import { PageActions, PageDescription, PageHeader, PageHeaderContent, PageShell, PageTitle } from "@/components/ui/page";
 import { ResourceCard } from "@/components/library/resource-card";
+import { hasSystemAiConnection } from "@/lib/ai/system";
 
 export default async function QuizzesPage(props: { searchParams: Promise<{ create?: string; fromNote?: string; fromReviewer?: string; source?: string; page?: string }> }) {
   const searchParams = await props.searchParams;
@@ -28,7 +29,7 @@ export default async function QuizzesPage(props: { searchParams: Promise<{ creat
           <PageDescription>Test recall with questions built from your own material.</PageDescription>
         </PageHeaderContent>
         <PageActions>
-          <QuizWizardLauncher key={`${searchParams.create}-${searchParams.source}-${searchParams.fromNote}-${searchParams.fromReviewer}`} notes={notes} reviewers={reviewers} defaultNoteId={searchParams.fromNote} defaultReviewerId={searchParams.fromReviewer} initiallyOpen={searchParams.create === "1"} initialMode={searchParams.source === "import" ? "import" : "existing"} defaults={{ questionCount: settings.defaultQuestionCount, difficulty: settings.defaultDifficulty, mode: settings.defaultQuizMode }} />
+          <QuizWizardLauncher key={`${searchParams.create}-${searchParams.source}-${searchParams.fromNote}-${searchParams.fromReviewer}`} notes={notes} reviewers={reviewers} defaultNoteId={searchParams.fromNote} defaultReviewerId={searchParams.fromReviewer} initiallyOpen={searchParams.create === "1"} initialMode={searchParams.source === "import" ? "import" : "existing"} defaults={{ questionCount: settings.defaultQuestionCount, difficulty: settings.defaultDifficulty, mode: settings.defaultQuizMode }} systemAvailable={hasSystemAiConnection()} />
         </PageActions>
       </PageHeader>
 

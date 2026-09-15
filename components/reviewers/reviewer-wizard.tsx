@@ -9,6 +9,7 @@ import { MarkdownRenderer } from "@/components/markdown/renderer";
 import { MmdValidationNotice } from "@/components/mmd/validation-notice";
 import { analyzeReviewerImport, stripCodeFences } from "@/lib/validation/reviewer";
 import { cn } from "@/lib/utils";
+import { AiSourcePicker, type AiKeySource } from "@/components/ai/ai-source-picker";
 
 const STYLES = [
   { value: "COMPLETE", label: "Complete" },
@@ -20,7 +21,7 @@ const STYLES = [
 ] as const;
 
 const PROCESSING_STYLES = [
-  { value: "visual_creative", label: "Visual & Creative - add diagrams and visual explanations" },
+  { value: "visual_creative", label: "Visual & Creative - add purposeful SVG visuals" },
   { value: "preserve", label: "Preserve — keep almost everything" },
   { value: "balanced", label: "Balanced — clean and organize" },
   { value: "condensed", label: "Condensed — shorter, key points only" },
@@ -32,7 +33,7 @@ interface Note {
   title: string;
 }
 
-export function ReviewerWizard({ notes, defaultNoteId, initiallyOpen = false, initialPath }: { notes: Note[]; defaultNoteId?: string; initiallyOpen?: boolean; initialPath?: "notes" | "import" }) {
+export function ReviewerWizard({ notes, defaultNoteId, initiallyOpen = false, initialPath, systemAvailable = false }: { notes: Note[]; defaultNoteId?: string; initiallyOpen?: boolean; initialPath?: "notes" | "import"; systemAvailable?: boolean }) {
   const router = useRouter();
   const [open, setOpen] = useState(Boolean(defaultNoteId) || initiallyOpen);
   const [creationPath, setCreationPath] = useState<"notes" | "import" | null>(initialPath ?? (defaultNoteId ? "notes" : null));
@@ -46,6 +47,7 @@ export function ReviewerWizard({ notes, defaultNoteId, initiallyOpen = false, in
   const [title, setTitle] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [source, setSource] = useState<AiKeySource>(systemAvailable ? "system" : "personal");
 
   function toggleNote(id: string) {
     setSelectedNoteIds((prev) => (prev.includes(id) ? prev.filter((n) => n !== id) : [...prev, id]));
@@ -84,17 +86,37 @@ export function ReviewerWizard({ notes, defaultNoteId, initiallyOpen = false, in
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch("/api/ai/generate", {
+      const response = await fetch("/api/ai/general", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt }),
+        body: JSON.stringify({ prompt, source }),
       });
       const payload = await response.json().catch(() => null);
       if (!response.ok) {
-        setError(payload?.error ?? "AI generation failed.");
+        if (payload?.code === "AI_SYSTEM_NOT_CONFIGURED") {
+          setError("Memoria AI is not configured yet. Choose your own connected key or ask an administrator to add a system key.");
+          return;
+        }
+        if (payload?.code === "NO_AI_CONNECTION") {
+          setError("No personal AI key is connected. Add one in Settings → AI providers or choose Memoria AI.");
+          return;
+        }
+        setError(payload?.code === "AI_CONNECTION_INVALID"
+          ? "Your saved AI provider key can no longer be unlocked. Reconnect it in Settings → AI providers, then try again."
+          : payload?.code === "AI_PROVIDER_BUSY"
+            ? "All selected AI keys are temporarily busy. Memoria tried each key; try again in a moment."
+          : payload?.error ?? "AI generation failed.");
+        return;
+      }
+      if (typeof payload?.text !== "string" || !payload.text.trim()) {
+        setError("The connected AI returned an empty response. Try again or copy the prompt to another AI assistant.");
         return;
       }
       const cleaned = stripCodeFences(payload.text);
+      if (cleaned.trim().length < 20) {
+        setError("The connected AI returned too little content for a reviewer. Try again with the same prompt.");
+        return;
+      }
       setPastedMarkdown(cleaned);
       setTitle(extractTitleFromMarkdown(cleaned));
       setStep(4);
@@ -250,9 +272,11 @@ export function ReviewerWizard({ notes, defaultNoteId, initiallyOpen = false, in
         <div>
           <p className="mb-2 text-sm text-ink-soft">Copy this prompt and paste it into Claude or another AI assistant.</p>
           <Textarea readOnly rows={10} value={prompt} className="font-mono text-xs" />
-          <div className="mt-3 flex justify-between">
+          <div className="mt-4 space-y-4">
+            <AiSourcePicker value={source} onChange={setSource} systemAvailable={systemAvailable} />
+            <div className="flex flex-wrap items-center justify-between gap-2">
             <Button variant="ghost" onClick={() => setStep(2)}>Back</Button>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <Button onClick={() => void generateWithConnectedAi()} loading={loading}>
                 <Sparkles className="h-4 w-4" /> Generate here
               </Button>
@@ -261,7 +285,9 @@ export function ReviewerWizard({ notes, defaultNoteId, initiallyOpen = false, in
               </Button>
               <Button onClick={() => setStep(4)}>I have the result</Button>
             </div>
+            </div>
           </div>
+          {error && <p className="mt-3 rounded-lg border border-danger/30 bg-danger/5 p-3 text-sm text-danger" role="alert">{error}</p>}
         </div>
       )}
 

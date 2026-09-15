@@ -29,7 +29,7 @@ export function ResourceCard({ href, kind, title, description, meta, badge, favo
   const style = resourceStyle[kind];
   const Icon = style.icon;
   return (
-    <Link href={href} className={cn("card interactive-card group relative flex min-h-40 flex-col overflow-hidden p-4", style.classes, className)}>
+    <Link href={href} title={title} className={cn("card interactive-card group relative flex min-h-40 flex-col overflow-hidden p-4", style.classes, className)}>
       <div className="mb-4 flex items-start justify-between gap-3">
         <Badge tone={style.tone}><Icon className="mr-1.5 h-3.5 w-3.5" aria-hidden="true" />{badge ?? style.label}</Badge>
         {meta && <span className="shrink-0 text-xs text-ink-faint">{meta}</span>}

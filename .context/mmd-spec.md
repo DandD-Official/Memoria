@@ -84,6 +84,12 @@ marker in v1 — added only if/when v2 introduces a breaking change.
   `highlight`) purely for visual variant — no behavioral effect, to obey
   "only attributes with a real implementation purpose." Cards may contain
   a nested `:::code` block alongside their other supported content.
+- `section`, `card`, and callout blocks also accept bounded presentation
+  attributes: `textStyle="default|display|muted|strong"`,
+  `align="left|center|right"`, `size="compact|default|spacious"`,
+  `gradient="none|accent|memory|book"`, `hover="none|lift"`, and
+  `animation="none|fade"`. These map to fixed safe classes shared by the
+  reader, editor preview, and export surface.
 - `:::columns` containing exactly `:::column` children (2–3 columns);
   anything else inside `:::columns` other than `:::column` blocks and
   whitespace is a validation error for that block (falls back per §7).
@@ -144,18 +150,22 @@ block:
   break the whole block.
 
 ## 6. Nesting rules (summary table)
+Every supported custom block may contain every other supported custom block.
+The parser enforces only the shared depth limit; it does not reject a nested
+block based on the parent block's name.
+
 | Block | Can contain |
 |---|---|
 | note/tip/warning/danger/info/success | Markdown, definition, key-concept, example, important, summary, code (1 level) |
 | definition/key-concept/example/important/summary | Markdown and code (1 level) |
 | section | any block, depth ≤ 4 |
-| card | Markdown, callouts, definition/example, code (1 level) |
-| columns | column (only) |
+| card | Markdown and any supported block, recursively to depth 8 |
+| columns | Markdown and any supported block, including `column`, recursively to depth 8 |
 | column | any block except columns (depth ≤ 4, shares section's limit) |
 | details | any block, depth ≤ 4 |
-| gallery | image blocks / bare image syntax only |
-| image, image-request, diagram | no body (empty between fences) |
-| svg | one self-contained SVG body; no nested MMD blocks |
+| gallery | Markdown and any supported block, recursively to depth 8 |
+| image, image-request, diagram | Their primary content plus any supported nested block |
+| svg | One SVG body plus any supported nested block |
 
 ## 7. Malformed input / fallback behavior
 The parser never throws for malformed MMD; it always returns a full block

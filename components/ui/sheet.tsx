@@ -50,14 +50,14 @@ export function Sheet({ open, onOpenChange, title, description, children, classN
   if (!open || typeof document === "undefined") return null;
   return createPortal(
     <div className="fixed inset-0 z-[100]" role="presentation">
-      <button className="absolute inset-0 animate-overlay-in bg-ink/45 backdrop-blur-[2px]" onClick={() => onOpenChange(false)} aria-hidden="true" tabIndex={-1} />
-      <aside ref={panelRef} role="dialog" aria-modal="true" aria-labelledby={titleId} aria-describedby={description ? descriptionId : undefined} tabIndex={-1} className={cn("absolute inset-x-0 bottom-0 max-h-[min(44rem,calc(100dvh-1rem))] animate-sheet-in overflow-y-auto rounded-t-panel border border-line bg-surface-raised p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-dialog sm:inset-y-0 sm:left-auto sm:right-0 sm:max-h-none sm:w-full sm:max-w-md sm:animate-sheet-side-in sm:rounded-none sm:border-y-0 sm:border-r-0 sm:p-6", className)}>
+      <button type="button" className="absolute inset-0 animate-overlay-in bg-ink/45 backdrop-blur-[2px]" onClick={() => onOpenChange(false)} aria-label="Close panel" tabIndex={-1} />
+      <aside ref={panelRef} role="dialog" aria-modal="true" aria-labelledby={titleId} aria-describedby={description ? descriptionId : undefined} tabIndex={-1} className={cn("absolute inset-x-0 bottom-0 max-h-[min(44rem,calc(100dvh-1rem))] animate-sheet-in overflow-y-auto overscroll-contain rounded-t-panel border border-line bg-surface-raised p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-dialog sm:inset-y-0 sm:inset-inline-start-auto sm:inset-inline-end-0 sm:max-h-none sm:w-full sm:max-w-md sm:animate-sheet-side-in sm:rounded-none sm:border-y-0 sm:border-inline-end-0 sm:p-6", className)}>
         <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-line-strong sm:hidden" aria-hidden="true" />
         <div className="pr-10">
           <h2 id={titleId} className="font-display text-xl font-medium text-ink">{title}</h2>
           {description && <p id={descriptionId} className="mt-1.5 text-sm leading-relaxed text-ink-soft">{description}</p>}
         </div>
-        <button type="button" onClick={() => onOpenChange(false)} className="absolute right-4 top-4 inline-flex h-10 w-10 items-center justify-center rounded-control text-ink-faint hover:bg-ink/5 hover:text-ink" aria-label="Close panel"><X className="h-4 w-4" /></button>
+        <button type="button" onClick={() => onOpenChange(false)} className="absolute end-4 top-4 inline-flex h-10 w-10 items-center justify-center rounded-control text-ink-faint hover:bg-ink/5 hover:text-ink" aria-label="Close panel"><X className="h-4 w-4" aria-hidden="true" /></button>
         <div className="mt-5">{children}</div>
       </aside>
     </div>,

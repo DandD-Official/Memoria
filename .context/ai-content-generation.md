@@ -23,15 +23,17 @@ AI providers are text-only and use the user's configured API key only for
 text generation. Memoria does not call OpenAI or another image-generation
 provider.
 
-The prompt exposes four valid visual outcomes:
+New generation prompts expose one visual outcome:
 
-1. `:::diagram{id="..."}` for an existing Memoria diagram.
-2. `:::image{src="media://..." alt="..."}` or a real external HTTPS asset,
-   including SVG files.
-3. `:::image-request{purpose="..." alt="..."}` when no real asset exists.
-4. `:::svg{alt="..."}` for a self-contained AI-generated conceptual visual.
+1. `:::svg{alt="..."}` containing a self-contained, sanitized HTML/SVG visual.
 
-In an editable preview, an image request can be fulfilled by uploading an
+Legacy `:::diagram`, `:::image`, `:::gallery`, and `:::image-request` blocks
+remain readable for existing content and remain available to human authors,
+but are intentionally omitted from AI generation instructions. AI should not
+invent asset URLs, request separate image generation, or create dangling saved
+diagram references.
+
+In an editable preview, an older image request can still be fulfilled by uploading an
 SVG/raster asset or creating a deterministic SVG template. Successful upload
 stores owned bytes and replaces the exact request source with a persistent
 `:::image{src="media://..."}` block. Read-only and guest views do not expose

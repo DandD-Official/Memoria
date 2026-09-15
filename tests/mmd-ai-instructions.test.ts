@@ -8,7 +8,7 @@ describe("buildMmdOutputRules", () => {
 
   it("mentions every supported block name (except 'column', which only appears nested inside 'columns')", () => {
     for (const name of getSupportedBlockNames()) {
-      if (name === "column") continue;
+      if (["column", "diagram", "image-request", "image", "gallery"].includes(name)) continue;
       expect(rules, `rules text should mention :::${name}`).toContain(`:::${name}`);
     }
     // The "columns" example still demonstrates "column" usage even though
@@ -27,9 +27,12 @@ describe("buildMmdOutputRules", () => {
     expect(rules.toLowerCase()).toContain("invent");
   });
 
-  it("instructs image-request instead of fabricated image URLs", () => {
-    expect(rules).toContain(":::image-request");
-    expect(rules.toLowerCase()).toMatch(/fake|fabricat/);
+  it("asks for copy-ready, self-contained SVG instead of asset requests", () => {
+    expect(rules).toContain("self-contained HTML/SVG");
+    expect(rules).toContain(":::svg");
+    expect(rules).not.toContain(":::image-request");
+    expect(rules).not.toContain(":::diagram");
+    expect(rules).not.toContain(":::image");
   });
 
   it("every worked example is itself valid MMD", () => {
@@ -50,7 +53,7 @@ describe("buildMmdOutputRules", () => {
 
   it("has an example for every supported block except 'column' (nested-only, no standalone example)", () => {
     for (const name of getSupportedBlockNames()) {
-      if (name === "column") continue;
+      if (["column", "diagram", "image-request", "image", "gallery"].includes(name)) continue;
       expect(Object.keys(EXAMPLE_SYNTAX), `missing example for :::${name}`).toContain(name);
     }
   });

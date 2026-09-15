@@ -29,7 +29,7 @@ const sizeClasses: Record<ButtonSize, string> = {
 
 export function buttonStyles({ variant = "primary", size = "md", className }: { variant?: ButtonVariant; size?: ButtonSize; className?: string } = {}) {
   return cn(
-    "inline-flex shrink-0 items-center justify-center whitespace-nowrap rounded-control font-medium transition-[background-color,border-color,color,box-shadow,transform] duration-150 active:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50",
+    "inline-flex shrink-0 items-center justify-center whitespace-nowrap rounded-control font-medium motion-safe:transition-[background-color,border-color,color,box-shadow,scale] motion-safe:duration-150 motion-safe:ease-out active:scale-[0.96] disabled:pointer-events-none disabled:scale-100 disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50",
     variantClasses[variant],
     sizeClasses[size],
     className

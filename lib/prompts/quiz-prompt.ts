@@ -59,7 +59,7 @@ ANSWER FORMAT RULES
 - Every question should include "sourceSection" naming the heading/topic it was drawn from, and "explanation" describing why the answer is correct.
 
 OUTPUT FORMAT
-Return ONLY valid JSON (no prose, no markdown code fences) matching this schema:
+Return the JSON object below inside exactly one copy-ready Markdown code fence (\`\`\`json ... \`\`\`). Do not add prose outside the fence.
 
 {
   "format": "memoria-quiz",
@@ -74,5 +74,5 @@ Return ONLY valid JSON (no prose, no markdown code fences) matching this schema:
 SOURCE MATERIAL
 ${sourceBlock}
 
-Return only the JSON object described above.`;
+Return only the JSON object described above inside the single \`\`\`json snippet.`;
 }

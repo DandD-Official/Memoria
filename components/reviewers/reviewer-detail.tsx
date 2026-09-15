@@ -76,18 +76,18 @@ export function ReviewerDetail({ reviewer, isOwner, autoSave }: ReviewerDetailPr
   }
 
   return (
-    <div className="mx-auto max-w-3xl">
+    <div className="mx-auto max-w-4xl">
       <Link href="/reviewers" className="mb-4 inline-flex items-center gap-1 text-sm text-ink-soft hover:text-ink">
         <ArrowLeft className="h-4 w-4" /> Back to reviewers
       </Link>
 
-      <div className="mb-7 border-b border-line pb-5">
+      <div className="mb-7 border-b border-line pb-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0">
             <Badge tone="accent">{reviewer.style}</Badge>
             {!editing && <h1 className="mt-3 break-words font-display text-2xl text-ink">{title}</h1>}
             {!editing && reviewer.description && <p className="mt-1 text-ink-soft">{reviewer.description}</p>}
-            {!editing && <p className="mt-1 text-xs text-ink-faint">Last updated {formatDate(reviewer.updatedAt)}{reviewer.noteCount > 0 && ` · Built from ${reviewer.noteCount} ${reviewer.noteCount === 1 ? "note" : "notes"}`}</p>}
+            {!editing && <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-ink-faint"><span>Last updated {formatDate(reviewer.updatedAt)}</span>{reviewer.noteCount > 0 && <><span className="h-1 w-1 rounded-full bg-line-strong" aria-hidden="true" /><span>Built from {reviewer.noteCount} {reviewer.noteCount === 1 ? "note" : "notes"}</span></>}</div>}
           </div>
           <ResourceDetailActions
             edit={isOwner && !editing ? <Button variant="primary" size="sm" onClick={() => setEditing(true)}><Pencil className="h-3.5 w-3.5" /> Edit</Button> : undefined}
@@ -118,7 +118,7 @@ export function ReviewerDetail({ reviewer, isOwner, autoSave }: ReviewerDetailPr
       ) : (
         <>
           {isOwner && <TagEditor resourceType="REVIEWER" resourceId={reviewer.id} />}
-          <div className="mt-6 border-t border-line pt-6">
+          <div className="mt-6 rounded-panel border border-line bg-surface px-5 py-6 shadow-card sm:px-8 sm:py-8">
             <MarkdownRenderer content={content} />
           </div>
         </>

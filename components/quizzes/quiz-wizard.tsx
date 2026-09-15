@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input, Label, Textarea } from "@/components/ui/input";
 import { validateStructuredQuiz, quizConfigurationSchema, parseAiJson } from "@/lib/validation/quiz";
 import { cn } from "@/lib/utils";
+import { AiSourcePicker, type AiKeySource } from "@/components/ai/ai-source-picker";
 
 const QUESTION_TYPES = [
   { value: "multiple_choice", label: "Multiple choice" },
@@ -31,7 +32,7 @@ interface Source {
   title: string;
 }
 
-export function QuizWizard({ notes, reviewers, defaultNoteId, defaultReviewerId, defaults, initiallyOpen = false, initialMode = "existing" }: { notes: Source[]; reviewers: Source[]; defaultNoteId?: string; defaultReviewerId?: string; defaults: { questionCount: number; difficulty: "EASY" | "NORMAL" | "HARD" | "MIXED"; mode: (typeof MODES)[number]["value"] }; initiallyOpen?: boolean; initialMode?: "existing" | "import" }) {
+export function QuizWizard({ notes, reviewers, defaultNoteId, defaultReviewerId, defaults, initiallyOpen = false, initialMode = "existing", systemAvailable = false }: { notes: Source[]; reviewers: Source[]; defaultNoteId?: string; defaultReviewerId?: string; defaults: { questionCount: number; difficulty: "EASY" | "NORMAL" | "HARD" | "MIXED"; mode: (typeof MODES)[number]["value"] }; initiallyOpen?: boolean; initialMode?: "existing" | "import"; systemAvailable?: boolean }) {
   const router = useRouter();
   const [open, setOpen] = useState(Boolean(defaultNoteId || defaultReviewerId) || initiallyOpen);
   const [step, setStep] = useState(initialMode === "import" ? 4 : 1);
@@ -49,6 +50,7 @@ export function QuizWizard({ notes, reviewers, defaultNoteId, defaultReviewerId,
   const [title, setTitle] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [source, setSource] = useState<AiKeySource>(systemAvailable ? "system" : "personal");
 
   const totalSelected = selectedNoteIds.length + selectedReviewerIds.length;
 
@@ -93,14 +95,24 @@ export function QuizWizard({ notes, reviewers, defaultNoteId, defaultReviewerId,
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch("/api/ai/generate", {
+      const response = await fetch("/api/ai/general", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt }),
+        body: JSON.stringify({ prompt, source }),
       });
       const payload = await response.json().catch(() => null);
       if (!response.ok) {
-        setError(payload?.error ?? "AI generation failed.");
+        if (payload?.code === "AI_SYSTEM_NOT_CONFIGURED") {
+          setError("Memoria AI is not configured yet. Choose your own connected key or ask an administrator to add a system key.");
+          return;
+        }
+        if (payload?.code === "NO_AI_CONNECTION") {
+          setError("No personal AI key is connected. Add one in Settings → AI providers or choose Memoria AI.");
+          return;
+        }
+        setError(payload?.code === "AI_PROVIDER_BUSY"
+          ? "All selected AI keys are temporarily busy. Memoria tried each key; try again in a moment."
+          : payload?.error ?? "AI generation failed.");
         return;
       }
       const parsed = parseAiJson(payload.text);
@@ -310,9 +322,11 @@ export function QuizWizard({ notes, reviewers, defaultNoteId, defaultReviewerId,
         <div>
           <p className="mb-2 text-sm text-ink-soft">Copy this prompt and paste it into Claude or another AI assistant.</p>
           <Textarea readOnly rows={10} value={prompt} className="font-mono text-xs" />
-          <div className="mt-3 flex justify-between">
+          <div className="mt-4 space-y-4">
+            <AiSourcePicker value={source} onChange={setSource} systemAvailable={systemAvailable} />
+            <div className="flex flex-wrap items-center justify-between gap-2">
             <Button variant="ghost" onClick={() => setStep(2)}>Back</Button>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <Button onClick={() => void generateWithConnectedAi()} loading={loading}>
                 <Sparkles className="h-4 w-4" /> Generate here
               </Button>
@@ -320,6 +334,7 @@ export function QuizWizard({ notes, reviewers, defaultNoteId, defaultReviewerId,
                 {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />} {copied ? "Copied" : "Copy prompt"}
               </Button>
               <Button onClick={() => setStep(4)}>I have the result</Button>
+            </div>
             </div>
           </div>
         </div>

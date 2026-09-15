@@ -83,8 +83,12 @@ export function Topbar({ userName, unreadNotifications, studyStreak }: { userNam
     <header className="sticky top-0 z-30 flex h-16 items-center gap-2 border-b border-line bg-paper/90 px-3 backdrop-blur sm:gap-3 sm:px-6">
       <Link href="/dashboard" aria-label="Memoria dashboard" title="Memoria" className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-control text-accent-dark lg:hidden"><BookMarked className="h-5 w-5" /></Link>
       <form ref={searchRef} onSubmit={handleSearch} className="relative min-w-0 flex-1" role="search">
-        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-faint" />
+        <Search aria-hidden="true" className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-faint" />
         <input
+          type="search"
+          name="q"
+          autoComplete="off"
+          spellCheck={false}
           value={query}
           onFocus={() => setSearchOpen(true)}
           onChange={(e) => { setQuery(e.target.value); setSearchOpen(true); setSelectedIndex(-1); }}
@@ -99,10 +103,11 @@ export function Topbar({ userName, unreadNotifications, studyStreak }: { userNam
           aria-expanded={searchOpen}
           aria-controls="search-suggestions"
           aria-autocomplete="list"
-          className="h-9 w-full rounded-lg border border-line bg-surface pl-9 pr-3 text-sm placeholder:text-ink-faint focus:border-accent"
+          aria-activedescendant={selectedIndex >= 0 ? `search-option-${selectedIndex}` : undefined}
+          className="h-9 w-full rounded-lg border border-line bg-surface ps-9 pe-3 text-base placeholder:text-ink-faint focus:border-accent sm:text-sm"
         />
         {searchOpen && (
-          <div id="search-suggestions" role="listbox" className="absolute left-0 right-0 top-11 z-50 max-h-[min(28rem,70vh)] overflow-y-auto rounded-xl border border-line bg-surface p-2 shadow-card-hover">
+          <div id="search-suggestions" role="listbox" className="absolute inset-x-0 top-11 z-50 max-h-[min(28rem,70vh)] overflow-y-auto rounded-xl border border-line bg-surface p-2 shadow-card-hover">
             <div className="flex items-center justify-between px-2 py-1.5">
               <p className="text-xs font-medium uppercase tracking-wide text-ink-faint">{query.trim() ? "Best matches" : "Recommended for you"}</p>
               {searching && <span className="text-xs text-ink-faint">Searching…</span>}
@@ -114,10 +119,10 @@ export function Topbar({ userName, unreadNotifications, studyStreak }: { userNam
               </div>
             ) : suggestions.map((suggestion, index) => {
               const Icon = suggestion.type === "note" ? FileText : suggestion.type === "reviewer" ? Layers : ListChecks;
-              return <button key={`${suggestion.type}-${suggestion.id}`} type="button" role="option" aria-selected={selectedIndex === index} onMouseEnter={() => setSelectedIndex(index)} onClick={() => openSuggestion(suggestion)} className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left ${selectedIndex === index ? "bg-ink/5" : "hover:bg-ink/[0.03]"}`}>
+              return <button id={`search-option-${index}`} key={`${suggestion.type}-${suggestion.id}`} type="button" role="option" aria-selected={selectedIndex === index} onMouseEnter={() => setSelectedIndex(index)} onClick={() => openSuggestion(suggestion)} className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left ${selectedIndex === index ? "bg-ink/5" : "hover:bg-ink/[0.03]"}`}>
                 <Icon className="h-4 w-4 shrink-0 text-accent-dark" />
                 <div className="min-w-0 flex-1"><span className="block truncate text-sm font-medium text-ink">{suggestion.title}</span><span className="block text-xs capitalize text-ink-faint">{suggestion.type}</span><TagList tags={suggestion.tags.map(({ tag }) => tag)} className="mt-1" /></div>
-                {suggestion.isFavorite && <Star className="h-3.5 w-3.5 fill-accent text-accent-dark" aria-label="Favorite" />}
+                {suggestion.isFavorite && <><Star className="h-3.5 w-3.5 fill-accent text-accent-dark" aria-hidden="true" /><span className="sr-only">Favorite</span></>}
               </button>;
             })}
             {query.trim() && <button type="submit" onMouseEnter={() => setSelectedIndex(-1)} className="mt-1 flex w-full items-center justify-between border-t border-line px-3 py-3 text-left text-sm font-medium text-ink hover:bg-ink/[0.03]"><span>Search all for “{query.trim()}”</span><ArrowRight className="h-4 w-4" /></button>}
@@ -153,7 +158,7 @@ export function Topbar({ userName, unreadNotifications, studyStreak }: { userNam
             {userName.charAt(0).toUpperCase()}
           </button>
           {menuOpen && (
-            <div role="menu" className="absolute right-0 top-11 w-48 rounded-lg border border-line bg-surface py-1 shadow-card-hover">
+            <div role="menu" className="absolute end-0 top-11 w-48 rounded-lg border border-line bg-surface py-1 shadow-card-hover">
               <div className="border-b border-line px-3 py-2 text-sm text-ink-soft truncate">{userName}</div>
               <Link href="/settings" role="menuitem" onClick={() => setMenuOpen(false)} className="flex items-center gap-2 px-3 py-2 text-sm text-ink hover:bg-ink/5">
                 <UserIcon className="h-4 w-4" /> Settings

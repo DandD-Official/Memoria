@@ -4,6 +4,7 @@ import { getAccessLevelForOwner } from "@/lib/permissions";
 import { NoteDetail } from "@/components/notes/note-detail";
 import { findNoteById } from "@/lib/notes-repo";
 import { prisma } from "@/lib/db";
+import { hasSystemAiConnection } from "@/lib/ai/system";
 
 export default async function NoteDetailPage(props: { params: Promise<{ id: string }> }) {
   const params = await props.params;
@@ -28,6 +29,7 @@ export default async function NoteDetailPage(props: { params: Promise<{ id: stri
       canEdit={access === "OWNER" || access === "EDIT"}
       isOwner={access === "OWNER"}
       autoSave={settings?.autoSave ?? true}
+      systemAvailable={hasSystemAiConnection()}
     />
   );
 }

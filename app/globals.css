@@ -17,6 +17,7 @@
   --color-accent-dark: 193 128 30;
   --color-action: 27 31 59;
   --color-action-foreground: 255 255 255;
+  --color-focus-ring: 193 128 30;
   --color-line: 228 225 216;
   --color-line-strong: 202 198 186;
   --color-surface: 255 255 255;
@@ -29,6 +30,11 @@
   --color-memory-soft: 229 238 247;
   --color-book: 126 73 52;
   --color-book-soft: 244 232 222;
+  --color-diagram-canvas: 248 246 239;
+  --color-diagram-node: 255 252 244;
+  --color-diagram-stroke: 155 118 83;
+  --color-diagram-text: 53 43 34;
+  --color-diagram-selection: 194 118 74;
   --radius-control: 0.625rem;
   --radius-surface: 0.875rem;
   --radius-panel: 1.125rem;
@@ -63,6 +69,7 @@
   --color-accent-dark: 240 180 99;
   --color-action: 232 163 61;
   --color-action-foreground: 27 31 59;
+  --color-focus-ring: 240 180 99;
   --color-line: 49 54 77;
   --color-line-strong: 73 79 105;
   --color-surface: 27 31 46;
@@ -75,6 +82,11 @@
   --color-memory-soft: 28 46 65;
   --color-book: 213 148 117;
   --color-book-soft: 59 39 34;
+  --color-diagram-canvas: 24 27 39;
+  --color-diagram-node: 38 43 61;
+  --color-diagram-stroke: 240 180 99;
+  --color-diagram-text: 236 237 245;
+  --color-diagram-selection: 240 180 99;
   --elevation-surface: 0 1px 2px rgba(0, 0, 0, 0.18), 0 10px 24px rgba(0, 0, 0, 0.08);
   --elevation-raised: 0 10px 28px rgba(0, 0, 0, 0.24), 0 2px 6px rgba(0, 0, 0, 0.16);
   --elevation-dialog: 0 30px 80px rgba(0, 0, 0, 0.5), 0 6px 20px rgba(0, 0, 0, 0.28);
@@ -89,7 +101,8 @@
   body {
     @apply min-w-0 overflow-x-clip bg-paper text-ink antialiased;
     background-image: radial-gradient(circle at 85% -10%, rgb(var(--color-accent-soft) / 0.34), transparent 28rem);
-    font-feature-settings: "kern" 1, "liga" 1;
+    font-kerning: normal;
+    font-variant-ligatures: common-ligatures;
   }
 
   body > * { min-width: 0; }
@@ -99,13 +112,45 @@
   h1, h2, h3 { text-wrap: balance; }
   p { text-wrap: pretty; }
 
-  button, a, input, textarea, select, summary { -webkit-tap-highlight-color: transparent; }
+  button, a, input, textarea, select, summary {
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
 
   .dark body { color-scheme: dark; }
 
   :focus-visible {
-    @apply outline-none ring-2 ring-accent ring-offset-2 ring-offset-paper;
+    outline: 2px solid rgb(var(--color-focus-ring));
+    outline-offset: 2px;
   }
+
+  @media (forced-colors: active) {
+    :focus-visible { outline-color: Highlight; }
+  }
+
+  .skip-link {
+    position: absolute;
+    inset-inline-start: -999px;
+    top: 1rem;
+    z-index: 100;
+    border-radius: var(--radius-control);
+    background: rgb(var(--color-action));
+    color: rgb(var(--color-action-foreground));
+    padding: 0.625rem 0.875rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+  }
+
+  .skip-link:focus-visible { inset-inline-start: 1rem; }
+
+  main { scroll-margin-top: 5rem; }
+
+  img {
+    outline: 1px solid rgb(0 0 0 / 0.1);
+    outline-offset: -1px;
+  }
+
+  .dark img { outline-color: rgb(255 255 255 / 0.1); }
 
   ::selection {
     @apply bg-accent-soft text-ink;
@@ -147,7 +192,30 @@
   }
 
   .interactive-card {
-    @apply transition-[border-color,box-shadow,transform,background-color] duration-200 hover:-translate-y-0.5 hover:border-line-strong hover:shadow-card-hover;
+    @apply min-w-0;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .interactive-card {
+      transition-property: border-color, box-shadow, transform, background-color;
+      transition-duration: 150ms;
+      transition-timing-function: ease-out;
+    }
+  }
+
+  @media (hover: hover) and (prefers-reduced-motion: no-preference) {
+    .interactive-card:hover {
+      transform: translateY(-0.125rem);
+      border-color: rgb(var(--color-line-strong));
+      box-shadow: var(--elevation-raised);
+    }
+  }
+
+  @media (hover: hover) {
+    .dashboard-action-primary:hover {
+      border-color: rgb(var(--color-action));
+      background-color: rgb(var(--color-action) / 0.9);
+    }
   }
 
   .memory-surface {
@@ -183,7 +251,14 @@
 
   /* Typography for rendered Markdown (notes + reviewers) */
   .memora-markdown {
-    @apply text-ink leading-relaxed;
+    @apply min-w-0 text-ink leading-relaxed;
+    font-size: 0.96875rem;
+  }
+  .memora-markdown > p,
+  .memora-markdown > ul,
+  .memora-markdown > ol,
+  .memora-markdown > blockquote {
+    max-width: 72ch;
   }
   .memora-markdown > *:first-child {
     @apply mt-0;
@@ -201,7 +276,7 @@
     @apply font-display text-lg font-medium text-ink mt-5 mb-2;
   }
   .memora-markdown p {
-    @apply my-3 leading-relaxed;
+    @apply my-3 leading-[1.78];
   }
   .memora-markdown strong {
     @apply font-semibold text-ink;
@@ -223,7 +298,7 @@
     @apply text-accent-dark underline underline-offset-2 hover:text-ink;
   }
   .memora-markdown blockquote {
-    @apply my-4 rounded-r-lg border-l-4 border-accent bg-accent-soft/40 px-4 py-2.5 text-ink-soft italic;
+    @apply my-5 rounded-r-card border-s-4 border-accent bg-accent-soft/35 px-5 py-3 text-ink-soft italic;
   }
   .memora-markdown blockquote p {
     @apply my-0;
@@ -232,7 +307,7 @@
     @apply rounded bg-ink/5 px-1.5 py-0.5 font-mono text-[0.85em] text-ink;
   }
   .memora-markdown pre {
-    @apply my-4 overflow-x-auto rounded-lg bg-[#1B1F3B] p-4;
+    @apply my-4 overflow-x-auto rounded-card bg-action p-4 text-action-foreground;
   }
   .memora-markdown pre code {
     @apply bg-transparent px-0 py-0 text-white;
@@ -290,18 +365,42 @@
     @apply bg-ink/5;
   }
   .memora-markdown th {
-    @apply border border-line px-3 py-2 text-left font-medium text-ink;
+    @apply border border-line px-3 py-2.5 text-left font-semibold text-ink;
   }
   .memora-markdown td {
-    @apply border border-line px-3 py-2 text-ink-soft align-top;
+    @apply border border-line px-3 py-2.5 text-ink-soft align-top;
   }
   .memora-markdown tbody tr:nth-child(even) {
-    @apply bg-ink/[0.02];
+    @apply bg-ink/[0.025];
   }
   .memora-markdown img {
-    @apply my-4 max-w-full rounded-lg border border-line;
+    @apply my-5 max-w-full rounded-card border border-line bg-surface shadow-sm;
+  }
+
+.diagram-canvas {
+    background: rgb(var(--color-diagram-canvas));
+  }
+
+  .editor-surface {
+    background-image: linear-gradient(90deg, rgb(var(--color-accent-soft) / 0.18), transparent 20rem);
   }
 }
+
+/* Safe presentation tokens exposed by MMD. These are intentionally named
+ * classes, never user-authored CSS, so exported and interactive views agree. */
+.mmd-text-display { font-family: var(--font-display), Georgia, serif; font-size: 1.08em; letter-spacing: -0.015em; }
+.mmd-text-muted { color: rgb(var(--color-ink-soft)); }
+.mmd-text-strong { font-weight: 650; }
+.mmd-size-compact { padding-block: 0.65rem !important; }
+.mmd-size-spacious { padding-block: 1.35rem !important; }
+.mmd-gradient-accent { background-image: linear-gradient(135deg, rgb(var(--color-accent-soft) / 0.58), transparent 68%); }
+.mmd-gradient-memory { background-image: linear-gradient(135deg, rgb(var(--color-accent-soft) / 0.42), rgb(var(--color-surface)) 72%); }
+.mmd-gradient-book { background-image: linear-gradient(135deg, rgb(var(--color-action) / 0.1), rgb(var(--color-surface)) 70%); }
+.mmd-hover-lift { transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease; }
+.mmd-hover-lift:hover { transform: translateY(-2px); box-shadow: 0 12px 26px rgb(var(--color-ink) / 0.1); border-color: rgb(var(--color-accent) / 0.7); }
+.mmd-animation-fade { animation: mmd-fade-up 420ms ease both; }
+@keyframes mmd-fade-up { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+@media (prefers-reduced-motion: reduce) { .mmd-animation-fade, .mmd-hover-lift { animation: none; transition: none; } .mmd-hover-lift:hover { transform: none; } }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {

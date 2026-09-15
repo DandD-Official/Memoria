@@ -6,7 +6,8 @@ describe("AI/OCR note import prompt", () => {
     const prompt = buildOcrExtractionPrompt([{ name: "scan.png", text: "# Partial lesson" }], ["scan.png"]);
     expect(prompt).toContain(":::svg");
     expect(prompt).toContain("self-contained");
-    expect(prompt).toContain(":::image-request");
+    expect(prompt).toContain("VISUAL NOT RECONSTRUCTED");
+    expect(prompt).not.toContain(":::image-request");
     expect(prompt).toMatch(/exactly one outer/i);
     expect(prompt).toContain("scan.png");
   });

@@ -8,6 +8,7 @@ import { LibraryNavigation } from "@/components/library/library-navigation";
 import { TagList } from "@/components/library/tag-list";
 import { PageActions, PageDescription, PageHeader, PageHeaderContent, PageShell, PageTitle } from "@/components/ui/page";
 import { ResourceCard } from "@/components/library/resource-card";
+import { hasSystemAiConnection } from "@/lib/ai/system";
 
 export default async function ReviewersPage(props: { searchParams: Promise<{ create?: string; fromNote?: string; source?: string; page?: string }> }) {
   const searchParams = await props.searchParams;
@@ -26,7 +27,7 @@ export default async function ReviewersPage(props: { searchParams: Promise<{ cre
           <PageDescription>Structured study guides distilled from your Memories.</PageDescription>
         </PageHeaderContent>
         <PageActions>
-          <ReviewerWizardLauncher key={`${searchParams.create}-${searchParams.source}-${searchParams.fromNote}`} notes={notes} defaultNoteId={searchParams.fromNote} initiallyOpen={searchParams.create === "1"} initialPath={searchParams.source === "import" ? "import" : searchParams.source === "notes" ? "notes" : undefined} />
+          <ReviewerWizardLauncher key={`${searchParams.create}-${searchParams.source}-${searchParams.fromNote}`} notes={notes} defaultNoteId={searchParams.fromNote} initiallyOpen={searchParams.create === "1"} initialPath={searchParams.source === "import" ? "import" : searchParams.source === "notes" ? "notes" : undefined} systemAvailable={hasSystemAiConnection()} />
         </PageActions>
       </PageHeader>
 

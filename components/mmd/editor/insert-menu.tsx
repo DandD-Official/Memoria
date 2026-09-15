@@ -36,7 +36,7 @@ function humanLabel(blockName: string): string {
 
 /** "column" is only ever inserted as part of "columns" (see
  * lib/mmd/editor-templates.ts) — it has no standalone menu entry. */
-const HIDDEN_FROM_MENU = new Set(["column"]);
+const HIDDEN_FROM_MENU = new Set(["column", "diagram"]);
 
 interface Group {
   category: BlockDefinition["category"];

@@ -3,6 +3,7 @@ import { z } from "zod";
 import { withApiErrorHandling, type RouteContext } from "@/lib/api/handler";
 import { requireUserOrNull } from "@/lib/auth/session";
 import { prisma } from "@/lib/db";
+import { canDeleteFeedback } from "@/lib/feedback-permissions";
 
 const updateSchema = z.object({ message: z.string().trim().min(1).max(2000) });
 
@@ -20,8 +21,8 @@ export const PATCH = withApiErrorHandling(async (request: Request, context: Rout
 export const DELETE = withApiErrorHandling(async (_request: Request, context: RouteContext<{ id: string }>) => {
   const [{ id }, user] = await Promise.all([context.params, requireUserOrNull()]);
   if (!user) return NextResponse.json({ error: "Sign in to delete comments." }, { status: 401 });
-  const feedback = await prisma.shareFeedback.findUnique({ where: { id }, select: { authorUserId: true, collection: { select: { ownerId: true } } } });
-  if (!feedback || (feedback.authorUserId !== user.id && feedback.collection.ownerId !== user.id)) return NextResponse.json({ error: "You can only delete your own comment." }, { status: 403 });
+  const feedback = await prisma.shareFeedback.findUnique({ where: { id }, select: { authorUserId: true } });
+  if (!feedback || !canDeleteFeedback(user.id, feedback.authorUserId)) return NextResponse.json({ error: "You can only delete your own comment." }, { status: 403 });
   await prisma.shareFeedback.delete({ where: { id } });
   return NextResponse.json({ success: true });
 });

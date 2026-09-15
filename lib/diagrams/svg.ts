@@ -2,6 +2,19 @@ import type { DiagramData, DiagramNode } from "@/lib/diagrams/schema";
 
 export const DIAGRAM_VIEWBOX = { width: 900, height: 560 } as const;
 
+export interface DiagramBounds { x: number; y: number; width: number; height: number }
+
+/** Expands the drawing area around every node so moving an object beyond the
+ * starter frame never clips it in the editor or in exports. */
+export function getDiagramBounds(data: DiagramData, padding = 64): DiagramBounds {
+  if (data.nodes.length === 0) return { x: 0, y: 0, width: DIAGRAM_VIEWBOX.width, height: DIAGRAM_VIEWBOX.height };
+  const minX = Math.min(0, ...data.nodes.map((node) => node.x)) - padding;
+  const minY = Math.min(0, ...data.nodes.map((node) => node.y)) - padding;
+  const maxX = Math.max(DIAGRAM_VIEWBOX.width, ...data.nodes.map((node) => node.x + node.width)) + padding;
+  const maxY = Math.max(DIAGRAM_VIEWBOX.height, ...data.nodes.map((node) => node.y + node.height)) + padding;
+  return { x: minX, y: minY, width: maxX - minX, height: maxY - minY };
+}
+
 function escapeXml(value: string): string {
   return value.replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&apos;" }[char] ?? char));
 }
@@ -25,5 +38,6 @@ export function diagramToSvg(data: DiagramData): string {
     return `<line x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" stroke="#9b7653" stroke-width="2"${edge.style?.dashed ? ` stroke-dasharray="6 4"` : ""} marker-end="url(#arrow)"/>`;
   }).join("");
   const nodes = data.nodes.map((node) => `<g fill="${node.style?.fill ?? "#fffaf0"}" stroke="${node.style?.stroke ?? "#9b7653"}" stroke-width="${node.style?.strokeWidth ?? 2}">${shapeMarkup(node)}<text x="${node.x + node.width / 2}" y="${node.y + node.height / 2}" text-anchor="middle" dominant-baseline="middle" font-size="${node.style?.fontSize ?? 14}" fill="#352b22" stroke="none">${escapeXml(node.label ?? "")}</text></g>`).join("");
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${DIAGRAM_VIEWBOX.width} ${DIAGRAM_VIEWBOX.height}"><defs><marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#9b7653"/></marker></defs>${edges}${nodes}</svg>`;
+  const bounds = getDiagramBounds(data);
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${bounds.x} ${bounds.y} ${bounds.width} ${bounds.height}"><defs><marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#9b7653"/></marker></defs>${edges}${nodes}</svg>`;
 }

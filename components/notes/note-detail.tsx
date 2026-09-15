@@ -17,6 +17,7 @@ import { TagEditor } from "@/components/library/tag-editor";
 import { RevisionHistory } from "@/components/library/revision-history";
 import { ExportMenu } from "@/components/exports/export-menu";
 import type { ExportProgressHandler } from "@/lib/export/types";
+import { RepromptDialog } from "@/components/notes/reprompt-dialog";
 
 interface NoteDetailProps {
   note: {
@@ -32,9 +33,10 @@ interface NoteDetailProps {
   canEdit: boolean;
   isOwner: boolean;
   autoSave: boolean;
+  systemAvailable: boolean;
 }
 
-export function NoteDetail({ note, canEdit, isOwner, autoSave }: NoteDetailProps) {
+export function NoteDetail({ note, canEdit, isOwner, autoSave, systemAvailable }: NoteDetailProps) {
   const router = useRouter();
   const [title, setTitle] = useState(note.title);
   const [content, setContent] = useState(note.content);
@@ -95,17 +97,17 @@ export function NoteDetail({ note, canEdit, isOwner, autoSave }: NoteDetailProps
   }
 
   return (
-    <div className="mx-auto max-w-3xl">
+    <div className="mx-auto max-w-4xl">
       <Link href="/notes" className="mb-4 inline-flex items-center gap-1 text-sm text-ink-soft hover:text-ink">
         <ArrowLeft className="h-4 w-4" /> Back to notes
       </Link>
 
-      <div className="mb-7 border-b border-line pb-5">
+      <div className="mb-7 border-b border-line pb-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0">
             <Badge tone="neutral">{note.sourceType}</Badge>
             {!isEditing && <h1 className="mt-3 break-words font-display text-2xl text-ink">{title}</h1>}
-            {!isEditing && <p className="mt-1 text-xs text-ink-faint">Last updated {formatDate(note.updatedAt)}</p>}
+            {!isEditing && <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-ink-faint"><span>Last updated {formatDate(note.updatedAt)}</span><span className="h-1 w-1 rounded-full bg-line-strong" aria-hidden="true" /><span>{canEdit ? "You can edit this Memory" : "Read-only access"}</span></div>}
           </div>
           <ResourceDetailActions
             edit={canEdit && !isEditing ? <Button variant="primary" size="sm" onClick={() => { setSaved(false); setIsEditing(true); }}><Pencil className="h-3.5 w-3.5" /> Edit</Button> : undefined}
@@ -116,6 +118,7 @@ export function NoteDetail({ note, canEdit, isOwner, autoSave }: NoteDetailProps
             favorite={isOwner ? <ResourceFavoriteButton resourceType="NOTE" resourceId={note.id} favorite={note.favorite} /> : <span />}
             share={isOwner ? <ShareDialog resourceType="NOTE" resourceId={note.id} /> : undefined}
             tools={<>
+              {canEdit && <RepromptDialog noteId={note.id} systemAvailable={systemAvailable} />}
               <ExportMenu options={[{ value: "pdf", label: "PDF document" }, { value: "docx", label: "Word document" }, { value: "md", label: "Markdown" }, { value: "json", label: "Memoria JSON" }]} onExport={handleExport} />
               {isOwner && <ResourceUtilityActions resourceType="NOTE" resourceId={note.id} archived={note.archived} />}
               {isOwner && <RevisionHistory resourceType="NOTE" resourceId={note.id} />}
@@ -142,7 +145,7 @@ export function NoteDetail({ note, canEdit, isOwner, autoSave }: NoteDetailProps
         </>
       ) : (
         <>
-          <div className="rounded-card border border-line bg-surface p-6">
+          <div className="rounded-panel border border-line bg-surface px-5 py-6 shadow-card sm:px-8 sm:py-8">
             <MarkdownRenderer content={content} />
           </div>
         </>

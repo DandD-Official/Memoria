@@ -28,10 +28,8 @@ export interface MmdBlockNode {
    * block's schema are present here — unknown attributes are dropped
    * (non-fatally) during parsing. */
   attrs: Record<string, string>;
-  /** Nested content. For "leaf" blocks (definition, image, diagram, ...)
-   * this is at most a single MmdTextNode. For container blocks (section,
-   * details, columns/column) this may contain any node type, including
-   * further MmdBlockNodes, up to the nesting depth limit. */
+  /** Nested content. Every supported block may contain any node type,
+   * including further MmdBlockNodes, up to the shared nesting depth limit. */
   children: MmdNode[];
   /** Original source text for this block, fences included. Used by the
    * exporters (which render some blocks as plain text) and for

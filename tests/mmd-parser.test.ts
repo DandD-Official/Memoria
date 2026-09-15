@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { parseMmd, collectMmdErrors, isPlainMarkdown } from "@/lib/mmd/parser";
-import type { MmdBlockNode, MmdErrorNode } from "@/lib/mmd/ast";
+import type { MmdBlockNode } from "@/lib/mmd/ast";
 
 function blocks(doc: ReturnType<typeof parseMmd>) {
   return doc.children.filter((n): n is MmdBlockNode => n.type === "block");
@@ -73,6 +73,12 @@ describe("parseMmd — simple blocks", () => {
     expect(block.attrs).toEqual({ title: "OSI Model", subtitle: "Layers", type: "highlight" });
   });
 
+  it("parses bounded presentation properties for custom blocks", () => {
+    const doc = parseMmd(':::card{title="Focus" textStyle="display" gradient="memory" hover="lift" animation="fade"}\nBody\n:::');
+    const [block] = blocks(doc);
+    expect(block.attrs).toMatchObject({ textStyle: "display", gradient: "memory", hover: "lift", animation: "fade" });
+  });
+
   it("drops unknown attributes without failing the block", () => {
     const doc = parseMmd(':::note{color="red"}\nhi\n:::');
     const [block] = blocks(doc);
@@ -141,12 +147,12 @@ describe("parseMmd — nesting rules", () => {
     expect(nestedBlocks[0].attrs.term).toBe("X");
   });
 
-  it("rejects a section nested inside a note (not on the allow-list)", () => {
+  it("allows a section nested inside a note", () => {
     const doc = parseMmd(':::note\n:::section{title="Nope"}\nbody\n:::\n:::');
     const [note] = blocks(doc);
-    const nestedErrors = note.children.filter((c): c is MmdErrorNode => c.type === "mmd-error");
-    expect(nestedErrors).toHaveLength(1);
-    expect(nestedErrors[0].reason).toMatch(/cannot contain a nested :::section/);
+    const nestedSection = note.children.find((c): c is MmdBlockNode => c.type === "block");
+    expect(nestedSection?.block).toBe("section");
+    expect(collectMmdErrors(doc)).toHaveLength(0);
   });
 
   it("allows arbitrary block types inside a section up to the depth limit", () => {
@@ -169,10 +175,10 @@ describe("parseMmd — nesting rules", () => {
   });
 
   it("enforces the maximum nesting depth inside containers", () => {
-    // section > section > section > section > section is 5 levels deep;
-    // maxDepth is 4, so the 5th should error rather than recurse forever.
+    // Nine nested blocks exceed the universal maxDepth of 8, so the parser
+    // still has a guard against pathological recursive documents.
     const deepest = ':::section{title="L5"}\ntoo deep\n:::';
-    const source = [4, 3, 2, 1].reduce(
+    const source = [8, 7, 6, 5, 4, 3, 2, 1].reduce(
       (inner, level) => `:::section{title="L${level}"}\n${inner}\n:::`,
       deepest
     );
@@ -181,11 +187,10 @@ describe("parseMmd — nesting rules", () => {
     expect(errors.some((e) => e.reason.includes("Maximum nesting depth exceeded"))).toBe(true);
   });
 
-  it("rejects a columns block whose only child is not a column", () => {
+  it("allows any supported block inside a columns block", () => {
     const doc = parseMmd(':::columns\n:::note\nnope\n:::\n:::');
-    const errors = collectMmdErrors(doc);
-    expect(errors).toHaveLength(1);
-    expect(errors[0].reason).toMatch(/may only contain: column/);
+    expect(collectMmdErrors(doc)).toHaveLength(0);
+    expect(blocks(doc)[0]?.children.some((child) => child.type === "block" && child.block === "note")).toBe(true);
   });
 
   it("accepts a columns block containing only column children", () => {
@@ -199,7 +204,7 @@ describe("parseMmd — nesting rules", () => {
     expect(cols.every((c) => c.block === "column")).toBe(true);
   });
 
-  it("rejects a column nested directly inside another column's disallowed 'columns'", () => {
+  it("allows columns to nest inside columns", () => {
     const doc = parseMmd(
       [
         ":::columns",
@@ -213,8 +218,7 @@ describe("parseMmd — nesting rules", () => {
         ":::",
       ].join("\n")
     );
-    const errors = collectMmdErrors(doc);
-    expect(errors.some((e) => e.reason.includes("cannot contain a nested :::columns"))).toBe(true);
+    expect(collectMmdErrors(doc)).toHaveLength(0);
   });
 });
 
@@ -262,12 +266,10 @@ describe("parseMmd — media and diagram blocks", () => {
     expect(images.every((i) => i.block === "image")).toBe(true);
   });
 
-  it("rejects a non-image block nested inside a gallery", () => {
+  it("allows a non-image block nested inside a gallery", () => {
     const doc = parseMmd(':::gallery\n:::note\nnot an image\n:::\n:::');
-    const [gallery] = blocks(doc);
-    const errors = gallery.children.filter((c): c is MmdErrorNode => c.type === "mmd-error");
-    expect(errors).toHaveLength(1);
-    expect(errors[0].reason).toMatch(/cannot contain a nested :::note/);
+    expect(collectMmdErrors(doc)).toHaveLength(0);
+    expect(blocks(doc)[0]?.children.some((child) => child.type === "block" && child.block === "note")).toBe(true);
   });
 
   it("parses a diagram reference block by id", () => {
@@ -322,6 +324,24 @@ describe("parseMmd — details block", () => {
     expect(block.block).toBe("details");
     expect(block.attrs.title).toBe("Click to reveal");
     expect(block.children).toEqual([{ type: "markdown", content: "Hidden content." }]);
+  });
+
+  it("allows every block family to nest recursively", () => {
+    const doc = parseMmd([
+      ":::card",
+      ":::details{title=\"More\"}",
+      ":::warning",
+      ":::definition{term=\"Nested\"}",
+      ":::code{language=\"text\"}",
+      "nested code",
+      ":::",
+      ":::",
+      ":::",
+      ":::",
+      ":::",
+    ].join("\n"));
+    expect(collectMmdErrors(doc)).toHaveLength(0);
+    expect(blocks(doc)[0]?.children[0]).toMatchObject({ type: "block", block: "details" });
   });
 });
 

@@ -61,6 +61,11 @@ export type ChildPolicy =
    * mmd-error preserving the raw source (per mmd-spec.md §7). */
   | { kind: "only"; allow: string[]; maxDepth: number };
 
+/** Every supported block can contain every other supported block. The depth
+ * limit prevents pathological documents while keeping nesting unrestricted by
+ * block type. */
+const UNIVERSAL_CHILD_POLICY: ChildPolicy = { kind: "container", maxDepth: 8 };
+
 export interface BlockDefinition {
   name: string;
   category: "callout" | "educational" | "layout" | "media" | "diagram" | "ai" | "code";
@@ -73,14 +78,13 @@ export interface BlockDefinition {
 }
 
 const CALLOUT_NAMES = ["note", "tip", "warning", "danger", "info", "success"] as const;
-const CALLOUT_CHILD_POLICY: ChildPolicy = {
-  kind: "restricted",
-  allow: ["definition", "key-concept", "example", "important", "summary", "code"],
-};
-
-const EDUCATIONAL_CHILD_POLICY: ChildPolicy = {
-  kind: "restricted",
-  allow: ["code"],
+const PRESENTATION_ATTRS = {
+  textStyle: z.enum(["default", "display", "muted", "strong"]).optional(),
+  align: z.enum(["left", "center", "right"]).optional(),
+  size: z.enum(["compact", "default", "spacious"]).optional(),
+  gradient: z.enum(["none", "accent", "memory", "book"]).optional(),
+  hover: z.enum(["none", "lift"]).optional(),
+  animation: z.enum(["none", "fade"]).optional(),
 };
 
 const CALLOUT_DESCRIPTIONS: Record<(typeof CALLOUT_NAMES)[number], string> = {
@@ -99,9 +103,9 @@ function calloutDefs(): Record<string, BlockDefinition> {
       name,
       category: "callout",
       description: CALLOUT_DESCRIPTIONS[name],
-      attrs: { title: safeString(200).optional() },
+      attrs: { title: safeString(200).optional(), ...PRESENTATION_ATTRS },
       requiredAttrs: [],
-      childPolicy: CALLOUT_CHILD_POLICY,
+      childPolicy: UNIVERSAL_CHILD_POLICY,
     };
   }
   return out;
@@ -120,7 +124,7 @@ export const BLOCK_DEFS: Record<string, BlockDefinition> = {
       theme: z.enum(CODE_THEME_IDS).optional(),
     },
     requiredAttrs: [],
-    childPolicy: { kind: "leaf" },
+    childPolicy: UNIVERSAL_CHILD_POLICY,
   },
 
   // Educational blocks — leaf bodies (plain Markdown only, no further nesting).
@@ -130,7 +134,7 @@ export const BLOCK_DEFS: Record<string, BlockDefinition> = {
     description: "Defines a single term. Requires `term`.",
     attrs: { term: safeString(200) },
     requiredAttrs: ["term"],
-    childPolicy: EDUCATIONAL_CHILD_POLICY,
+    childPolicy: UNIVERSAL_CHILD_POLICY,
   },
   "key-concept": {
     name: "key-concept",
@@ -138,7 +142,7 @@ export const BLOCK_DEFS: Record<string, BlockDefinition> = {
     description: "Flags an idea that is central to the topic.",
     attrs: {},
     requiredAttrs: [],
-    childPolicy: EDUCATIONAL_CHILD_POLICY,
+    childPolicy: UNIVERSAL_CHILD_POLICY,
   },
   example: {
     name: "example",
@@ -146,7 +150,7 @@ export const BLOCK_DEFS: Record<string, BlockDefinition> = {
     description: "A worked example illustrating a concept.",
     attrs: { title: safeString(200).optional() },
     requiredAttrs: [],
-    childPolicy: EDUCATIONAL_CHILD_POLICY,
+    childPolicy: UNIVERSAL_CHILD_POLICY,
   },
   important: {
     name: "important",
@@ -154,7 +158,7 @@ export const BLOCK_DEFS: Record<string, BlockDefinition> = {
     description: "Content that frequently appears in exams or is easy to forget.",
     attrs: {},
     requiredAttrs: [],
-    childPolicy: EDUCATIONAL_CHILD_POLICY,
+    childPolicy: UNIVERSAL_CHILD_POLICY,
   },
   summary: {
     name: "summary",
@@ -162,7 +166,7 @@ export const BLOCK_DEFS: Record<string, BlockDefinition> = {
     description: "A short recap of the preceding section.",
     attrs: {},
     requiredAttrs: [],
-    childPolicy: EDUCATIONAL_CHILD_POLICY,
+    childPolicy: UNIVERSAL_CHILD_POLICY,
   },
   math: {
     name: "math",
@@ -170,7 +174,7 @@ export const BLOCK_DEFS: Record<string, BlockDefinition> = {
     description: "Renders a safe LaTeX-style mathematical expression, including arrows such as \\rightarrow.",
     attrs: { formula: safeString(1000) },
     requiredAttrs: ["formula"],
-    childPolicy: { kind: "empty" },
+    childPolicy: UNIVERSAL_CHILD_POLICY,
   },
 
   // Layout
@@ -178,9 +182,9 @@ export const BLOCK_DEFS: Record<string, BlockDefinition> = {
     name: "section",
     category: "layout",
     description: "A titled section that may contain any other supported block.",
-    attrs: { title: safeString(200), subtitle: safeString(200).optional() },
+    attrs: { title: safeString(200), subtitle: safeString(200).optional(), ...PRESENTATION_ATTRS },
     requiredAttrs: ["title"],
-    childPolicy: { kind: "container", maxDepth: 4 },
+    childPolicy: UNIVERSAL_CHILD_POLICY,
   },
   card: {
     name: "card",
@@ -191,20 +195,18 @@ export const BLOCK_DEFS: Record<string, BlockDefinition> = {
       subtitle: safeString(200).optional(),
       icon: safeString(100).optional(),
       type: z.enum(["default", "outline", "highlight"]).optional(),
+      ...PRESENTATION_ATTRS,
     },
     requiredAttrs: [],
-    childPolicy: {
-      kind: "restricted",
-      allow: ["note", "tip", "warning", "danger", "info", "success", "definition", "example", "code"],
-    },
+    childPolicy: UNIVERSAL_CHILD_POLICY,
   },
   columns: {
     name: "columns",
     category: "layout",
-    description: "A responsive multi-column layout. Must contain only `column` blocks.",
+    description: "A responsive multi-column layout that can contain any supported block, including `column` blocks.",
     attrs: {},
     requiredAttrs: [],
-    childPolicy: { kind: "only", allow: ["column"], maxDepth: 4 },
+    childPolicy: UNIVERSAL_CHILD_POLICY,
   },
   column: {
     name: "column",
@@ -212,7 +214,7 @@ export const BLOCK_DEFS: Record<string, BlockDefinition> = {
     description: "One column inside a `columns` block.",
     attrs: {},
     requiredAttrs: [],
-    childPolicy: { kind: "container", maxDepth: 4, disallow: ["columns"] },
+    childPolicy: UNIVERSAL_CHILD_POLICY,
   },
   details: {
     name: "details",
@@ -220,7 +222,7 @@ export const BLOCK_DEFS: Record<string, BlockDefinition> = {
     description: "Collapsible content, expanded by default in exports.",
     attrs: { title: safeString(200).optional() },
     requiredAttrs: [],
-    childPolicy: { kind: "container", maxDepth: 4 },
+    childPolicy: UNIVERSAL_CHILD_POLICY,
   },
 
   // Media
@@ -236,7 +238,7 @@ export const BLOCK_DEFS: Record<string, BlockDefinition> = {
       size: z.enum(["small", "medium", "large", "full"]).optional(),
     },
     requiredAttrs: ["src", "alt"],
-    childPolicy: { kind: "empty" },
+    childPolicy: UNIVERSAL_CHILD_POLICY,
   },
   gallery: {
     name: "gallery",
@@ -244,7 +246,7 @@ export const BLOCK_DEFS: Record<string, BlockDefinition> = {
     description: "A responsive grid of images. May contain `image` blocks or bare Markdown images.",
     attrs: {},
     requiredAttrs: [],
-    childPolicy: { kind: "restricted", allow: ["image"] },
+    childPolicy: UNIVERSAL_CHILD_POLICY,
   },
 
   // Diagram
@@ -254,7 +256,7 @@ export const BLOCK_DEFS: Record<string, BlockDefinition> = {
     description: "Embeds a diagram by id. The diagram itself is stored and edited separately.",
     attrs: { id: safeString(200), caption: safeString(300).optional() },
     requiredAttrs: ["id"],
-    childPolicy: { kind: "empty" },
+    childPolicy: UNIVERSAL_CHILD_POLICY,
   },
 
   // AI image placeholder — never a real image, see mmd-spec.md §4.
@@ -269,7 +271,7 @@ export const BLOCK_DEFS: Record<string, BlockDefinition> = {
       placement: safeString(200).optional(),
     },
     requiredAttrs: ["purpose", "alt"],
-    childPolicy: { kind: "empty" },
+    childPolicy: UNIVERSAL_CHILD_POLICY,
   },
 
   // Inline AI/user-authored visual. The body is handled only by the SVG
@@ -285,7 +287,7 @@ export const BLOCK_DEFS: Record<string, BlockDefinition> = {
       size: z.enum(["small", "medium", "large", "full"]).optional(),
     },
     requiredAttrs: ["alt"],
-    childPolicy: { kind: "leaf" },
+    childPolicy: UNIVERSAL_CHILD_POLICY,
   },
 };
 

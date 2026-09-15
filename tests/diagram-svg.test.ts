@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { diagramToSvg } from "@/lib/diagrams/svg";
+import { diagramToSvg, getDiagramBounds } from "@/lib/diagrams/svg";
 
 describe("diagram SVG previews", () => {
   it("renders supported shapes and escapes labels", () => {
@@ -15,5 +15,13 @@ describe("diagram SVG previews", () => {
   it("omits edges whose endpoints no longer exist", () => {
     const svg = diagramToSvg({ version: 1, type: "memoria-diagram", nodes: [], edges: [{ id: "e", source: "missing", target: "also-missing", directional: true }] });
     expect(svg).not.toContain("<line");
+  });
+
+  it("expands the viewbox around nodes moved beyond the starter frame", () => {
+    const data = { version: 1 as const, type: "memoria-diagram" as const, nodes: [{ id: "far", shape: "rectangle" as const, x: 1200, y: 900, width: 180, height: 80, label: "Far away", style: undefined }], edges: [] };
+    const bounds = getDiagramBounds(data);
+    expect(bounds.width).toBeGreaterThan(900);
+    expect(bounds.height).toBeGreaterThan(560);
+    expect(diagramToSvg(data)).toContain(`viewBox="${bounds.x} ${bounds.y} ${bounds.width} ${bounds.height}"`);
   });
 });
