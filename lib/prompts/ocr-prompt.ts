@@ -1,4 +1,5 @@
 import { buildMmdOutputRules } from "@/lib/mmd/ai-instructions";
+import { buildOcrKeepInstructions, DEFAULT_OCR_KEEP, type OcrKeepOption } from "@/lib/prompts/ocr-options";
 
 /** Builds the prompt shown when a note import needs external AI/OCR help.
  * Keep this on the same MMD contract as note/reviewer generation so pasted
@@ -6,7 +7,8 @@ import { buildMmdOutputRules } from "@/lib/mmd/ai-instructions";
  * the normal note reader. */
 export function buildOcrExtractionPrompt(
   extracted: Array<{ name: string; text: string }>,
-  missingFiles: string[]
+  missingFiles: string[],
+  keep: OcrKeepOption[] = DEFAULT_OCR_KEEP
 ): string {
   const partial = extracted
     .map((item) => `FILE: ${item.name}\nPARTIAL TEXT:\n${item.text}`)
@@ -22,6 +24,8 @@ VISUALS
 If a source contains a chart, process flow, timeline, hierarchy, or other visual and you can faithfully reconstruct its visible structure and labels, represent it as one self-contained HTML/SVG visual inside a :::svg block with meaningful alt text. Do not invent values, labels, relationships, or styling that are not visible in the source. If it cannot be faithfully reconstructed as SVG, preserve the readable annotations and write [VISUAL NOT RECONSTRUCTED: ...] instead of requesting an image.
 
 ${buildMmdOutputRules()}
+
+${buildOcrKeepInstructions(keep)}
 
 ${missing ? `Files needing OCR: ${missing}\n\n` : ""}${partial ? `Merge the OCR result with this partial extraction without duplicating text:\n\n${partial}\n\n` : ""}Return only the complete final Memoria Markdown document using the outer-fence rule above. Do not include explanations or commentary outside that fence.`;
 }

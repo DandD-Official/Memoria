@@ -24,12 +24,15 @@ export { MMD_VERSION };
  * entirely — both should fail validation the same way. Pass `min: 0`
  * explicitly for attributes where an empty string is meaningfully
  * different from absent (none currently need this). */
-function safeString(max = 500, min = 1) {
-  return z
+function safeString(max = 500, min = 1, options: { allowAngleBrackets?: boolean } = {}) {
+  const schema = z
     .string()
     .min(min, min > 0 ? "must not be empty" : undefined)
-    .max(max, `must be ${max} characters or fewer`)
-    .refine((v) => !/[<>]/.test(v), "must not contain < or >")
+    .max(max, `must be ${max} characters or fewer`);
+  const safeSchema = options.allowAngleBrackets
+    ? schema
+    : schema.refine((v) => !/[<>]/.test(v), "must not contain < or >");
+  return safeSchema
     .refine((v) => !/javascript:/i.test(v), "must not contain a javascript: URL")
     .refine((v) => !/^data:/i.test(v), "must not be a data: URL");
 }
@@ -132,7 +135,9 @@ export const BLOCK_DEFS: Record<string, BlockDefinition> = {
     name: "definition",
     category: "educational",
     description: "Defines a single term. Requires `term`.",
-    attrs: { term: safeString(200) },
+    // Terms are rendered as escaped text, so notation such as <<extend>> is
+    // safe and should remain usable even though other attrs reject brackets.
+    attrs: { term: safeString(200, 1, { allowAngleBrackets: true }) },
     requiredAttrs: ["term"],
     childPolicy: UNIVERSAL_CHILD_POLICY,
   },

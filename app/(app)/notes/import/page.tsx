@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input, Label, Textarea } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { stripCodeFences } from "@/lib/validation/reviewer";
+import { applyOcrKeepPreferences, DEFAULT_OCR_KEEP, OCR_KEEP_OPTIONS, type OcrKeepOption } from "@/lib/prompts/ocr-options";
 
 type Tab = "file" | "link" | "cloud";
 type Status = "idle" | "processing" | "failed";
@@ -35,6 +36,30 @@ const LINK_GUIDANCE: Record<Exclude<LinkType, null>, string> = {
   UNKNOWN: "We couldn't recognize this as a Google Docs or Notion link — that's fine, just paste the content below.",
 };
 
+function OcrKeepSelector({ selected, onToggle }: { selected: OcrKeepOption[]; onToggle: (option: OcrKeepOption) => void }) {
+  return (
+    <div className="mt-5 rounded-lg border border-accent/30 bg-accent-soft/20 p-4">
+      <p className="font-medium text-ink">AI/OCR tool selected</p>
+      <p className="mt-1 text-xs leading-relaxed text-ink-soft">Choose the content types to keep. Your selection is added to the prompt as a priority for the AI/OCR tool.</p>
+      <fieldset className="mt-4">
+        <legend className="mb-2 text-sm font-medium text-ink">Keep in the imported note</legend>
+        <div className="grid gap-2 sm:grid-cols-2">
+          {OCR_KEEP_OPTIONS.map((option) => {
+            const isSelected = selected.includes(option.value);
+            return (
+              <label key={option.value} className={cn("flex min-h-12 cursor-pointer items-start gap-3 rounded-control border p-3 transition-colors", isSelected ? "border-accent bg-surface" : "border-line bg-surface/50 hover:border-ink-faint")}>
+                <input type="checkbox" checked={isSelected} onChange={() => onToggle(option.value)} className="mt-0.5 h-4 w-4 accent-accent" />
+                <span className="min-w-0"><span className="block text-sm font-medium text-ink">{option.label}</span><span className="mt-0.5 block text-xs text-ink-soft">{option.description}</span></span>
+              </label>
+            );
+          })}
+        </div>
+        <p className="mt-2 text-xs text-ink-faint">{selected.length} content type{selected.length === 1 ? "" : "s"} selected. At least one must remain selected.</p>
+      </fieldset>
+    </div>
+  );
+}
+
 export default function ImportNotePage() {
   const router = useRouter();
   const [tab, setTab] = useState<Tab>("file");
@@ -51,6 +76,7 @@ export default function ImportNotePage() {
   const [selectedResource, setSelectedResource] = useState("");
   const [imageWarning, setImageWarning] = useState<{ prompt: string; errors: Array<{ filename: string; error: string }> } | null>(null);
   const [showOcrHelp, setShowOcrHelp] = useState(false);
+  const [ocrKeep, setOcrKeep] = useState<OcrKeepOption[]>([...DEFAULT_OCR_KEEP]);
   const [ocrResult, setOcrResult] = useState("");
   const [promptCopied, setPromptCopied] = useState(false);
 
@@ -77,6 +103,10 @@ export default function ImportNotePage() {
       if (!previewResponse.ok || !preview) throw new Error(preview?.error ?? "Import preview failed.");
       if (preview.hasImageIssue) {
         setImageWarning({ prompt: preview.extractionPrompt ?? "Extract all text from these images as Markdown.", errors: preview.errors ?? [] });
+        setShowOcrHelp(false);
+        setOcrKeep([...DEFAULT_OCR_KEEP]);
+        setOcrResult("");
+        setPromptCopied(false);
         setStatus("idle");
         return;
       }
@@ -124,6 +154,13 @@ export default function ImportNotePage() {
     const data = await response.json().catch(() => null);
     if (response.ok) navigateAfterSave(`/notes/${data.note.id}`);
     else { setStatus("failed"); setError(data?.error ?? "Couldn't save the extracted text."); }
+  }
+
+  function toggleOcrKeep(option: OcrKeepOption) {
+    const next = ocrKeep.includes(option) ? ocrKeep.filter((value) => value !== option) : [...ocrKeep, option];
+    if (!next.length) return;
+    setOcrKeep(next);
+    setImageWarning((current) => current ? { ...current, prompt: applyOcrKeepPreferences(current.prompt, next) } : current);
   }
 
   async function handleNotionImport() {
@@ -374,6 +411,7 @@ export default function ImportNotePage() {
         <div className="card max-h-[90vh] w-full max-w-2xl overflow-y-auto p-6 shadow-card-hover">
           <div className="flex items-start gap-3"><span className="rounded-full bg-accent-soft p-2 text-accent-dark"><AlertTriangle className="h-5 w-5" /></span><div><h2 id="image-import-title" className="font-display text-xl text-ink">Some image content could not be extracted</h2><p className="mt-1 text-sm text-ink-soft">Text embedded in images, scans, charts, or photographed pages may be missing. Nothing will be imported until you choose how to continue.</p></div></div>
           {imageWarning.errors.length > 0 && <ul className="mt-4 list-disc space-y-1 pl-5 text-xs text-danger">{imageWarning.errors.map((item) => <li key={item.filename}>{item.filename}: {item.error}</li>)}</ul>}
+          {showOcrHelp && <OcrKeepSelector selected={ocrKeep} onToggle={toggleOcrKeep} />}
           {!showOcrHelp ? <div className="mt-6 grid gap-3 sm:grid-cols-2"><button onClick={() => { setImageWarning(null); void performFileImport(true); }} className="rounded-lg border border-line p-4 text-left hover:border-accent"><span className="block font-medium text-ink">Continue with partial text</span><span className="mt-1 block text-xs text-ink-soft">Import only the text Memoria could read.</span></button><button onClick={() => setShowOcrHelp(true)} className="rounded-lg border border-accent bg-accent-soft/30 p-4 text-left"><span className="block font-medium text-ink">Use an AI/OCR tool</span><span className="mt-1 block text-xs text-ink-soft">Copy a prepared prompt, then paste the completed extraction back.</span></button></div> : <div className="mt-5"><div className="flex items-center justify-between"><Label htmlFor="ocr-prompt">Extraction prompt</Label><button onClick={async () => { await navigator.clipboard.writeText(imageWarning.prompt); setPromptCopied(true); setTimeout(() => setPromptCopied(false), 1500); }} className="inline-flex items-center gap-1 text-xs font-medium text-accent-dark">{promptCopied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}{promptCopied ? "Copied" : "Copy prompt"}</button></div><Textarea id="ocr-prompt" readOnly rows={7} value={imageWarning.prompt} className="mt-1 font-mono text-xs" /><div className="mt-4"><Label htmlFor="ocr-result">Paste the completed Markdown</Label><Textarea id="ocr-result" rows={8} value={ocrResult} onChange={(event) => setOcrResult(event.target.value)} placeholder="# Extracted lesson…" className="mt-1 font-mono text-sm" /></div></div>}
           <div className="mt-6 flex justify-end gap-2"><Button variant="ghost" onClick={() => { setImageWarning(null); setShowOcrHelp(false); }}>Cancel</Button>{showOcrHelp && <Button onClick={saveOcrResult} disabled={!ocrResult.trim()} loading={status === "processing"}>Save completed import</Button>}</div>
         </div>

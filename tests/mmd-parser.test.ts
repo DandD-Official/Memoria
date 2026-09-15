@@ -59,6 +59,14 @@ describe("parseMmd — simple blocks", () => {
     expect(block.attrs.term).toBe("Normalization");
   });
 
+  it("keeps angle brackets and symbols in definition terms", () => {
+    const doc = parseMmd(':::definition{term="<<extend&>>"}\nAdds optional behavior.\n:::');
+    const [block] = blocks(doc);
+    expect(block.block).toBe("definition");
+    expect(block.attrs.term).toBe("<<extend&>>");
+    expect(collectMmdErrors(doc)).toHaveLength(0);
+  });
+
   it("errors when a required attribute is missing", () => {
     const doc = parseMmd(":::definition\nNo term given.\n:::");
     const errors = collectMmdErrors(doc);

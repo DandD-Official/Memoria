@@ -10,5 +10,13 @@ describe("AI/OCR note import prompt", () => {
     expect(prompt).not.toContain(":::image-request");
     expect(prompt).toMatch(/exactly one outer/i);
     expect(prompt).toContain("scan.png");
+    expect(prompt).toContain("USER KEEP PREFERENCES");
+    expect(prompt).toContain("SVG visuals");
+  });
+
+  it("puts a user's keep selection ahead of the OCR tool's defaults", () => {
+    const prompt = buildOcrExtractionPrompt([], ["scan.png"], ["svg"]);
+    expect(prompt).toContain("Keep and prioritize these content types in the final note: SVG visuals.");
+    expect(prompt).toContain("Do not spend output on these unselected content types: Readable text, Tables, Equations.");
   });
 });
