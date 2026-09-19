@@ -1,0 +1,15 @@
+"use client";
+import { useState } from "react";
+import { BookReader } from "@/components/books/book-reader";
+import { DiagramEditor } from "@/components/diagrams/diagram-editor";
+import { MmdDiagramPicker } from "@/components/mmd/editor/diagram-picker";
+import { downloadBook } from "@/lib/books/download";
+import type { BookDocument } from "@/lib/books/document";
+import { diagramToSvg } from "@/lib/diagrams/svg";
+import { diagramTemplate } from "@/lib/diagrams/workspace";
+const book: BookDocument = { title: "The art of remembering", subtitle: "Small ideas, lasting connections", author: "Memoria", description: "A field guide to building understanding, one connected idea at a time.", tocTitle: "Contents", assets: { "diagram://sample": `data:image/svg+xml;charset=utf-8,${encodeURIComponent(diagramToSvg(diagramTemplate("flow")))}` }, chapters: [
+  { id: "first", title: "A place for your ideas", kind: "NOTE", content: "## Begin with a question\n\nGood notes connect what you already know with what you are discovering. **Make space for curiosity.**\n\n:::note{title=\"A small habit\"}\nWrite one clear question before your next study session.\n:::\n\n| Practice | Purpose |\n| --- | --- |\n| Capture | Keep an idea |\n| Connect | Build understanding |\n\n:::diagram{id=\"sample\" caption=\"A learning journey\"}\n:::" },
+  { id: "second", title: "Build a learning rhythm", kind: "REVIEWER", content: Array.from({ length: 15 }, (_, i) => `## Reflection ${i + 1}\n\n${"Take a moment to recall an idea and connect it with a concrete example. ".repeat(5)}`).join("\n\n") },
+] };
+const longBook: BookDocument = { ...book, title: 'A long and thoughtful title '.repeat(8).slice(0,200), subtitle: 'A descriptive subtitle with many words '.repeat(8).slice(0,240), description: 'A careful description of this learning collection and the ideas inside it. '.repeat(40).slice(0,2000), chapters: [{ id: 'long', title: 'Long paragraphs and tables', kind: 'NOTE', content: 'A paragraph with **emphasis** and [links](https://example.com). '.repeat(140)+'\n\n| Item | Detail |\n| --- | --- |\n'+Array.from({length:70},(_,i)=>'| Row '+i+' | Content '+i+' |').join('\n') }, ...Array.from({length:18},(_,i)=>({id:'extra'+i,title:'Chapter '+i+' with a fairly long title',kind:'NOTE' as const,content:'A short note.'}))] };
+export default function Check() { const [status, setStatus] = useState(""); const [chosen, setChosen] = useState(book); return <main className="mx-auto max-w-6xl space-y-8 p-6"><p role="status">{status}</p><button onClick={() => setChosen(longBook)}>Long book case</button><div className="flex gap-4"><button onClick={() => downloadBook(chosen, "pdf").catch(e => setStatus(e.message))}>Download PDF</button><button onClick={() => downloadBook(chosen, "docx").catch(e => setStatus(e.message))}>Download Word</button><MmdDiagramPicker onInsert={id => setStatus(`Inserted ${id}`)} /></div><BookReader book={chosen} /><DiagramEditor initialDiagrams={[]} onInsert={id => setStatus(`Inserted ${id}`)} /></main>; }

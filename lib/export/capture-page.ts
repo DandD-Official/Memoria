@@ -4,7 +4,7 @@ import type { CapturedPage, CanonicalPage } from "@/lib/export/types";
 
 export async function captureCanonicalPage(page: CanonicalPage): Promise<CapturedPage> {
   const dataUrl = await toPng(page.element, {
-    backgroundColor: EXPORT_COLORS.paper,
+    backgroundColor: window.getComputedStyle(page.element).backgroundColor || EXPORT_COLORS.paper,
     cacheBust: false,
     pixelRatio: EXPORT_PIXEL_RATIO,
     skipAutoScale: true,

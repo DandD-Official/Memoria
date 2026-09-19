@@ -12,20 +12,27 @@ export interface RenderedBook { pages: CanonicalPage[]; chapterPages: Record<str
 
 /** The reader and downloads use these exact DOM pages, including resolved MMD assets. */
 export async function renderBook(book: BookDocument): Promise<RenderedBook> {
+  // Readers call from a React effect. Leave that lifecycle before mounting
+  // the isolated root, so flushSync is safe and measurements see committed DOM.
+  await new Promise<void>(resolve => queueMicrotask(resolve));
   const host = document.createElement("div");
   host.style.cssText = "position:fixed;left:-100000px;top:0;pointer-events:none";
   host.setAttribute("aria-hidden", "true");
+  host.inert = true;
   document.body.append(host);
   const root = createRoot(host);
   const registry = createMmdAssetRegistry();
   let releaseAssets = () => {};
-  const cleanup = () => { releaseAssets(); root.unmount(); host.remove(); };
+  let disposed = false;
+  const cleanup = () => { if (disposed) return; disposed = true; releaseAssets(); host.remove(); queueMicrotask(() => root.unmount()); };
   try {
     flushSync(() => root.render(<BookSurface book={book} assetRegistry={registry} />));
     const source = host.querySelector<HTMLElement>("[data-book-source]")!;
     const assets = await prepareMmdForExport(source, { assetRegistry: registry });
     releaseAssets = assets.cleanup;
     if (assets.failedAssets.length || source.querySelector('[data-mmd-asset-state="error"]')) throw new Error("A book image or diagram could not load. Check the chapter and try again.");
+    const sourceCover = source.querySelector<HTMLElement>("[data-book-cover]")!;
+    if (sourceCover.lastElementChild!.getBoundingClientRect().bottom > sourceCover.getBoundingClientRect().bottom - 56) sourceCover.classList.add("book-cover-compact");
     const pages: CanonicalPage[] = [];
     const makePage = () => {
       const element = document.createElement("div");
@@ -34,7 +41,7 @@ export async function renderBook(book: BookDocument): Promise<RenderedBook> {
       return { element, width: EXPORT_PAGE.cssWidth, height: EXPORT_PAGE.cssHeight };
     };
     const cover = makePage();
-    cover.element.append(source.querySelector("[data-book-cover]")!.cloneNode(true));
+    cover.element.append(sourceCover.cloneNode(true));
     pages.push(cover);
     const contents = source.querySelector<HTMLElement>("[data-book-contents]")!;
     const rows = [...contents.querySelectorAll<HTMLElement>("[data-book-toc-row]")];

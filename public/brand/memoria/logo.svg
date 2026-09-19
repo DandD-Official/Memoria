@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="468" height="150" viewBox="0 0 234 75" role="img" aria-labelledby="title">
+  <title id="title">Memoria</title>
+  <rect width="234" height="75" fill="#f7f7ef"/>
+  <g transform="translate(25 25)" fill="none" stroke="#22312b" stroke-width="2.2" stroke-linecap="round">
+    <path d="M6 26V13a6 6 0 0 1 12 0v10a4 4 0 0 1-8 0v-6a4 4 0 0 1 8 0v6a4 4 0 0 0 8 0V13a6 6 0 0 0-12 0v13"/>
+    <circle cx="30" cy="27" r="2.5" fill="#22312b" stroke="none"/>
+  </g>
+  <text x="77" y="53" fill="#22312b" font-family="Iowan Old Style, Palatino Linotype, Book Antiqua, Georgia, serif" font-size="31" letter-spacing="-1.7">memoria<tspan fill="#496327">.</tspan></text>
+</svg>

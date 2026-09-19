@@ -10,7 +10,7 @@ export function quizChapterMarkdown(questions: QuizQuestion[]): string {
     const options = question.type === "multiple_choice" || question.type === "multiple_select"
       ? question.choices.map((choice, i) => `${String.fromCharCode(65 + i)}. ${choice}`).join("\n\n")
       : question.type === "true_false" ? "□ True    □ False"
-      : question.type === "matching" ? question.pairs.map(pair => `- ${pair.left}: ____________________`).join("\n")
+      : question.type === "matching" ? `${question.pairs.map(pair => `- ${pair.left}: ____________________`).join("\n")}\n\nOptions: ${question.pairs.map(pair => pair.right).sort().map((right, index) => `${String.fromCharCode(65 + index)}. ${right}`).join(" · ")}`
       : "Answer: ________________________________________";
     return `### ${index + 1}. ${question.question}\n\n${options}`;
   });

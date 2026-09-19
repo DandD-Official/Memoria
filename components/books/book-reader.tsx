@@ -50,12 +50,12 @@ export function BookReader({ book, resumeChapter, onChapterChange }: { book: Boo
       {resumeChapter && rendered.current?.chapterPages[resumeChapter] && <Button variant="ghost" size="sm" onClick={() => navigate(rendered.current!.chapterPages[resumeChapter] - 1)}><RotateCcw className="h-4 w-4" />Resume</Button>}
       <select aria-label="Page zoom" value={zoom} onChange={event => setZoom(event.target.value)} className="h-11 rounded-control border border-line bg-surface px-2 text-sm"><option value="fit">Fit page</option><option value="1">100%</option><option value="1.25">125%</option><option value="1.5">150%</option></select>
     </div>
-    <div ref={viewport} className="book-reader-stage" tabIndex={0} aria-label="Book page. Use the page controls to continue.">
+    <div ref={viewport} className="book-reader-stage" tabIndex={0} aria-label="Book page. Use the page controls to continue." onKeyDown={event => { if (event.target !== event.currentTarget || !total) return; if (event.key === "PageDown" || event.key === "PageUp") { event.preventDefault(); navigate(Math.max(0, Math.min(total - 1, page + (event.key === "PageDown" ? 1 : -1)))); } }}>
       {!total && !error && <p className="p-10 text-center text-sm text-ink-soft" role="status">Preparing your book pages…</p>}
       {error && <div className="p-8"><p role="alert" className="text-sm text-danger">{error}</p><Button onClick={() => setRetry(value => value + 1)} variant="outline" className="mt-4">Try again</Button></div>}
-      {total > 0 && <div className="book-reader-frame" style={{ width: 794 * scale, height: height * scale }}><div ref={paper} style={{ width: 794, transform: `scale(${scale})`, transformOrigin: "top left" }} /></div>}
+      {total > 0 && <div className="book-reader-frame" style={{ width: 794 * scale, height: height * scale }}><div ref={paper} onClick={event => { const link = (event.target as HTMLElement).closest<HTMLElement>("[data-book-goto]"); const target = link && rendered.current?.chapterPages[link.dataset.bookGoto!]; if (target) { event.preventDefault(); navigate(target - 1); } }} style={{ width: 794, transform: `scale(${scale})`, transformOrigin: "top left" }} /></div>}
     </div>
     <div className="book-reader-toolbar"><Button variant="ghost" size="sm" disabled={!total || page === 0} onClick={() => navigate(page - 1)}><ChevronLeft className="h-4 w-4" />Previous</Button><p role="status" className="text-xs tabular-nums text-ink-soft">{total ? `Page ${page + 1} of ${total}` : "Preparing pages"}</p><Button variant="ghost" size="sm" disabled={!total || page >= total - 1} onClick={() => navigate(page + 1)}>Next<ChevronRight className="h-4 w-4" /></Button></div>
-    <p className="px-4 pb-4 text-xs text-ink-faint">PDF and Word use this page layout. Use 100% to read small details.</p>
+    <p className="px-4 pb-4 text-xs text-ink-faint">PDF and Word preserve these pages as images. Use JSON for editable content, or 100% zoom to read small details.</p>
   </section>;
 }

@@ -15,7 +15,9 @@ const signature = (title: string, data: DiagramData) => JSON.stringify([title, d
 export function DiagramEditor({ initialDiagrams, initialDiagramId, onInsert, onDirtyChange }: { initialDiagrams: Summary[]; initialDiagramId?: string; onInsert?: (id: string) => void; onDirtyChange?: (dirty: boolean) => void }) {
   const initial = initialDiagrams.find(item => item.id === initialDiagramId) ?? initialDiagrams[0];
   const [diagrams, setDiagrams] = useState(initialDiagrams);
-  const [id, setId] = useState<string | null>(initial?.id ?? null);
+  // Only an opened document gets a write target. A failed initial fetch must
+  // never leave an empty canvas capable of overwriting the existing diagram.
+  const [id, setId] = useState<string | null>(null);
   const [title, setTitle] = useState(initial?.title ?? "Untitled diagram");
   const [data, setData] = useState<DiagramData>(emptyDiagramData);
   const [saved, setSaved] = useState(() => signature(initial?.title ?? "Untitled diagram", emptyDiagramData()));

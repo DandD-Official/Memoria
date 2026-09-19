@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { ArrowUpRight, BookOpen, Plus, Star } from "lucide-react";
+import { MemoryMark } from "@/components/layout/brand";
 import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/input";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -95,12 +96,11 @@ export function CollectionsList({ initialCollections, initiallyCreating = false 
             return (
             <article key={book.id} className="group relative min-w-0">
               <Link href={`/books/${book.id}`} className="block rounded-[1rem] focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2">
-                <div className="relative aspect-[4/3] overflow-hidden rounded-[1rem] border border-line-strong bg-action p-2 shadow-card transition-transform duration-200 group-hover:-translate-y-1 group-hover:shadow-card-hover">
-                  <div className="absolute inset-y-2 left-4 w-3 rounded-full bg-ink/20 blur-[1px]" aria-hidden="true" />
-                  <div className="flex h-full flex-col justify-between rounded-[0.65rem] border border-action-foreground/20 bg-action px-6 py-5 text-action-foreground">
-                    <div><p className="text-[0.6rem] font-semibold uppercase tracking-[0.24em] text-action-foreground/70">Memoria Book</p><h2 className="mt-7 line-clamp-3 font-display text-2xl leading-tight">{book.title}</h2>{book.subtitle && <p className="mt-2 line-clamp-2 font-display text-sm italic text-action-foreground/80">{book.subtitle}</p>}</div>
-                    <div className="flex items-end justify-between border-t border-action-foreground/25 pt-3 text-[0.68rem] text-action-foreground/75"><span>{book._count.items} chapter{book._count.items === 1 ? "" : "s"}</span><ArrowUpRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" /></div>
-                  </div>
+                <div className="book-thumbnail">
+                  <div className="book-thumbnail-brand"><MemoryMark /><span>memoria.</span></div>
+                  <div className="book-thumbnail-orbits" aria-hidden="true"><i /><i /><i /></div>
+                  <div className="book-thumbnail-title"><p>A collection of connected ideas</p><h2>{book.title}</h2>{book.subtitle && <span>{book.subtitle}</span>}</div>
+                  <div className="book-thumbnail-footer"><span>{book._count.items} chapter{book._count.items === 1 ? "" : "s"}</span><ArrowUpRight className="h-4 w-4" /></div>
                 </div>
                 <div className="px-1 pt-3"><p className="line-clamp-2 text-sm leading-relaxed text-ink-soft">{book.description || "Open this Book and begin shaping its chapters."}</p><div className="mt-2 flex items-center justify-between gap-3 text-xs text-ink-faint"><span>{chapter > 0 ? `Continue · Chapter ${chapter}` : formatRelativeTime(new Date(book.updatedAt))}</span><span>{book._count.members > 0 ? `${book._count.members} people` : book.isPublished ? "Link shared" : "Only you"}</span></div></div>
               </Link>

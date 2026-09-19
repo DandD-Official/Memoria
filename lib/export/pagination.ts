@@ -15,17 +15,85 @@ function isHeading(element: Element): boolean {
   return /^H[1-4]$/.test(element.tagName);
 }
 
+/** Split common flowing content before packing pages. Range cloning retains
+ * inline emphasis and links when a paragraph spans several pages. */
+function splitLargeElement(element: Element, markdown: HTMLElement): Element[] {
+  const max = EXPORT_PAGE.contentHeight - 32;
+  const measure = (node: Element) => {
+    markdown.append(node); const height = node.getBoundingClientRect().height + marginHeight(node); node.remove(); return height;
+  };
+  if (element.getBoundingClientRect().height + marginHeight(element) <= max) return [element];
+  const parts: Element[] = [];
+  if (element.tagName === "P" && element.textContent && !element.querySelector("img,svg")) {
+    const texts: Text[] = []; const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+    while (walker.nextNode()) texts.push(walker.currentNode as Text);
+    const full = element.textContent;
+    const boundaries = [0, ...[...full.matchAll(/\S+\s*/g)].map(match => match.index! + match[0].length)];
+    if (boundaries.at(-1) !== full.length) boundaries.push(full.length);
+    const locate = (offset: number): [Text, number] => {
+      let position = offset;
+      for (const text of texts) { if (position <= text.length) return [text, position]; position -= text.length; }
+      return [texts[texts.length - 1], texts[texts.length - 1].length];
+    };
+    const fragment = (start: number, end: number) => {
+      const range = document.createRange(); range.setStart(...locate(start)); range.setEnd(...locate(end));
+      const copy = element.cloneNode(false) as Element; copy.append(range.cloneContents()); return copy;
+    };
+    let start = 0;
+    while (start < boundaries.length - 1) {
+      let low = start + 1, high = boundaries.length - 1, best = low;
+      while (low <= high) {
+        const middle = Math.floor((low + high) / 2);
+        if (measure(fragment(boundaries[start], boundaries[middle])) <= max) { best = middle; low = middle + 1; } else high = middle - 1;
+      }
+      parts.push(fragment(boundaries[start], boundaries[best])); start = best;
+    }
+  } else {
+    const table = element.matches("table") ? element : element.querySelector("table");
+    const isList = element.matches("ol,ul");
+    const children = table ? [...table.querySelectorAll(":scope > tbody > tr")] : isList ? [...element.children] : [];
+    if (children.length > 1) {
+      let group: Element[] = [], start = 0;
+      const fragment = (entries: Element[], index: number) => {
+        const copy = element.cloneNode(true) as Element;
+        const body = table ? (copy.matches("table") ? copy : copy.querySelector("table")!).querySelector("tbody")! : copy;
+        body.replaceChildren(...entries.map(entry => entry.cloneNode(true)));
+        if (element.tagName === "OL") copy.setAttribute("start", String(Number(element.getAttribute("start") ?? 1) + index));
+        return copy;
+      };
+      for (const child of children) {
+        if (group.length && measure(fragment([...group, child], start)) > max) { parts.push(fragment(group, start)); start += group.length; group = []; }
+        group.push(child);
+      }
+      if (group.length) parts.push(fragment(group, start));
+    }
+  }
+  // Keep indivisible visuals intact on one sheet, with the same scale in
+  // the reader and both exports, rather than creating invalid Word page sizes.
+  return (parts.length ? parts : [element]).map(part => {
+    const height = part === element ? element.getBoundingClientRect().height + marginHeight(element) : measure(part);
+    if (height <= max) return part;
+    const outer = document.createElement("div"), inner = document.createElement("div");
+    outer.style.height = `${max}px`; outer.style.position = "relative";
+    inner.style.cssText = `width:${EXPORT_PAGE.contentWidth}px;transform:scale(${max / height});transform-origin:top left;display:flow-root`;
+    inner.append(part.cloneNode(true)); outer.append(inner); return outer;
+  });
+}
+
 function measureUnits(markdown: HTMLElement): MeasuredUnit[] {
-  const children = [...markdown.children];
+  const children = [...markdown.children].flatMap(element => splitLargeElement(element, markdown));
   const units: MeasuredUnit[] = [];
   for (let index = 0; index < children.length; index += 1) {
     const element = children[index];
     const next = children[index + 1];
-    const rect = element.getBoundingClientRect();
-    const height = rect.height + marginHeight(element);
-    if (isHeading(element) && next) {
-      const nextRect = next.getBoundingClientRect();
-      units.push({ nodes: [element, next], height: height + nextRect.height + marginHeight(next) });
+    const measure = (node: Element) => {
+      const detached = !node.isConnected; if (detached) markdown.append(node);
+      const height = node.getBoundingClientRect().height + marginHeight(node);
+      if (detached) node.remove(); return height;
+    };
+    const height = measure(element);
+    if (isHeading(element) && next && height + measure(next) <= EXPORT_PAGE.contentHeight) {
+      units.push({ nodes: [element, next], height: height + measure(next) });
       index += 1;
     } else {
       units.push({ nodes: [element], height });
@@ -134,13 +202,13 @@ export function paginateMmdSurface(root: HTMLElement, title: string): CanonicalP
   if (units.length === 0 && !cover) finishPage();
   for (const unit of units) {
     const available = EXPORT_PAGE.contentHeight;
-    const wouldOverflow = pageHasContent && used + unit.height > available;
+    const wouldOverflow = (pageHasContent || used > 0) && used + unit.height > available;
     if (wouldOverflow) finishPage();
     bodyNodes.push(...unit.nodes);
     used += unit.height;
     pageHasContent = true;
-    if (unit.height > available) {
-      page.style.height = `${Math.max(EXPORT_PAGE.cssHeight, used + EXPORT_PAGE.margin + EXPORT_PAGE.footerHeight)}px`;
+    if (used > available) {
+      page.style.height = `${Math.max(EXPORT_PAGE.cssHeight, used + EXPORT_PAGE.margin * 2 + EXPORT_PAGE.footerHeight)}px`;
       finishPage();
     }
   }

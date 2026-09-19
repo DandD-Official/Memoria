@@ -26,7 +26,7 @@ function shapeMarkup(node: DiagramNode): string {
   if (node.shape === "document") return `<path d="M ${x} ${y} h ${w} v ${h - 12} q -${w / 4} 24 -${w / 2} 0 q -${w / 4} -24 -${w / 2} 0 Z"/>`;
   if (node.shape === "circle" || node.shape === "ellipse") return `<ellipse cx="${x + w / 2}" cy="${y + h / 2}" rx="${w / 2}" ry="${h / 2}"/>`;
   if (node.shape === "cylinder" || node.shape === "database") return `<path d="M ${x} ${y + 12} a ${w / 2} 12 0 0 1 ${w} 0 v ${h - 24} a ${w / 2} 12 0 0 1 -${w} 0 Z M ${x} ${y + 12} a ${w / 2} 12 0 0 0 ${w} 0"/>`;
-  const radius = node.shape === "rounded-rectangle" || node.shape === "terminator" ? Math.min(18, h / 2) : node.shape === "cylinder" || node.shape === "database" ? 12 : 0;
+  const radius = node.shape === "rounded-rectangle" || node.shape === "terminator" ? Math.min(18, h / 2) : 0;
   return `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${radius}"/>`;
 }
 
