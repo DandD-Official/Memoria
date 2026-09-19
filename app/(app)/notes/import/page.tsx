@@ -2,7 +2,9 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Upload, Link2, FileText, Cloud, Copy, Check, AlertTriangle } from "lucide-react";
+import Link from "next/link";
+import { Dialog } from "@/components/ui/dialog";
+import { Upload, Link2, FileText, Cloud, Copy, Check, ArrowRight } from "lucide-react";
 import { FileDropzone } from "@/components/notes/file-dropzone";
 import { Button } from "@/components/ui/button";
 import { Input, Label, Textarea } from "@/components/ui/input";
@@ -10,7 +12,7 @@ import { cn } from "@/lib/utils";
 import { stripCodeFences } from "@/lib/validation/reviewer";
 import { applyOcrKeepPreferences, DEFAULT_OCR_KEEP, OCR_KEEP_OPTIONS, type OcrKeepOption } from "@/lib/prompts/ocr-options";
 
-type Tab = "file" | "link" | "cloud";
+type Tab = "file" | "write" | "link" | "cloud";
 type Status = "idle" | "processing" | "failed";
 type LinkType = "GOOGLE_DOCS" | "NOTION" | "UNKNOWN" | null;
 
@@ -62,6 +64,8 @@ function OcrKeepSelector({ selected, onToggle }: { selected: OcrKeepOption[]; on
 
 export default function ImportNotePage() {
   const router = useRouter();
+  const [imported, setImported] = useState<{ href: string; noteId?: string } | null>(null);
+  const [processingStage, setProcessingStage] = useState("Reading your material");
   const [tab, setTab] = useState<Tab>("file");
   const [file, setFile] = useState<File | null>(null);
   const [files, setFiles] = useState<File[]>([]);
@@ -83,18 +87,19 @@ export default function ImportNotePage() {
   const linkType = useMemo(() => detectLinkType(link), [link]);
 
   function navigateAfterSave(href: string) {
-    router.push(href);
-    // A mutation can leave previously visited library pages in the App
-    // Router cache. Refresh after navigation so the new note is visible.
+    const noteId = href.match(/^\/notes\/([^/]+)$/)?.[1];
+    setImported({ href: href === "/dashboard" ? "/library" : href, noteId });
+    setStatus("idle");
+    setImageWarning(null);
     router.refresh();
   }
-
   async function handleFileImport() {
     if (!file) return;
     setError(null);
     setNotice(null);
     setStatus("processing");
     try {
+      setProcessingStage("Checking the text and images in your files");
       const previewForm = new FormData();
       for (const selected of files.length ? files : [file]) previewForm.append("file", selected);
       previewForm.append("mode", "preview");
@@ -110,6 +115,7 @@ export default function ImportNotePage() {
         setStatus("idle");
         return;
       }
+      setProcessingStage("Saving your editable source notes");
       await performFileImport(false);
     } catch (caught) {
       setStatus("failed");
@@ -277,36 +283,18 @@ export default function ImportNotePage() {
     }
   }
 
+  if (imported) return <div className="mx-auto max-w-4xl py-8"><p className="eyebrow">Captured / Ready to connect</p><Check className="mt-8 h-10 w-10 text-success" /><h1 className="mt-5 font-display text-4xl tracking-tight">Your material has a home.</h1><p className="mt-4 max-w-lg text-sm leading-relaxed text-ink-soft">Read through what came in, then give it a shape that helps you learn.</p>{notice && <p role="status" className="mt-4 annotation">{notice}</p>}<div className="mt-8 divide-y divide-line border-y border-line"><Link href={imported.href} className="flex items-center justify-between gap-4 py-6"><span><span className="index-label">01 / Check the source</span><span className="mt-2 block font-display text-xl">Open your material</span></span><ArrowRight className="h-5 w-5" /></Link>{imported.noteId && <><Link href={`/reviewers?fromNote=${imported.noteId}`} className="flex items-center justify-between gap-4 py-6"><span><span className="index-label">02 / Make sense of it</span><span className="mt-2 block font-display text-xl">Build a study guide</span></span><ArrowRight className="h-5 w-5" /></Link><Link href={`/quizzes?fromNote=${imported.noteId}`} className="flex items-center justify-between gap-4 py-6"><span><span className="index-label">03 / Try what you know</span><span className="mt-2 block font-display text-xl">Create a practice set</span></span><ArrowRight className="h-5 w-5" /></Link></>}</div><Button variant="ghost" className="mt-6" onClick={() => { setImported(null); setFile(null); setFiles([]); setPastedContent(""); setNotice(null); }}>Bring in more material</Button></div>;
   return (
-    <div className="mx-auto max-w-2xl">
-      <h1 className="font-display text-2xl text-ink">Import a note</h1>
-      <p className="mt-1 text-sm text-ink-soft">
-        Bring in material from a file or a link. Notes are stored as Markdown, so headings, bold text, lists, and
-        tables all carry over.
-      </p>
+    <div className="mx-auto max-w-5xl">
+      <p className="section-kicker">Start with what you already have</p>
+      <h1 className="mt-3 font-display text-4xl tracking-tight text-ink">Bring your material.</h1>
+      <p className="mt-2 max-w-2xl text-sm leading-relaxed text-ink-soft">Bring in a file, paste a lesson, or connect a source. Your material stays editable and ready to shape into a reviewer.</p>
 
-      <div className="mt-6 flex gap-1 rounded-lg border border-line bg-surface p-1">
-        <button
-          onClick={() => setTab("file")}
-          className={cn("flex-1 rounded-md py-2 text-sm font-medium", tab === "file" ? "bg-action text-action-foreground" : "text-ink-soft")}
-        >
-          <Upload className="mr-1.5 inline h-4 w-4" /> Upload File
-        </button>
-        <button
-          onClick={() => setTab("link")}
-          className={cn("flex-1 rounded-md py-2 text-sm font-medium", tab === "link" ? "bg-action text-action-foreground" : "text-ink-soft")}
-        >
-          <Link2 className="mr-1.5 inline h-4 w-4" /> Import Link
-        </button>
-        <button
-          onClick={() => { setTab("cloud"); if (resources.length === 0) void loadCloudResources(cloudProvider); }}
-          className={cn("flex-1 rounded-md py-2 text-sm font-medium", tab === "cloud" ? "bg-action text-action-foreground" : "text-ink-soft")}
-        >
-          <Cloud className="mr-1.5 inline h-4 w-4" /> Connected Apps
-        </button>
-      </div>
-
-      <div className="card mt-4 p-6">
+      <div className="mt-8 grid items-start gap-8 lg:grid-cols-[14rem_minmax(0,1fr)]">
+      <div><p className="index-label mb-4">01 / Choose your source</p><div className="grid grid-cols-2 gap-2 lg:grid-cols-1" role="group" aria-label="Import source">
+        {([{ key: "file", label: "Files & documents", detail: "PDF, slides, Word, text, JSON", icon: Upload }, { key: "write", label: "Write or paste", detail: "Start with your own words", icon: FileText }, { key: "link", label: "A shared link", detail: "Google Docs or Notion", icon: Link2 }, { key: "cloud", label: "Connected sources", detail: "Choose from your accounts", icon: Cloud }] as const).map(source => <button key={source.key} type="button" disabled={status === "processing"} aria-pressed={tab === source.key} onClick={() => { setTab(source.key); setError(null); if (source.key === "cloud" && resources.length === 0) void loadCloudResources(cloudProvider); }} className={cn("min-h-20 rounded-control border p-3 text-left", tab === source.key ? "border-action bg-accent-soft" : "border-line hover:bg-surface-muted")}><source.icon className="mb-2 h-4 w-4" /><span className="block text-sm font-medium">{source.label}</span><span className="mt-1 block text-xs leading-relaxed text-ink-soft">{source.detail}</span></button>)}
+      </div><p className="annotation mt-6 hidden lg:block">Your original material becomes an editable note. You decide what to make from it next.</p></div>
+      <div className="min-w-0 border-t-2 border-action bg-surface p-5 sm:p-7"><p className="index-label mb-6">02 / {tab === "file" ? "Bring in a document" : tab === "cloud" ? "Choose your material" : "Capture the source"}</p>
         {tab === "file" ? (
           <>
             <FileDropzone onFileSelected={setFile} onFilesSelected={setFiles} multiple accept=".md,.txt,.pdf,.docx,.pptx,.json" />
@@ -317,9 +305,9 @@ export default function ImportNotePage() {
               Only text is imported — if a PDF, Word, or PowerPoint file has images or embedded visuals, those are skipped and
               you&apos;ll see a notice after importing.
             </p>
-            {error && <p className="mt-3 text-sm text-danger">{error}</p>}
+            {error && <p role="alert" className="mt-3 text-sm text-danger">{error}</p>}
             {notice && <p className="mt-3 rounded-lg border border-accent/30 bg-accent-soft/40 p-3 text-sm text-accent-dark">{notice}</p>}
-            {status === "processing" && <p className="mt-3 text-sm text-ink-soft">Extracting content…</p>}
+            {status === "processing" && <div role="status" className="mt-5 space-y-3"><p className="text-sm text-ink-soft">{processingStage}…</p><div className="h-2 animate-pulse bg-accent-soft" /><p className="text-xs text-ink-faint">Keep this page open while your material is processed.</p></div>}
             <div className="mt-5 flex justify-end gap-2">
               <Button variant="ghost" onClick={() => router.push("/notes")}>
                 Cancel
@@ -329,18 +317,19 @@ export default function ImportNotePage() {
               </Button>
             </div>
           </>
-        ) : tab === "link" ? (
+        ) : tab === "link" || tab === "write" ? (
           <>
-            <Label htmlFor="link">Google Docs or Notion link</Label>
+            {tab === "link" && <><Label htmlFor="link">Google Docs or Notion link</Label>
             <Input id="link" value={link} onChange={(e) => setLink(e.target.value)} placeholder="https://docs.google.com/… or https://app.notion.com/p/…" />
 
-            {linkType && (
+            </>}
+            {tab === "link" && linkType && (
               <p className="mt-2 rounded-lg border border-line bg-ink/[0.02] p-3 text-xs text-ink-soft">
                 {LINK_GUIDANCE[linkType]}
               </p>
             )}
 
-            {linkType === "NOTION" ? (
+            {tab === "link" && linkType === "NOTION" ? (
               <div className="mt-4 flex justify-end gap-2">
                 <Button variant="outline" onClick={() => setLink("")}>
                   Clear
@@ -357,7 +346,7 @@ export default function ImportNotePage() {
                 </div>
 
                 <div className="mt-4">
-                  <Label htmlFor="pasted">Paste the exported content (Markdown works best)</Label>
+                  <Label htmlFor="pasted">Your notes (Markdown supported)</Label>
                   <Textarea
                     id="pasted"
                     rows={8}
@@ -370,10 +359,10 @@ export default function ImportNotePage() {
               </>
             )}
 
-            {error && <p className="mt-3 text-sm text-danger">{error}</p>}
+            {error && <p role="alert" className="mt-3 text-sm text-danger">{error}</p>}
             {notice && <p className="mt-3 rounded-lg border border-accent/30 bg-accent-soft/40 p-3 text-sm text-accent-dark">{notice}</p>}
 
-            {linkType !== "NOTION" && (
+            {(tab === "write" || linkType !== "NOTION") && (
               <div className="mt-5 flex justify-end gap-2">
                 <Button variant="ghost" onClick={() => router.push("/notes")}>
                   Cancel
@@ -390,7 +379,7 @@ export default function ImportNotePage() {
               <Button variant={cloudProvider === "google" ? "primary" : "outline"} size="sm" onClick={() => void loadCloudResources("google")}>Google Drive</Button>
               <Button variant={cloudProvider === "notion" ? "primary" : "outline"} size="sm" onClick={() => void loadCloudResources("notion")}>Notion</Button>
             </div>
-            <p className="mt-3 text-sm text-ink-soft">Choose a document from your connected account. Manage access in <a className="text-accent underline" href="/settings">Settings</a>.</p>
+            <p className="mt-3 text-sm text-ink-soft">Choose a document from your connected account. Manage access in <a className="text-accent-dark underline" href="/settings">Settings</a>.</p>
             {status === "processing" && <p className="mt-4 text-sm text-ink-soft">Loading documents…</p>}
             {resources.length > 0 && (
               <div className="mt-4">
@@ -402,20 +391,20 @@ export default function ImportNotePage() {
               </div>
             )}
             {status !== "processing" && resources.length === 0 && !error && <p className="mt-4 text-sm text-ink-soft">No importable documents were found.</p>}
-            {error && <p className="mt-3 text-sm text-danger">{error}</p>}
+            {error && <p role="alert" className="mt-3 text-sm text-danger">{error}</p>}
             <div className="mt-5 flex justify-end"><Button disabled={!selectedResource} loading={status === "processing"} onClick={() => void importCloudResource()}>Import document</Button></div>
           </>
         )}
       </div>
-      {imageWarning && <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/35 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="image-import-title">
-        <div className="card max-h-[90vh] w-full max-w-2xl overflow-y-auto p-6 shadow-card-hover">
-          <div className="flex items-start gap-3"><span className="rounded-full bg-accent-soft p-2 text-accent-dark"><AlertTriangle className="h-5 w-5" /></span><div><h2 id="image-import-title" className="font-display text-xl text-ink">Some image content could not be extracted</h2><p className="mt-1 text-sm text-ink-soft">Text embedded in images, scans, charts, or photographed pages may be missing. Nothing will be imported until you choose how to continue.</p></div></div>
+      </div>
+      {imageWarning && <Dialog open onOpenChange={() => setImageWarning(null)} title="Some content needs a closer look" description="Text in scans, images, and charts may be missing. Choose how to continue before anything is saved." className="sm:max-w-2xl">
+        <div>
           {imageWarning.errors.length > 0 && <ul className="mt-4 list-disc space-y-1 pl-5 text-xs text-danger">{imageWarning.errors.map((item) => <li key={item.filename}>{item.filename}: {item.error}</li>)}</ul>}
           {showOcrHelp && <OcrKeepSelector selected={ocrKeep} onToggle={toggleOcrKeep} />}
           {!showOcrHelp ? <div className="mt-6 grid gap-3 sm:grid-cols-2"><button onClick={() => { setImageWarning(null); void performFileImport(true); }} className="rounded-lg border border-line p-4 text-left hover:border-accent"><span className="block font-medium text-ink">Continue with partial text</span><span className="mt-1 block text-xs text-ink-soft">Import only the text Memoria could read.</span></button><button onClick={() => setShowOcrHelp(true)} className="rounded-lg border border-accent bg-accent-soft/30 p-4 text-left"><span className="block font-medium text-ink">Use an AI/OCR tool</span><span className="mt-1 block text-xs text-ink-soft">Copy a prepared prompt, then paste the completed extraction back.</span></button></div> : <div className="mt-5"><div className="flex items-center justify-between"><Label htmlFor="ocr-prompt">Extraction prompt</Label><button onClick={async () => { await navigator.clipboard.writeText(imageWarning.prompt); setPromptCopied(true); setTimeout(() => setPromptCopied(false), 1500); }} className="inline-flex items-center gap-1 text-xs font-medium text-accent-dark">{promptCopied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}{promptCopied ? "Copied" : "Copy prompt"}</button></div><Textarea id="ocr-prompt" readOnly rows={7} value={imageWarning.prompt} className="mt-1 font-mono text-xs" /><div className="mt-4"><Label htmlFor="ocr-result">Paste the completed Markdown</Label><Textarea id="ocr-result" rows={8} value={ocrResult} onChange={(event) => setOcrResult(event.target.value)} placeholder="# Extracted lesson…" className="mt-1 font-mono text-sm" /></div></div>}
           <div className="mt-6 flex justify-end gap-2"><Button variant="ghost" onClick={() => { setImageWarning(null); setShowOcrHelp(false); }}>Cancel</Button>{showOcrHelp && <Button onClick={saveOcrResult} disabled={!ocrResult.trim()} loading={status === "processing"}>Save completed import</Button>}</div>
         </div>
-      </div>}
+      </Dialog>}
     </div>
   );
 }

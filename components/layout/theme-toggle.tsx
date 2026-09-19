@@ -25,6 +25,7 @@ export function ThemeToggle({ className }: { className?: string }) {
           key={value}
           type="button"
           aria-label={label}
+          aria-pressed={theme === value}
           title={label}
           onClick={() => setTheme(value)}
           className={cn(

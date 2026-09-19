@@ -26,6 +26,7 @@ const PROCESSING_STYLES = [
 const PLACEHOLDER_NOTE = "[Paste your notes here before sending this prompt to the AI]";
 
 export function GuestReviewerFlow({ initialView = "reviewer" }: { initialView?: "reviewer" | "flashcards" }) {
+  const fieldId = `guest-${initialView}`;
   const [notesText, setNotesText] = useState("");
   const [style, setStyle] = useState<(typeof PROCESSING_STYLES)[number]["value"]>("balanced");
   const [prompt, setPrompt] = useState("");
@@ -113,25 +114,29 @@ export function GuestReviewerFlow({ initialView = "reviewer" }: { initialView?: 
         <p className="mb-3 text-sm font-medium text-ink">1. Add your notes (optional but recommended)</p>
         <p className="mb-3 text-xs text-ink-soft">
           Paste your notes below, or upload a file — either way they get embedded directly into the prompt.
-          Skip this and the prompt will include a placeholder you can fill in yourself inside Claude.
+          Skip this and the prompt will include a placeholder you can fill in with your AI assistant.
         </p>
         <FileDropzone onFileSelected={handleFileUpload} accept=".md,.txt,.pdf,.docx,.pptx,.json" />
         {uploading && <p className="mt-2 text-xs text-ink-soft">Reading file…</p>}
         {notice && <p className="mt-2 rounded-lg border border-accent/30 bg-accent-soft/40 p-2.5 text-xs text-accent-dark">{notice}</p>}
+        <Label htmlFor={`${fieldId}-notes`} className="mt-4">Source notes</Label>
         <Textarea
+          id={`${fieldId}-notes`}
           rows={6}
           value={notesText}
           onChange={(e) => setNotesText(e.target.value)}
           placeholder="Paste your raw notes here…"
-          className="mt-3 font-mono text-sm"
+          className="font-mono text-sm"
         />
-        <div className="mt-3 flex items-center gap-2">
+        <div role="group" aria-label="Study guide style" className="mt-3 flex flex-wrap items-center gap-2">
           {PROCESSING_STYLES.map((s) => (
             <button
               key={s.value}
+              type="button"
+              aria-pressed={style === s.value}
               onClick={() => setStyle(s.value)}
               className={cn(
-                "rounded-full border px-3 py-1.5 text-xs font-medium",
+                "min-h-11 rounded-control border px-3 py-2 text-xs font-medium",
                 style === s.value ? "border-accent bg-accent-soft text-accent-dark" : "border-line text-ink-soft hover:bg-ink/5"
               )}
             >
@@ -139,7 +144,7 @@ export function GuestReviewerFlow({ initialView = "reviewer" }: { initialView?: 
             </button>
           ))}
         </div>
-        {error && <p className="mt-3 text-sm text-danger">{error}</p>}
+        {error && <p className="mt-3 text-sm text-danger" role="alert">{error}</p>}
         <Button className="mt-4" onClick={generatePrompt} loading={loading}>
           Generate prompt
         </Button>
@@ -147,14 +152,15 @@ export function GuestReviewerFlow({ initialView = "reviewer" }: { initialView?: 
 
       {prompt && (
         <div className="card p-5">
-          <p className="mb-2 text-sm font-medium text-ink">2. Copy this and run it in Claude</p>
-          <Textarea readOnly rows={10} value={prompt} className="font-mono text-xs" />
+          <Label htmlFor={`${fieldId}-prompt`}>2. Copy this into your AI assistant</Label>
+          <Textarea id={`${fieldId}-prompt`} readOnly rows={10} value={prompt} className="font-mono text-xs" />
           <Button variant="outline" size="sm" className="mt-2" onClick={copyPrompt}>
             {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />} {copied ? "Copied" : "Copy prompt"}
           </Button>
 
-          <p className="mb-2 mt-5 text-sm font-medium text-ink">3. Paste the AI&apos;s Markdown response</p>
+          <Label htmlFor={`${fieldId}-response`} className="mt-5">3. Paste the AI&apos;s Markdown response</Label>
           <Textarea
+            id={`${fieldId}-response`}
             rows={8}
             value={pastedMarkdown}
             onChange={(e) => setPastedMarkdown(e.target.value)}
@@ -166,8 +172,8 @@ export function GuestReviewerFlow({ initialView = "reviewer" }: { initialView?: 
           {isValidLength && (
             <div className="mt-4 space-y-3">
               <div>
-                <Label htmlFor="guest-reviewer-title">Title</Label>
-                <Input id="guest-reviewer-title" value={title} onChange={(e) => setTitle(e.target.value)} />
+                <Label htmlFor={`${fieldId}-title`}>Title</Label>
+                <Input id={`${fieldId}-title`} value={title} onChange={(e) => setTitle(e.target.value)} />
               </div>
               <div className="flex gap-1 rounded-lg border border-line bg-surface p-1">
                 <button type="button" onClick={() => setResultView("reviewer")} className={cn("flex-1 rounded-md py-2 text-sm font-medium", resultView === "reviewer" ? "bg-action text-action-foreground" : "text-ink-soft")}>Reviewer</button>

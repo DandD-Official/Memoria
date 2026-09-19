@@ -5,6 +5,7 @@ import { Suspense, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/input";
+import { AuthFrame } from "@/components/auth/auth-frame";
 
 export default function ResetPasswordPage() {
   return <Suspense fallback={<main className="min-h-screen bg-paper" />}><ResetPasswordForm /></Suspense>;
@@ -26,5 +27,5 @@ function ResetPasswordForm() {
     } catch (caught) { setError(caught instanceof Error ? caught.message : "Couldn't reach the server."); }
     finally { setLoading(false); }
   }
-  return <main className="flex min-h-screen items-center justify-center bg-paper px-6"><div className="card w-full max-w-sm p-7"><h1 className="font-display text-xl text-ink">Choose a new password</h1>{complete ? <><p className="mt-4 text-sm text-success">Your password has been updated.</p><Link href="/login" className="mt-4 inline-block text-sm font-medium underline">Sign in</Link></> : <form onSubmit={submit} className="mt-5 space-y-4"><div><Label htmlFor="password">New password</Label><Input id="password" type="password" minLength={8} value={password} onChange={(event) => setPassword(event.target.value)} required /></div>{error && <p className="text-sm text-danger">{error}</p>}<Button className="w-full" loading={loading}>Reset password</Button></form>}</div></main>;
+  return <AuthFrame title="Start with a new password." description="Choose at least eight characters to protect your learning space.">{complete ? <><p role="status" className="text-sm text-success">Your password has been updated.</p><Link href="/login" className="journal-link mt-4">Continue to sign in</Link></> : !token ? <div><p className="text-sm text-ink-soft">This page needs the reset link from your email. Request a new link to continue.</p><Link href="/forgot-password" className="journal-link mt-4">Request a reset link</Link></div> : <form onSubmit={submit} className="space-y-5"><div><Label htmlFor="password">New password</Label><Input id="password" name="password" autoComplete="new-password" type="password" minLength={8} value={password} onChange={(event) => setPassword(event.target.value)} required /></div>{error && <p role="alert" className="text-sm text-danger">{error} Request a new reset link if this one has expired.</p>}<Button className="w-full" loading={loading}>Reset password</Button><Link href="/forgot-password" className="journal-link">Request a new link</Link></form>}</AuthFrame>;
 }

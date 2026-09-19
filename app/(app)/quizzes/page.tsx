@@ -25,8 +25,8 @@ export default async function QuizzesPage(props: { searchParams: Promise<{ creat
     <PageShell className="max-w-5xl">
       <PageHeader>
         <PageHeaderContent>
-          <PageTitle>Quizzes</PageTitle>
-          <PageDescription>Test recall with questions built from your own material.</PageDescription>
+          <p className="eyebrow">Put what you know to work</p><PageTitle className="mt-3">Quizzes &amp; exams</PageTitle>
+          <PageDescription>Practice recall with questions built from your own material.</PageDescription>
         </PageHeaderContent>
         <PageActions>
           <QuizWizardLauncher key={`${searchParams.create}-${searchParams.source}-${searchParams.fromNote}-${searchParams.fromReviewer}`} notes={notes} reviewers={reviewers} defaultNoteId={searchParams.fromNote} defaultReviewerId={searchParams.fromReviewer} initiallyOpen={searchParams.create === "1"} initialMode={searchParams.source === "import" ? "import" : "existing"} defaults={{ questionCount: settings.defaultQuestionCount, difficulty: settings.defaultDifficulty, mode: settings.defaultQuizMode }} systemAvailable={hasSystemAiConnection()} />
@@ -36,9 +36,9 @@ export default async function QuizzesPage(props: { searchParams: Promise<{ creat
       <LibraryNavigation basePath="/quizzes" page={page} hasNext={quizzes.length === 24} />
 
       {quizzes.length === 0 ? (
-        <EmptyState icon={ListChecks} title="Create your first quiz" description="Build questions from a Memory or reviewer, or import an existing quiz." actionLabel={notes.length > 0 || reviewers.length > 0 ? "Choose study material" : "Import a Memory first"} actionHref={notes.length > 0 || reviewers.length > 0 ? "/quizzes?create=1&source=existing" : "/notes/import"} secondaryActionLabel="Import quiz" secondaryActionHref="/quizzes?create=1&source=import" />
+        <EmptyState icon={ListChecks} title="Create your first quiz" description="Build questions from a note or reviewer, or import an existing quiz." actionLabel={notes.length > 0 || reviewers.length > 0 ? "Choose study material" : "Import notes first"} actionHref={notes.length > 0 || reviewers.length > 0 ? "/quizzes?create=1&source=existing" : "/notes/import"} secondaryActionLabel="Import quiz" secondaryActionHref="/quizzes?create=1&source=import" />
       ) : (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="resource-list">
           {quizzes.map((quiz) => {
             const questionCount = Array.isArray(quiz.questions) ? (quiz.questions as unknown[]).length : 0;
             return (

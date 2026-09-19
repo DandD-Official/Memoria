@@ -23,8 +23,8 @@ export default async function ReviewersPage(props: { searchParams: Promise<{ cre
     <PageShell className="max-w-5xl">
       <PageHeader>
         <PageHeaderContent>
-          <PageTitle>Reviewers</PageTitle>
-          <PageDescription>Structured study guides distilled from your Memories.</PageDescription>
+          <p className="eyebrow">Turn information into understanding</p><PageTitle className="mt-3">Study guides</PageTitle>
+          <PageDescription>Readable study guides shaped from your notes.</PageDescription>
         </PageHeaderContent>
         <PageActions>
           <ReviewerWizardLauncher key={`${searchParams.create}-${searchParams.source}-${searchParams.fromNote}`} notes={notes} defaultNoteId={searchParams.fromNote} initiallyOpen={searchParams.create === "1"} initialPath={searchParams.source === "import" ? "import" : searchParams.source === "notes" ? "notes" : undefined} systemAvailable={hasSystemAiConnection()} />
@@ -34,9 +34,9 @@ export default async function ReviewersPage(props: { searchParams: Promise<{ cre
       <LibraryNavigation basePath="/reviewers" page={page} hasNext={reviewers.length === 24} />
 
       {reviewers.length === 0 ? (
-        <EmptyState icon={Layers} title="Build your first reviewer" description="Turn one or more Memories into a focused study guide." actionLabel={notes.length > 0 ? "Choose existing Memories" : "Import a Memory first"} actionHref={notes.length > 0 ? "/reviewers?create=1&source=notes" : "/notes/import"} secondaryActionLabel="Import reviewer" secondaryActionHref="/reviewers?create=1&source=import" />
+        <EmptyState icon={Layers} title="Build your first reviewer" description="Turn one or more notes into a focused study guide." actionLabel={notes.length > 0 ? "Choose existing notes" : "Import notes first"} actionHref={notes.length > 0 ? "/reviewers?create=1&source=notes" : "/notes/import"} secondaryActionLabel="Import reviewer" secondaryActionHref="/reviewers?create=1&source=import" />
       ) : (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="resource-list">
           {reviewers.map((reviewer) => (
             <ResourceCard key={reviewer.id} href={`/reviewers/${reviewer.id}`} kind="reviewer" title={reviewer.title} description={reviewer.description} badge={reviewer.style} meta={formatRelativeTime(reviewer.updatedAt)} favorite={reviewer.isFavorite}>
               <TagList tags={reviewer.tags.map(({ tag }) => tag)} />

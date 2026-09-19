@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { getSession, signIn } from "next-auth/react";
-import { BookMarked } from "lucide-react";
+import { AuthFrame } from "@/components/auth/auth-frame";
 import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
@@ -53,11 +53,11 @@ export default function LoginPage() {
       password: parsed.data.password,
       keepLoggedIn: keepLoggedIn ? "true" : "false",
       redirect: false,
-    });
+    }).catch(() => ({ error: "ConnectionError" }));
     setLoading(false);
 
     if (result?.error) {
-      setError("That email and password don't match an account.");
+      setError(result.error === "ConnectionError" ? "Sign in could not connect. Check your connection and try again." : "That email and password don't match. Check your details or reset your password.");
       return;
     }
 
@@ -69,17 +69,7 @@ export default function LoginPage() {
     router.replace("/dashboard");
   }
 
-  return (
-    <main className="flex min-h-screen items-center justify-center bg-paper px-6">
-      <div className="w-full max-w-sm">
-        <Link href="/" className="mb-8 flex items-center justify-center gap-2 font-display text-lg text-ink">
-          <BookMarked className="h-5 w-5 text-accent-dark" />
-          Memoria
-        </Link>
-        <div className="card p-7">
-          <h1 className="font-display text-xl text-ink">Welcome back</h1>
-          <p className="mt-1 text-sm text-ink-soft">Sign in to keep studying where you left off.</p>
-
+  return <AuthFrame title="Welcome back." description="Pick up a thread. Your learning is right where you left it.">
           <form onSubmit={handleSubmit} autoComplete="on" className="mt-6 space-y-4">
             <div>
               <Label htmlFor="email">Email</Label>
@@ -119,7 +109,7 @@ export default function LoginPage() {
                 </Link>
               </div>
             </div>
-            {error && <p className="text-sm text-danger">{error}</p>}
+            {error && <p className="rounded-control border border-danger/25 bg-danger/5 p-3 text-sm text-danger" role="alert">{error}</p>}
             <Button type="submit" className="w-full" loading={loading}>
               Sign in
             </Button>
@@ -131,8 +121,5 @@ export default function LoginPage() {
               Create an account
             </Link>
           </p>
-        </div>
-      </div>
-    </main>
-  );
+  </AuthFrame>;
 }

@@ -30,13 +30,14 @@ export default async function ArchivePage({ searchParams }: { searchParams: Prom
     ...quizzes.map((item) => ({ ...item, type: "QUIZ" as const, label: "Quiz", href: `/quizzes/${item.id}`, icon: ListChecks })),
   ].sort((a, b) => (b.archivedAt?.getTime() ?? 0) - (a.archivedAt?.getTime() ?? 0));
 
-  return <div className="mx-auto max-w-5xl space-y-6">
+  return <div className="mx-auto max-w-5xl space-y-8">
     <div>
-      <h1 className="font-display text-2xl text-ink">Archive</h1>
+      <p className="section-kicker">Keep the workspace clear</p>
+      <h1 className="mt-2 font-display text-3xl font-medium text-ink">Archive</h1>
       <p className="mt-1 text-sm text-ink-soft">Archived notes, reviewers, and quizzes in one place.</p>
     </div>
     <nav className="flex flex-wrap gap-2" aria-label="Filter archived resources">
-      {filters.map(({ value, label }) => <Link key={value} href={value === "all" ? "/archive" : `/archive?type=${value}`} className={cn("rounded-lg border px-3 py-1.5 text-sm font-medium", filter === value ? "border-action bg-action text-action-foreground" : "border-line bg-surface text-ink-soft hover:text-ink")}>{label}</Link>)}
+      {filters.map(({ value, label }) => <Link key={value} href={value === "all" ? "/archive" : `/archive?type=${value}`} className={cn("inline-flex min-h-10 items-center rounded-control border px-3 text-sm font-medium", filter === value ? "border-action bg-action text-action-foreground" : "border-line bg-surface text-ink-soft hover:text-ink")}>{label}</Link>)}
     </nav>
     {rows.length === 0 ? <EmptyState icon={Archive} title="Nothing archived" description="Items you archive will appear here and can be restored at any time." /> : <div className="space-y-3">
       {rows.map((row) => <article key={`${row.type}-${row.id}`} className="card flex flex-col justify-between gap-4 p-4 sm:flex-row sm:items-center">

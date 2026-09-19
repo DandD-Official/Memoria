@@ -1,90 +1,32 @@
 import Link from "next/link";
-import { GraduationCap, Layers, RotateCcw, CalendarCheck, Flame } from "lucide-react";
+import { ArrowRight, ArrowUpRight, Layers3, RotateCcw, ListChecks, Clock, CheckCircle2 } from "lucide-react";
 import { prisma } from "@/lib/db";
 import { requireUser } from "@/lib/auth/session";
 import { EmptyState } from "@/components/ui/empty-state";
+import { PageShell, PageHeader, PageHeaderContent, PageTitle, PageDescription } from "@/components/ui/page";
+import { ButtonLink } from "@/components/ui/button";
 import { formatRelativeTime } from "@/lib/utils";
-import { calculateStudyStreak } from "@/lib/study-streak";
 
 export default async function StudyHubPage() {
   const user = await requireUser();
-  const [reviewers, recentMistakeAttempts, dueCount, recentReviews] = await Promise.all([
+  const [reviewers, attempts, dueCount, active] = await Promise.all([
     prisma.reviewer.findMany({ where: { ownerId: user.id, archivedAt: null }, orderBy: { updatedAt: "desc" }, select: { id: true, title: true, updatedAt: true } }),
-    prisma.quizAttempt.findMany({
-      where: { userId: user.id, completedAt: { not: null } },
-      orderBy: { completedAt: "desc" },
-      take: 5,
-      select: {
-        id: true,
-        score: true,
-        totalQuestions: true,
-        completedAt: true,
-        quiz: { select: { id: true, title: true } },
-      },
-    }),
+    prisma.quizAttempt.findMany({ where: { userId: user.id, status: "COMPLETED" }, orderBy: { completedAt: "desc" }, take: 10, select: { id: true, score: true, totalQuestions: true, completedAt: true, quiz: { select: { id: true, title: true } } } }),
     prisma.flashcard.count({ where: { ownerId: user.id, OR: [{ progress: { none: { userId: user.id } } }, { progress: { some: { userId: user.id, dueAt: { lte: new Date() } } } }] } }),
-    prisma.flashcardReview.findMany({ where: { userId: user.id, reviewedAt: { gte: new Date(Date.now() - 30 * 86_400_000) } }, select: { reviewedAt: true }, orderBy: { reviewedAt: "desc" } }),
+    prisma.quizAttempt.findMany({ where: { userId: user.id, status: "IN_PROGRESS", OR: [{ deadline: null }, { deadline: { gt: new Date() } }] }, orderBy: { startedAt: "desc" }, take: 3, select: { id: true, testMode: true, quiz: { select: { id: true, title: true } } } }),
   ]);
-  const streak = calculateStudyStreak(recentReviews.map((review) => review.reviewedAt));
-
-  return (
-    <div className="mx-auto max-w-5xl space-y-10">
-      <div>
-        <h1 className="font-display text-2xl text-ink">Study</h1>
-        <p className="mt-1 text-sm text-ink-soft">Flashcards and mistake review, built from what you already have.</p>
-      </div>
-
-      <div className="grid gap-3 sm:grid-cols-2">
-        <Link href="/study/review" className="card flex items-center gap-3 p-4 hover:shadow-card-hover"><CalendarCheck className="h-5 w-5 text-accent-dark" /><div><p className="font-medium text-ink">{dueCount} card{dueCount === 1 ? "" : "s"} due</p><p className="text-xs text-ink-soft">Start your spaced-repetition queue</p></div></Link>
-        <div className="card flex items-center gap-3 p-4"><Flame className="h-5 w-5 text-accent-dark" /><div><p className="font-medium text-ink">{streak}-day streak</p><p className="text-xs text-ink-soft">Reviews completed on consecutive days</p></div></div>
-      </div>
-
-      <section>
-        <h2 className="mb-3 flex items-center gap-2 font-display text-lg text-ink">
-          <Layers className="h-4 w-4 text-accent-dark" /> Flashcards from a reviewer
-        </h2>
-        {reviewers.length === 0 ? (
-          <EmptyState
-            icon={GraduationCap}
-            title="No reviewers yet."
-            description="Build a reviewer from your notes first, then study it here as flashcards."
-            actionLabel="Create a reviewer"
-            actionHref="/reviewers?create=1"
-            secondaryActionLabel="Import a note"
-            secondaryActionHref="/notes/import"
-          />
-        ) : (
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {reviewers.map((r) => (
-              <Link key={r.id} href={`/study/flashcards/${r.id}`} className="card p-4 hover:shadow-card-hover">
-                <p className="font-display text-base text-ink line-clamp-1">{r.title}</p>
-                <p className="mt-1 text-xs text-ink-faint">{formatRelativeTime(r.updatedAt)}</p>
-              </Link>
-            ))}
-          </div>
-        )}
-      </section>
-
-      <section>
-        <h2 className="mb-3 flex items-center gap-2 font-display text-lg text-ink">
-          <RotateCcw className="h-4 w-4 text-accent-dark" /> Review recent quiz mistakes
-        </h2>
-        {recentMistakeAttempts.length === 0 ? (
-          <p className="text-sm text-ink-soft">Complete a quiz to review your mistakes here.</p>
-        ) : (
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {recentMistakeAttempts.map((a) => (
-              <Link key={a.id} href={`/quizzes/${a.quiz.id}/results?attempt=${a.id}`} className="card p-4 hover:shadow-card-hover">
-                <p className="font-display text-base text-ink line-clamp-1">{a.quiz.title}</p>
-                <p className="mt-1 text-xs text-ink-faint">
-                  {a.score}/{a.totalQuestions} · {a.completedAt ? formatRelativeTime(a.completedAt) : ""}
-                </p>
-              </Link>
-            ))}
-          </div>
-        )}
-      </section>
-
+  const latest = attempts.filter((attempt, index) => attempts.findIndex(other => other.quiz.id === attempt.quiz.id) === index);
+  const weak = latest.filter(attempt => attempt.score < attempt.totalQuestions);
+  return <PageShell>
+    <PageHeader><PageHeaderContent><p className="eyebrow">Understanding grows with a little practice</p><PageTitle className="mt-3">Let’s make it stick.</PageTitle><PageDescription>Choose what needs your attention. Give it a few focused minutes.</PageDescription></PageHeaderContent><Link href="/progress" className="journal-link">See your learning progress<ArrowUpRight className="h-4 w-4" /></Link></PageHeader>
+    {active.length > 0 && <section className="border-s-2 border-action ps-5"><h2 className="index-label">Finish an open session</h2>{active.map(attempt => <Link key={attempt.id} href={`/quizzes/${attempt.quiz.id}/play?mode=${attempt.testMode.toLowerCase()}`} className="mt-3 flex min-h-12 flex-wrap items-center justify-between gap-3"><span className="font-display text-xl">{attempt.quiz.title}</span><span className="journal-link">Resume<ArrowRight className="h-4 w-4" /></span></Link>)}</section>}
+    <section className="grid border-y border-line lg:grid-cols-[1.3fr_1fr]" aria-labelledby="recall-title">
+      <div className="bg-action px-6 py-8 text-action-foreground sm:p-9"><p className="font-mono text-xs uppercase tracking-widest opacity-80">01 / Return to remember</p><div className="mt-7 flex items-center gap-4"><RotateCcw className="h-7 w-7" /><h2 id="recall-title" className="font-display text-3xl tracking-tight">{dueCount ? `${dueCount} cards. A fresh chance.` : "Your memory has room to breathe."}</h2></div><p className="mt-4 max-w-lg text-sm leading-relaxed opacity-85">{dueCount ? "New and due flashcards, one thought at a time. Recall the answer, then tell Memoria how it felt." : "No cards are due right now. Choose a study guide below to build a deck, or practice with a quiz."}</p>{dueCount > 0 && <ButtonLink href="/study/review" className="mt-7 border-action-foreground bg-action-foreground text-action hover:bg-action-foreground/90">Begin a focused review<ArrowRight className="h-4 w-4" /></ButtonLink>}</div>
+      <div className="bg-surface px-6 py-8 sm:p-9"><p className="index-label">02 / Put yourself to the test</p><h2 className="mt-7 font-display text-2xl">Find the edges of what you know.</h2><p className="mt-4 text-sm leading-relaxed text-ink-soft">Review with feedback, sit a practice or mock exam, work against a timer, or prioritize past mistakes with a mastery test.</p><div className="mt-6 flex flex-wrap gap-4"><Link href="/quizzes" className="journal-link">Choose a quiz<ArrowRight className="h-4 w-4" /></Link><Link href="/quizzes?create=1" className="journal-link">Make a practice set<ArrowUpRight className="h-4 w-4" /></Link></div></div>
+    </section>
+    <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_20rem]">
+      <section><div className="journal-rule"><h2 className="section-heading">A thought at a time</h2><Layers3 className="h-5 w-5 text-ink-faint" /></div><p className="mt-3 text-sm text-ink-soft">Flashcard decks built from your study guides.</p>{reviewers.length ? <div className="mt-5 divide-y divide-line">{reviewers.map((reviewer, index) => <Link key={reviewer.id} href={`/study/flashcards/${reviewer.id}`} className="flex min-h-24 items-center gap-4 py-4"><span className="font-mono text-xs text-ink-faint">{String(index + 1).padStart(2, "0")}</span><span className="min-w-0"><span className="block break-words font-display text-xl">{reviewer.title}</span><span className="mt-1 block text-xs text-ink-faint">Updated {formatRelativeTime(reviewer.updatedAt)}</span></span><ArrowRight className="ms-auto h-4 w-4 shrink-0 text-accent-dark" /></Link>)}</div> : <EmptyState icon={Layers3} title="Make a guide. Give it a little practice." description="Create a reviewer from your notes, then turn its concepts into a flashcard deck." actionLabel="Build a study guide" actionHref="/reviewers?create=1" />}</section>
+      <aside><div className="journal-rule"><h2 className="section-heading">Worth another look</h2><ListChecks className="h-5 w-5 text-ink-faint" /></div>{weak.length ? <div className="divide-y divide-line">{weak.slice(0, 4).map(attempt => <Link key={attempt.id} href={`/quizzes/${attempt.quiz.id}/results?attempt=${attempt.id}`} className="block py-5"><p className="text-xs text-ink-faint">{attempt.totalQuestions - attempt.score} missed in the latest attempt</p><p className="mt-2 break-words font-display text-lg">{attempt.quiz.title}</p><span className="journal-link mt-2">Review explanations<ArrowRight className="h-3 w-3" /></span></Link>)}</div> : <div className="py-6"><CheckCircle2 className="h-5 w-5 text-study" /><p className="mt-3 text-sm leading-relaxed text-ink-soft">{attempts.length ? "Your latest results have no missed questions. Try a new challenge when you’re ready." : "After a quiz, missed questions will give you a useful place to return to."}</p></div>}<div className="annotation mt-6"><Clock className="mb-2 h-4 w-4" />Use the focus timer when you want a little structure. A short session still counts.</div></aside>
     </div>
-  );
+  </PageShell>;
 }

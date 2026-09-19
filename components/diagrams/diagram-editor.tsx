@@ -36,10 +36,11 @@ function nodePath(node: DiagramNode): string {
 
 function center(node: DiagramNode) { return { x: node.x + node.width / 2, y: node.y + node.height / 2 }; }
 
-export function DiagramEditor({ initialDiagrams }: { initialDiagrams: DiagramSummary[] }) {
+export function DiagramEditor({ initialDiagrams, initialDiagramId }: { initialDiagrams: DiagramSummary[]; initialDiagramId?: string }) {
+  const initialDiagram = initialDiagrams.find(diagram => diagram.id === initialDiagramId) ?? initialDiagrams[0];
   const [diagrams, setDiagrams] = useState(initialDiagrams);
-  const [selectedId, setSelectedId] = useState<string | null>(initialDiagrams[0]?.id ?? null);
-  const [title, setTitle] = useState(initialDiagrams[0]?.title ?? "Untitled diagram");
+  const [selectedId, setSelectedId] = useState<string | null>(initialDiagram?.id ?? null);
+  const [title, setTitle] = useState(initialDiagram?.title ?? "Untitled diagram");
   const [data, setData] = useState<DiagramData>(emptyDiagramData);
   const [history, setHistory] = useState<DiagramData[]>([]);
   const [future, setFuture] = useState<DiagramData[]>([]);

@@ -18,8 +18,10 @@ const ThemeContext = createContext<ThemeContextValue | null>(null);
 
 function readStoredTheme(): Appearance {
   if (typeof window === "undefined") return "SYSTEM";
-  const stored = window.localStorage.getItem(STORAGE_KEY);
-  return stored === "LIGHT" || stored === "DARK" || stored === "SYSTEM" ? stored : "SYSTEM";
+  try {
+    const stored = window.localStorage.getItem(STORAGE_KEY);
+    return stored === "LIGHT" || stored === "DARK" || stored === "SYSTEM" ? stored : "SYSTEM";
+  } catch { return "SYSTEM"; }
 }
 
 function systemPrefersDark(): boolean {
@@ -27,7 +29,14 @@ function systemPrefersDark(): boolean {
 }
 
 function applyThemeClass(resolved: "LIGHT" | "DARK") {
+  if (document.documentElement.classList.contains("dark") === (resolved === "DARK")) return;
+  const suppressTransitions = document.createElement("style");
+  suppressTransitions.textContent = "*,*::before,*::after{transition:none !important}";
+  document.head.appendChild(suppressTransitions);
   document.documentElement.classList.toggle("dark", resolved === "DARK");
+  // Apply the new palette together before restoring interaction transitions.
+  void window.getComputedStyle(document.body).backgroundColor;
+  window.requestAnimationFrame(() => suppressTransitions.remove());
 }
 
 /**
@@ -59,7 +68,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   const setTheme = useCallback((next: Appearance) => {
     setThemeState(next);
-    window.localStorage.setItem(STORAGE_KEY, next);
+    try { window.localStorage.setItem(STORAGE_KEY, next); } catch { /* The theme still works for this visit. */ }
   }, []);
 
   const value = useMemo(() => ({ theme, resolvedTheme, setTheme }), [theme, resolvedTheme, setTheme]);

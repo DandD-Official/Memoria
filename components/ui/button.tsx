@@ -14,17 +14,17 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
 
 const variantClasses: Record<ButtonVariant, string> = {
   primary: "border border-action bg-action text-action-foreground shadow-sm hover:bg-action/90 active:bg-action/80",
-  secondary: "border border-accent bg-accent text-ink shadow-sm hover:border-accent-dark hover:bg-accent-dark hover:text-white",
+  secondary: "border border-line-strong bg-surface text-ink hover:border-action hover:bg-accent-soft",
   outline: "border border-line-strong bg-surface text-ink hover:border-ink-faint hover:bg-surface-muted",
   ghost: "border border-transparent bg-transparent text-ink-soft hover:bg-ink/5 hover:text-ink",
   danger: "border border-danger bg-danger text-white shadow-sm hover:bg-danger/90",
 };
 
 const sizeClasses: Record<ButtonSize, string> = {
-  sm: "min-h-9 px-3 text-sm gap-1.5",
-  md: "min-h-10 px-4 text-sm gap-2",
+  sm: "min-h-11 sm:min-h-10 px-3 text-sm gap-1.5",
+  md: "min-h-11 px-4 text-sm gap-2",
   lg: "h-12 px-6 text-base gap-2",
-  icon: "h-10 w-10 p-0",
+  icon: "h-11 w-11 p-0",
 };
 
 export function buttonStyles({ variant = "primary", size = "md", className }: { variant?: ButtonVariant; size?: ButtonSize; className?: string } = {}) {

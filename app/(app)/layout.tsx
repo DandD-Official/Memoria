@@ -1,13 +1,10 @@
 import { requireUser } from "@/lib/auth/session";
-import { Sidebar } from "@/components/layout/sidebar";
-import { MobileNav } from "@/components/layout/mobile-nav";
-import { Topbar } from "@/components/layout/topbar";
+import { WorkspaceShell } from "@/components/layout/workspace-shell";
 import { prisma } from "@/lib/db";
 import { redirect } from "next/navigation";
 import { SessionConflictModal } from "@/components/auth/session-conflict-modal";
 import { SessionHeartbeat } from "@/components/auth/session-heartbeat";
 import { calculateStudyStreak } from "@/lib/study-streak";
-import { cn } from "@/lib/utils";
 
 // This layout wraps every authenticated route (dashboard, notes, reviewers,
 // quizzes, study, shared, settings — see the route groups that reuse it via
@@ -30,18 +27,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const userSettings = settings ?? { sidebarMode: "MANUAL", sidebarCollapsed: false, compactLayout: false, reduceMotion: false };
 
   return (
-    <div className={cn("flex min-h-screen bg-paper", userSettings.reduceMotion && "reduce-motion", userSettings.compactLayout && "compact-layout")}>
-      <a href="#main-content" className="skip-link">Skip to content</a>
-      <Sidebar mode={userSettings.sidebarMode === "HOVER" ? "HOVER" : "MANUAL"} initialCollapsed={userSettings.sidebarCollapsed} />
-      <div className="flex min-w-0 flex-1 flex-col overflow-x-clip pb-20 lg:pb-0">
-        <Topbar userName={user.name ?? user.email ?? "Account"} unreadNotifications={unreadNotifications} studyStreak={studyStreak} />
-        <main id="main-content" tabIndex={-1} className={cn("min-w-0 flex-1 px-page", userSettings.compactLayout ? "py-4" : "py-6")}>
-          {children}
-        </main>
-      </div>
-      <MobileNav unreadNotifications={unreadNotifications} />
+    <WorkspaceShell userName={user.name ?? user.email ?? "Account"} unreadNotifications={unreadNotifications} studyStreak={studyStreak} compact={userSettings.compactLayout} reduceMotion={userSettings.reduceMotion} indexCollapsed={userSettings.sidebarCollapsed} indexMode={userSettings.sidebarMode}>
+      {children}
       <SessionHeartbeat />
       {user.sessionConflict && user.sessionId && <SessionConflictModal userName={user.name ?? user.email ?? "This account"} sessionId={user.sessionId} otherDevice={user.sessionConflictDevice} currentDevice={user.currentSessionDevice} />}
-    </div>
+    </WorkspaceShell>
   );
 }

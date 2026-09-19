@@ -31,21 +31,21 @@ export default async function NotesPage({ searchParams }: { searchParams: Promis
     <PageShell className="max-w-5xl">
       <PageHeader>
         <PageHeaderContent>
-          <PageTitle>Memories</PageTitle>
-          <PageDescription>Your captured notes and source material, ready to read, shape, and study.</PageDescription>
+          <p className="eyebrow">The source of your understanding</p><PageTitle className="mt-3">Source notes</PageTitle>
+          <PageDescription>Your captured source material, ready to read, shape, and study.</PageDescription>
         </PageHeaderContent>
         <PageActions>
           <GenerateNoteDialog systemAvailable={hasSystemAiConnection()} />
-          <ButtonLink href="/notes/import" className="w-full sm:w-auto"><Plus className="h-4 w-4" /> Import Memory</ButtonLink>
+          <ButtonLink href="/notes/import" className="w-full sm:w-auto"><Plus className="h-4 w-4" /> Import notes</ButtonLink>
         </PageActions>
       </PageHeader>
 
       <LibraryNavigation basePath="/notes" page={page} hasNext={notes.length === 24} />
 
       {notes.length === 0 ? (
-        <EmptyState icon={FileText} title="Your Memory library is empty" description="Import a note or document to create your first Memory." actionLabel="Import your first Memory" actionHref="/notes/import" />
+        <EmptyState icon={FileText} title="Your notes start here" description="Import a note or document to create your first study material." actionLabel="Import notes" actionHref="/notes/import" />
       ) : (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="resource-list">
           {notes.map((note) => (
             <ResourceCard
               key={note.id}
@@ -55,7 +55,7 @@ export default async function NotesPage({ searchParams }: { searchParams: Promis
               badge={sourceLabels[note.sourceType] ?? note.sourceType}
               meta={formatRelativeTime(note.updatedAt)}
               favorite={note.isFavorite}
-              description={note.description || note.originalFilename || "Open this Memory to continue reading."}
+              description={note.description || note.originalFilename || "Open this note to continue reading."}
             >
               <TagList tags={note.tags.map(({ tag }) => tag)} />
             </ResourceCard>

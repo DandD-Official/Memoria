@@ -56,7 +56,7 @@ export function Sidebar({ mode, initialCollapsed }: { mode: SidebarMode; initial
 
         <nav aria-label="Main navigation" className={cn("min-h-0 flex-1 overflow-y-auto py-4", labelsHidden ? "px-2.5" : "px-3", hoverMode && "min-w-64 px-3")}>
           {navigationGroups.map((group, index) => (
-            <div key={group.label} className={cn(index > 0 && "mt-5 border-t border-line pt-4")}>
+            <div key={group.label} className={cn(index > 0 && "mt-6 pt-2")}>
               <p className={cn("mb-1.5 px-3 text-[0.6875rem] font-semibold uppercase tracking-[0.14em] text-ink-faint transition-opacity", labelsHidden && "sr-only", hoverMode && "opacity-0 group-hover/sidebar:opacity-100")}>{group.label}</p>
               <div className="space-y-1">{group.items.map(renderLink)}</div>
             </div>

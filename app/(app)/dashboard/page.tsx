@@ -1,109 +1,65 @@
 import Link from "next/link";
-import { FileInput, Layers, ListChecks, PlayCircle, FileText, TrendingUp, ArrowRight } from "lucide-react";
+import { ArrowRight, ArrowUpRight, FileText, Layers3, ListChecks, Workflow, RotateCcw, Play, Plus, BookOpen } from "lucide-react";
 import { prisma } from "@/lib/db";
 import { requireUser } from "@/lib/auth/session";
-import { Card } from "@/components/ui/card";
-import { EmptyState } from "@/components/ui/empty-state";
-import { PageShell, SectionHeader } from "@/components/ui/page";
+import { PageShell } from "@/components/ui/page";
+import { ButtonLink } from "@/components/ui/button";
 import { ResourceCard, type ResourceKind } from "@/components/library/resource-card";
 import { formatRelativeTime } from "@/lib/utils";
 
-const quickActions = [
-  { href: "/notes/import", label: "Import Memory", description: "Bring in notes or documents", icon: FileInput },
-  { href: "/reviewers", label: "Build a reviewer", description: "Shape material for revision", icon: Layers },
-  { href: "/quizzes", label: "Create a quiz", description: "Turn material into questions", icon: ListChecks },
-  { href: "/study", label: "Start studying", description: "Continue a focused session", icon: PlayCircle },
-];
-
 export default async function DashboardPage() {
   const user = await requireUser();
-  const [recentNotes, recentReviewers, recentQuizzes, recentAttempts, noteCount, reviewerCount, quizCount, quizAttemptCount] = await Promise.all([
-    prisma.note.findMany({ where: { ownerId: user.id, archivedAt: null }, orderBy: { updatedAt: "desc" }, take: 8, select: { id: true, title: true, updatedAt: true } }),
-    prisma.reviewer.findMany({ where: { ownerId: user.id, archivedAt: null }, orderBy: { updatedAt: "desc" }, take: 8, select: { id: true, title: true, updatedAt: true } }),
-    prisma.quiz.findMany({ where: { ownerId: user.id, archivedAt: null }, orderBy: { updatedAt: "desc" }, take: 8, select: { id: true, title: true, updatedAt: true } }),
-    prisma.quizAttempt.findMany({ where: { userId: user.id, completedAt: { not: null } }, orderBy: { completedAt: "desc" }, take: 4, select: { score: true, totalQuestions: true } }),
-    prisma.note.count({ where: { ownerId: user.id, archivedAt: null } }),
-    prisma.reviewer.count({ where: { ownerId: user.id, archivedAt: null } }),
-    prisma.quiz.count({ where: { ownerId: user.id, archivedAt: null } }),
-    prisma.quizAttempt.count({ where: { userId: user.id, completedAt: { not: null } } }),
+  const now = new Date();
+  const [notes, reviewers, quizzes, diagrams, attempts, dueCount, activeAttempt, tags, spaces] = await Promise.all([
+    prisma.note.findMany({ where: { ownerId: user.id, archivedAt: null }, orderBy: { updatedAt: "desc" }, take: 4, select: { id: true, title: true, updatedAt: true } }),
+    prisma.reviewer.findMany({ where: { ownerId: user.id, archivedAt: null }, orderBy: { updatedAt: "desc" }, take: 4, select: { id: true, title: true, updatedAt: true } }),
+    prisma.quiz.findMany({ where: { ownerId: user.id, archivedAt: null }, orderBy: { updatedAt: "desc" }, take: 4, select: { id: true, title: true, updatedAt: true } }),
+    prisma.diagram.findMany({ where: { ownerId: user.id }, orderBy: { updatedAt: "desc" }, take: 3, select: { id: true, title: true, updatedAt: true } }),
+    prisma.quizAttempt.findMany({ where: { userId: user.id, status: "COMPLETED", quiz: { archivedAt: null } }, orderBy: { completedAt: "desc" }, take: 10, select: { id: true, score: true, totalQuestions: true, quiz: { select: { id: true, title: true } } } }),
+    prisma.flashcard.count({ where: { ownerId: user.id, OR: [{ progress: { none: { userId: user.id } } }, { progress: { some: { userId: user.id, dueAt: { lte: now } } } }] } }),
+    prisma.quizAttempt.findFirst({ where: { userId: user.id, status: "IN_PROGRESS", quiz: { archivedAt: null }, OR: [{ deadline: null }, { deadline: { gt: now } }] }, orderBy: { startedAt: "desc" }, select: { id: true, testMode: true, quiz: { select: { id: true, title: true } } } }),
+    prisma.tag.findMany({ where: { ownerId: user.id }, orderBy: { name: "asc" }, take: 8, select: { id: true, name: true } }),
+    prisma.shareCollection.findMany({ where: { ownerId: user.id }, orderBy: { updatedAt: "desc" }, take: 3, select: { id: true, title: true, _count: { select: { items: true } } } }),
   ]);
-
-  const memories: Array<{ id: string; title: string; updatedAt: Date; kind: ResourceKind; label: string; href: string }> = [
-    ...recentNotes.map((item) => ({ ...item, kind: "note" as const, label: "Memory", href: `/notes/${item.id}` })),
-    ...recentReviewers.map((item) => ({ ...item, kind: "reviewer" as const, label: "Reviewer", href: `/reviewers/${item.id}` })),
-    ...recentQuizzes.map((item) => ({ ...item, kind: "quiz" as const, label: "Quiz", href: `/quizzes/${item.id}` })),
-  ].sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime()).slice(0, 8);
-  const memoryCount = noteCount + reviewerCount + quizCount;
-  const avgScore = recentAttempts.length > 0 ? Math.round((recentAttempts.reduce((sum, attempt) => sum + attempt.score / Math.max(attempt.totalQuestions, 1), 0) / recentAttempts.length) * 100) : null;
-
-  return (
-    <PageShell>
-      <section aria-labelledby="dashboard-title" className="relative overflow-hidden rounded-panel border border-line bg-surface-raised px-5 py-7 shadow-card sm:px-8 sm:py-9">
-        <div className="pointer-events-none absolute -end-16 -top-24 h-64 w-64 rounded-full bg-accent-soft/75 blur-3xl" aria-hidden="true" />
-        <div className="pointer-events-none absolute bottom-0 inset-inline-start-8 h-px w-32 bg-gradient-to-r from-accent to-transparent" aria-hidden="true" />
-        <div className="relative max-w-3xl">
-          <p className="eyebrow">Your learning workspace</p>
-          <h1 id="dashboard-title" className="mt-2 max-w-2xl font-display text-display-lg font-medium text-ink">Welcome back{user.name ? `, ${user.name.split(" ")[0]}` : ""}</h1>
-          <p className="mt-3 max-w-2xl text-pretty text-sm leading-relaxed text-ink-soft sm:text-base">Turn today&apos;s notes into knowledge you can return to, connect, and remember.</p>
-          <div className="mt-6 flex flex-wrap items-center gap-3">
-            <Link href="/notes/import" className="inline-flex min-h-10 items-center justify-center gap-2 rounded-control border border-action bg-action px-4 text-sm font-semibold text-action-foreground shadow-sm motion-safe:transition-[background-color,box-shadow,scale] motion-safe:duration-150 motion-safe:ease-out hover:bg-action/90 active:scale-[0.96]">
-              <FileInput className="h-4 w-4" aria-hidden="true" />
-              Import Memory
-            </Link>
-            <Link href="/study" className="inline-flex min-h-10 items-center justify-center gap-2 rounded-control border border-line-strong bg-surface px-4 text-sm font-medium text-ink motion-safe:transition-[background-color,border-color,scale] motion-safe:duration-150 motion-safe:ease-out hover:border-ink-faint hover:bg-surface-muted active:scale-[0.96]">
-              Open study desk
-              <ArrowRight className="h-4 w-4" aria-hidden="true" />
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      <section aria-labelledby="quick-actions-title">
-        <div className="mb-4 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <h2 id="quick-actions-title" className="section-heading">Start with a workflow</h2>
-            <p className="mt-1 text-sm leading-relaxed text-ink-soft">Choose the next step that fits your study session.</p>
-          </div>
-        </div>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          {quickActions.map((action) => (
-            <Link key={action.href} href={action.href} className="card interactive-card group flex min-h-24 items-center gap-3 p-4">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-control border border-accent/20 bg-accent-soft">
-                <action.icon className="h-[1.125rem] w-[1.125rem] text-accent-dark" aria-hidden="true" />
-              </div>
-              <div>
-                <span className="block text-sm font-semibold text-ink">{action.label}</span>
-                <span className="mt-0.5 block text-xs leading-snug text-ink-faint">{action.description}</span>
-              </div>
-            </Link>
-          ))}
-        </div>
-      </section>
-
-      {memoryCount > 0 && (
-        <section aria-labelledby="progress-title">
-          <div className="mb-4">
-            <h2 id="progress-title" className="section-heading">Your progress</h2>
-            <p className="mt-1 text-sm leading-relaxed text-ink-soft">A quick look at your learning momentum.</p>
-          </div>
-          <div className="grid gap-3 sm:grid-cols-3">
-            <Card variant="muted" className="p-4"><p className="eyebrow text-ink-faint">Library</p><p className="mt-2 font-display text-3xl tabular-nums text-ink">{memoryCount}</p><p className="mt-1 text-xs text-ink-soft">Memories and study resources</p></Card>
-            <Card variant="muted" className="p-4"><p className="eyebrow text-ink-faint">Practice</p><p className="mt-2 font-display text-3xl tabular-nums text-ink">{quizAttemptCount}</p><p className="mt-1 text-xs text-ink-soft">Assessments completed</p></Card>
-            <Card variant="muted" className="p-4"><p className="eyebrow text-ink-faint">Recent recall</p><p className="mt-2 flex items-center gap-2 font-display text-3xl tabular-nums text-ink">{avgScore !== null ? `${avgScore}%` : "—"}{avgScore !== null && <TrendingUp className="h-4 w-4 text-success" aria-hidden="true" />}</p><p className="mt-1 text-xs text-ink-soft">Average across recent quizzes</p></Card>
-          </div>
+  const recent: { id: string; title: string; updatedAt: Date; kind: ResourceKind; href: string }[] = [
+    ...notes.map(item => ({ ...item, kind: "note" as const, href: `/notes/${item.id}` })),
+    ...reviewers.map(item => ({ ...item, kind: "reviewer" as const, href: `/reviewers/${item.id}` })),
+    ...quizzes.map(item => ({ ...item, kind: "quiz" as const, href: `/quizzes/${item.id}` })),
+    ...diagrams.map(item => ({ ...item, kind: "diagram" as const, href: `/diagrams?open=${item.id}` })),
+  ].sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime());
+  const latestByQuiz = attempts.filter((item, index) => attempts.findIndex(other => other.quiz.id === item.quiz.id) === index);
+  const weak = latestByQuiz.find(item => item.score < item.totalQuestions);
+  const next = activeAttempt ? { kicker: "An open thread", title: activeAttempt.quiz.title, description: "You have a session in progress. Pick up from your saved answers.", href: `/quizzes/${activeAttempt.quiz.id}/play?mode=${activeAttempt.testMode.toLowerCase()}`, action: "Resume your session" }
+    : dueCount > 0 ? { kicker: "A little recall goes a long way", title: `${dueCount} ${dueCount === 1 ? "memory" : "memories"} to revisit.`, description: "These flashcards are new or due for review. Give them a moment before moving on.", href: "/study/review", action: "Begin a review" }
+    : weak ? { kicker: "Turn uncertainty into understanding", title: weak.quiz.title, description: `Your latest attempt left ${weak.totalQuestions - weak.score} ${weak.totalQuestions - weak.score === 1 ? "question" : "questions"} to revisit. Start with the explanations.`, href: `/quizzes/${weak.quiz.id}/results?attempt=${weak.id}`, action: "Review your mistakes" }
+    : recent[0] ? { kicker: "Pick up a thread", title: recent[0].title, description: "Your most recently updated material is ready when you are.", href: recent[0].href, action: "Continue learning" }
+    : { kicker: "Every idea starts somewhere", title: "A fresh page for your next idea.", description: "Bring a lecture, a chapter, or a few notes. We’ll help you turn them into something that stays.", href: "/notes/import", action: "Bring your first material" };
+  return <PageShell>
+    <header className="flex flex-wrap items-end justify-between gap-4">
+      <div><p className="eyebrow">Your personal study desk</p><h1 className="mt-3 font-display text-3xl tracking-tight sm:text-4xl">Room to think{user.name ? `, ${user.name.split(" ")[0]}` : ""}.</h1></div>
+      <Link href="/progress" className="journal-link">Your learning so far <ArrowUpRight className="h-4 w-4" /></Link>
+    </header>
+    <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_19rem] xl:gap-16">
+      <div className="min-w-0">
+        <section className="relative border-y border-line bg-surface px-5 py-8 sm:px-8 sm:py-10" aria-labelledby="next-title">
+          <div className="flex items-center justify-between gap-3"><p className="index-label">01 / A good next step</p><span className="flex h-9 w-9 items-center justify-center rounded-full border border-line"><Play className="h-3.5 w-3.5 text-accent-dark" /></span></div>
+          <p className="mt-7 text-xs font-medium text-accent-dark">{next.kicker}</p><h2 id="next-title" className="mt-3 max-w-xl break-words font-display text-3xl leading-tight tracking-tight sm:text-4xl">{next.title}</h2><p className="mt-4 max-w-lg text-sm leading-relaxed text-ink-soft">{next.description}</p><ButtonLink href={next.href} className="mt-7">{next.action}<ArrowRight className="h-4 w-4" /></ButtonLink>
         </section>
-      )}
-
-      <section>
-        <SectionHeader title="Recent work" description="Your latest Memories, reviewers, and quizzes." />
-        {memories.length === 0 ? (
-          <EmptyState icon={FileText} title="Your workspace is ready" description="Import a note or document to create your first Memory." actionLabel="Import your first Memory" actionHref="/notes/import" />
-        ) : (
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            {memories.map((memory) => <ResourceCard key={`${memory.kind}-${memory.id}`} href={memory.href} kind={memory.kind} title={memory.title} badge={memory.label} meta={formatRelativeTime(memory.updatedAt)} className="min-h-36" />)}
-          </div>
-        )}
-      </section>
-    </PageShell>
-  );
+        <section className="mt-10" aria-labelledby="recent-title"><div className="journal-rule"><h2 id="recent-title" className="section-heading">On your desk</h2><Link href="/library" className="journal-link">Open library<ArrowUpRight className="h-4 w-4" /></Link></div>
+          {recent.length ? <div className="divide-y divide-line">{recent.slice(0, 5).map(item => <ResourceCard key={item.kind + item.id} href={item.href} kind={item.kind} title={item.title} meta={formatRelativeTime(item.updatedAt)} />)}</div> : <div className="py-10"><p className="font-display text-xl">A library grows one idea at a time.</p><p className="mt-3 max-w-md text-sm leading-relaxed text-ink-soft">As you bring in material and build study guides, your recent work will be here.</p><Link href="/notes/import" className="journal-link mt-4"><Plus className="h-4 w-4" />Add a source note</Link></div>}
+        </section>
+      </div>
+      <aside className="space-y-9">
+        <section><p className="index-label">02 / Keep it in memory</p><div className="mt-5 flex items-center gap-4"><RotateCcw className="h-5 w-5 text-accent-dark" /><p className="font-display text-2xl">{dueCount > 0 ? `${dueCount} cards to revisit` : "A little breathing room."}</p></div><p className="mt-3 text-sm leading-relaxed text-ink-soft">{dueCount > 0 ? "Return to what is due, at your own pace." : "No cards are due right now. Your next review will appear when it is ready."}</p><Link href="/study" className="journal-link mt-3">Find your practice<ArrowRight className="h-4 w-4" /></Link></section>
+        <section className="border-t border-line pt-6"><p className="index-label">Make something of it</p><div className="mt-3">{[
+          { href: "/notes/import", label: "Bring your material", icon: FileText },
+          { href: "/reviewers?create=1", label: "Build a study guide", icon: Layers3 },
+          { href: "/diagrams", label: "Connect ideas visually", icon: Workflow },
+          { href: "/quizzes?create=1", label: "Test your understanding", icon: ListChecks },
+        ].map(item => <Link key={item.href} href={item.href} className="flex min-h-12 items-center gap-3 text-sm hover:text-accent-dark"><item.icon className="h-4 w-4 text-ink-faint" />{item.label}<ArrowUpRight className="ms-auto h-3.5 w-3.5 text-ink-faint" /></Link>)}</div></section>
+        {tags.length > 0 && <section className="border-t border-line pt-6"><p className="index-label">Threads you’re following</p><div className="mt-4 flex flex-wrap gap-2">{tags.map(tag => <Link key={tag.id} href={`/search?q=${encodeURIComponent(tag.name)}`} className="inline-flex min-h-10 items-center rounded-control border border-line px-3 text-xs text-ink-soft hover:border-action"># {tag.name}</Link>)}</div></section>}
+        {spaces.length > 0 && <section className="border-t border-line pt-6"><p className="index-label">Your study spaces</p>{spaces.map(space => <Link key={space.id} href={`/books/${space.id}`} className="mt-4 flex items-start gap-3"><BookOpen className="mt-1 h-4 w-4 shrink-0 text-book" /><span><span className="block font-display text-lg">{space.title}</span><span className="text-xs text-ink-faint">{space._count.items} pieces of material</span></span></Link>)}</section>}
+      </aside>
+    </div>
+  </PageShell>;
 }

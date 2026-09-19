@@ -1,67 +1,37 @@
-import { Archive, Bell, BookOpen, FileText, GraduationCap, LayoutDashboard, Layers3, ListChecks, Search, Settings, Share2, Star, Workflow, type LucideIcon } from "lucide-react";
+import { Archive, Bell, BookOpen, FileText, GraduationCap, House, Layers3, LineChart, ListChecks, Search, Settings, Share2, Star, Workflow, type LucideIcon } from "lucide-react";
 
-export interface NavigationItem {
-  href: string;
-  label: string;
-  shortLabel?: string;
-  icon: LucideIcon;
-}
-
-export interface NavigationGroup {
-  label: string;
-  items: NavigationItem[];
-}
-
-export const navigationGroups: NavigationGroup[] = [
-  {
-    label: "Workspace",
-    items: [
-      { href: "/dashboard", label: "Dashboard", shortLabel: "Home", icon: LayoutDashboard },
-      { href: "/notes", label: "Memories", icon: FileText },
-      { href: "/books", label: "Books", icon: BookOpen },
-      { href: "/favorites", label: "Favorites", icon: Star },
-    ],
-  },
-  {
-    label: "Study",
-    items: [
-      { href: "/reviewers", label: "Reviewers", icon: Layers3 },
-      { href: "/quizzes", label: "Quizzes", icon: ListChecks },
-      { href: "/study", label: "Study", icon: GraduationCap },
-    ],
-  },
-  {
-    label: "Tools",
-    items: [
-      { href: "/diagrams", label: "Diagrams", icon: Workflow },
-      { href: "/shared", label: "Shared with Me", icon: Share2 },
-    ],
-  },
+export interface NavigationItem { href: string; label: string; shortLabel?: string; icon: LucideIcon }
+export interface NavigationGroup { label: string; items: NavigationItem[] }
+export const primaryNavigation: NavigationItem[] = [
+  { href: "/dashboard", label: "Desk", icon: House },
+  { href: "/library", label: "Library", icon: BookOpen },
+  { href: "/study", label: "Practice", icon: GraduationCap },
+  { href: "/books", label: "Together", icon: Share2 },
 ];
-
-export const utilityNavigation: NavigationItem[] = [
+export const libraryNavigation: NavigationItem[] = [
+  { href: "/library", label: "Everything", icon: BookOpen },
+  { href: "/notes", label: "Source notes", icon: FileText },
+  { href: "/reviewers", label: "Study guides", icon: Layers3 },
+  { href: "/diagrams", label: "Diagrams", icon: Workflow },
+  { href: "/quizzes", label: "Quizzes & exams", icon: ListChecks },
+  { href: "/favorites", label: "Favorites", icon: Star },
   { href: "/archive", label: "Archive", icon: Archive },
-  { href: "/settings", label: "Settings", icon: Settings },
 ];
-
-export const mobilePrimaryNavigation: NavigationItem[] = [
-  navigationGroups[0].items[0],
-  navigationGroups[0].items[1],
-  navigationGroups[0].items[2],
-  navigationGroups[1].items[2],
+export const navigationGroups: NavigationGroup[] = [
+  { label: "Workspace", items: primaryNavigation },
+  { label: "Knowledge library", items: libraryNavigation.slice(1) },
+  { label: "Your learning", items: [{ href: "/progress", label: "Learning progress", icon: LineChart }, { href: "/shared", label: "Shared with me", icon: Share2 }] },
 ];
-
-export const mobileMoreNavigation: NavigationItem[] = [
-  navigationGroups[0].items[3],
-  navigationGroups[1].items[0],
-  navigationGroups[1].items[1],
-  navigationGroups[2].items[0],
-  navigationGroups[2].items[1],
-  { href: "/search", label: "Search", icon: Search },
-  { href: "/notifications", label: "Notifications", icon: Bell },
-  ...utilityNavigation,
+export const togetherNavigation: NavigationItem[] = [
+  { href: "/books", label: "Books & study spaces", icon: BookOpen },
+  { href: "/shared", label: "Shared with me", icon: Share2 },
 ];
-
+export const utilityNavigation: NavigationItem[] = [{ href: "/settings", label: "Preferences & account", icon: Settings }];
+export const mobilePrimaryNavigation = primaryNavigation;
+export const mobileMoreNavigation: NavigationItem[] = [{ href: "/search", label: "Search everything", icon: Search }, { href: "/notifications", label: "Notifications", icon: Bell }, ...navigationGroups.flatMap(group => group.items).filter(item => !primaryNavigation.includes(item)), ...utilityNavigation];
 export function isNavigationItemActive(pathname: string, href: string) {
+  if (href === "/library") return libraryNavigation.some(item => pathname === item.href || pathname.startsWith(`${item.href}/`));
+  if (href === "/books") return pathname.startsWith("/books") || pathname.startsWith("/shared");
+  if (href === "/study") return pathname.startsWith("/study") || pathname.startsWith("/progress");
   return pathname === href || pathname.startsWith(`${href}/`);
 }

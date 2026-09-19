@@ -3,6 +3,7 @@
 import dynamic from "next/dynamic";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
+import { PageDescription, PageHeader, PageHeaderContent, PageShell, PageTitle } from "@/components/ui/page";
 
 const GuestReviewerFlow = dynamic(
   () => import("@/components/guest/guest-reviewer-flow").then((module) => module.GuestReviewerFlow),
@@ -15,44 +16,43 @@ const GuestQuizFlow = dynamic(
 
 export default function GuestPage() {
   const [tab, setTab] = useState<"reviewer" | "flashcards" | "quiz" | "exam">("reviewer");
+  const [visited, setVisited] = useState<string[]>(["reviewer"]);
 
   const activities = [
-    { key: "reviewer" as const, label: "Reviewer" },
+    { key: "reviewer" as const, label: "Study guide" },
     { key: "flashcards" as const, label: "Flashcards" },
     { key: "quiz" as const, label: "Quiz" },
     { key: "exam" as const, label: "Exam" },
   ];
 
   return (
-    <div className="mx-auto max-w-3xl">
-      <h1 className="font-display text-2xl text-ink">Quick mode</h1>
-      <p className="mt-1 text-sm text-ink-soft">
-        Get a ready-made prompt in one click, paste it (and your notes) into Claude, then bring the result back
-        here to preview and export. No account, no saving.
-      </p>
+    <PageShell className="max-w-4xl">
+      <PageHeader><PageHeaderContent><p className="eyebrow">A little room to explore</p><PageTitle className="mt-3">Start with one idea.</PageTitle><PageDescription>Build a prompt for your AI assistant, bring the result back, and try a study guide or a little practice. No account needed.</PageDescription></PageHeaderContent></PageHeader>
 
-      <div className="mt-6 grid grid-cols-2 gap-1 rounded-lg border border-line bg-surface p-1 sm:grid-cols-4">
+      <div role="group" aria-label="Choose an activity" className="grid grid-cols-2 gap-2 border-b border-line pb-5 sm:grid-cols-4">
         {activities.map((activity) => (
           <button
             key={activity.key}
-            onClick={() => setTab(activity.key)}
-            className={cn("rounded-md py-2 text-sm font-medium", tab === activity.key ? "bg-action text-action-foreground" : "text-ink-soft")}
+            type="button"
+            aria-pressed={tab === activity.key}
+            aria-controls={`activity-${activity.key}`}
+            onClick={() => { setTab(activity.key); setVisited(previous => previous.includes(activity.key) ? previous : [...previous, activity.key]); }}
+            className={cn("min-h-12 rounded-control border px-3 py-2 text-sm font-medium", tab === activity.key ? "border-action bg-action text-action-foreground" : "border-line text-ink-soft hover:bg-surface-muted")}
           >
             {activity.label}
           </button>
         ))}
       </div>
 
-      <div className="mt-4">
-        {tab === "reviewer" && <GuestReviewerFlow initialView="reviewer" />}
-        {tab === "flashcards" && <GuestReviewerFlow initialView="flashcards" />}
-        {tab === "quiz" && <GuestQuizFlow activityMode="quiz" />}
-        {tab === "exam" && <GuestQuizFlow activityMode="exam" />}
+      <div>
+        {activities.map(activity => <section key={activity.key} id={`activity-${activity.key}`} aria-label={activity.label} hidden={tab !== activity.key}>
+          {visited.includes(activity.key) && (activity.key === "reviewer" || activity.key === "flashcards" ? <GuestReviewerFlow initialView={activity.key} /> : <GuestQuizFlow activityMode={activity.key} />)}
+        </section>)}
       </div>
-    </div>
+    </PageShell>
   );
 }
 
 function ActivityLoading() {
-  return <div className="card h-48 animate-pulse bg-ink/[0.03]" aria-label="Loading activity" />;
+  return <div className="card h-48 animate-pulse bg-ink/[0.03]" role="status"><span className="sr-only">Loading activity</span></div>;
 }

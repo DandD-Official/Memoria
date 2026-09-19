@@ -7,12 +7,12 @@ import { Button } from "@/components/ui/button";
 import { Sheet } from "@/components/ui/sheet";
 
 const createOptions = [
-  { href: "/notes/import", label: "Create Memory", description: "Write, paste, or import source material", icon: FileInput },
-  { href: "/books?create=1", label: "Create Book", description: "Arrange Memories into a reading sequence", icon: BookOpen },
-  { href: "/reviewers?create=1", label: "Create Reviewer", description: "Build a structured study guide", icon: Layers3 },
-  { href: "/quizzes?create=1", label: "Create Quiz", description: "Generate or import practice questions", icon: ListChecks },
-  { href: "/diagrams", label: "Create Diagram", description: "Open the visual diagram workspace", icon: Workflow },
-  { href: "/settings#connections", label: "Connected Apps", description: "Import from connected services", icon: Link2 },
+  { href: "/notes/import", label: "Bring your material", description: "Import a file, paste text, or write a note", icon: FileInput },
+  { href: "/reviewers?create=1", label: "Build a study guide", description: "Turn source notes into a reviewer", icon: Layers3 },
+  { href: "/diagrams", label: "Map an idea", description: "Connect concepts on a diagram canvas", icon: Workflow },
+  { href: "/quizzes?create=1", label: "Make a practice set", description: "Create a quiz or configure an exam", icon: ListChecks },
+  { href: "/books?create=1", label: "Curate a study space", description: "Collect material to read and share together", icon: BookOpen },
+  { href: "/settings#connections", label: "Connect your sources", description: "Bring in Google Drive or Notion", icon: Link2 },
 ];
 
 export function CreateMenu() {
@@ -24,10 +24,10 @@ export function CreateMenu() {
         <span className="hidden sm:inline">Create</span>
         <span className="sr-only sm:hidden">Create</span>
       </Button>
-      <Sheet open={open} onOpenChange={setOpen} title="Create something" description="Choose what you want to add to your workspace.">
-        <nav aria-label="Create options" className="space-y-2">
+      <Sheet open={open} onOpenChange={setOpen} title="What are you working on?" description="Start with material. Make it your own.">
+        <nav aria-label="Create options" className="divide-y divide-line">
           {createOptions.map((option) => (
-            <Link key={option.href} href={option.href} onClick={() => setOpen(false)} className="group flex min-h-16 items-center gap-3 rounded-card border border-line bg-surface p-3 transition-[border-color,background-color] hover:border-line-strong hover:bg-surface-muted">
+            <Link key={option.href} href={option.href} onClick={() => setOpen(false)} className="group flex min-h-20 items-center gap-4 px-2 py-4 transition-colors hover:bg-surface-muted">
               <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-control border border-accent/20 bg-accent-soft text-accent-dark"><option.icon className="h-[1.125rem] w-[1.125rem]" aria-hidden="true" /></span>
               <span className="min-w-0"><span className="block text-sm font-semibold text-ink">{option.label}</span><span className="mt-0.5 block text-xs leading-relaxed text-ink-soft">{option.description}</span></span>
             </Link>

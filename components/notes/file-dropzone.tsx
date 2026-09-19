@@ -29,7 +29,7 @@ export function FileDropzone({ onFileSelected, onFilesSelected, accept = ".md,.t
   );
 
   return (
-    <div
+    <label
       onDragOver={(e) => {
         e.preventDefault();
         setDragging(true);
@@ -40,9 +40,8 @@ export function FileDropzone({ onFileSelected, onFilesSelected, accept = ".md,.t
         setDragging(false);
         handleFiles(e.dataTransfer.files);
       }}
-      onClick={() => inputRef.current?.click()}
       className={cn(
-        "flex cursor-pointer flex-col items-center justify-center rounded-card border-2 border-dashed px-6 py-14 text-center transition-colors",
+        "flex cursor-pointer flex-col items-center justify-center rounded-card border-2 border-dashed px-6 py-14 text-center transition-[border-color,background-color,box-shadow] focus-within:ring-2 focus-within:ring-accent/40",
         dragging ? "border-accent bg-accent-soft/40" : "border-line bg-surface hover:border-accent/60"
       )}
     >
@@ -51,7 +50,7 @@ export function FileDropzone({ onFileSelected, onFilesSelected, accept = ".md,.t
         type="file"
         multiple={multiple}
         accept={accept}
-        className="hidden"
+        className="sr-only"
         onChange={(e) => handleFiles(e.target.files)}
       />
       {fileName ? (
@@ -67,6 +66,6 @@ export function FileDropzone({ onFileSelected, onFilesSelected, accept = ".md,.t
           <p className="mt-1 text-xs text-ink-faint">Supported: MD, TXT, PDF, DOCX, PPTX, and Memoria JSON exports</p>
         </>
       )}
-    </div>
+    </label>
   );
 }

@@ -1,14 +1,16 @@
 import { cn } from "@/lib/utils";
+import { useId } from "react";
 import type { QuizQuestion } from "@/lib/validation/quiz";
 
 export function QuestionInput({ question, value, onChange }: { question: QuizQuestion; value: unknown; onChange: (v: unknown) => void }) {
+  const groupName = useId();
   switch (question.type) {
     case "multiple_choice":
       return (
         <div className="space-y-2">
           {question.choices.map((choice, i) => (
-            <label key={i} className={cn("flex cursor-pointer items-center gap-2 rounded-lg border p-3 text-sm", value === i ? "border-ink bg-ink/5" : "border-line hover:bg-ink/5")}>
-              <input type="radio" checked={value === i} onChange={() => onChange(i)} />
+            <label key={i} className={cn("flex min-h-11 cursor-pointer items-center gap-3 rounded-control border p-3 text-sm", value === i ? "border-ink bg-ink/5" : "border-line hover:bg-ink/5")}>
+              <input type="radio" name={groupName} checked={value === i} onChange={() => onChange(i)} />
               {choice}
             </label>
           ))}
@@ -20,8 +22,10 @@ export function QuestionInput({ question, value, onChange }: { question: QuizQue
           {[true, false].map((v) => (
             <button
               key={String(v)}
+              type="button"
               onClick={() => onChange(v)}
-              className={cn("flex-1 rounded-lg border py-3 text-sm font-medium", value === v ? "border-action bg-action text-action-foreground" : "border-line text-ink-soft hover:bg-ink/5")}
+              aria-pressed={value === v}
+              className={cn("min-h-11 flex-1 rounded-control border py-3 text-sm font-medium", value === v ? "border-action bg-action text-action-foreground" : "border-line text-ink-soft hover:bg-ink/5")}
             >
               {v ? "True" : "False"}
             </button>
@@ -33,7 +37,7 @@ export function QuestionInput({ question, value, onChange }: { question: QuizQue
       return (
         <div className="space-y-2">
           {question.choices.map((choice, i) => (
-            <label key={i} className={cn("flex cursor-pointer items-center gap-2 rounded-lg border p-3 text-sm", selected.includes(i) ? "border-ink bg-ink/5" : "border-line hover:bg-ink/5")}>
+            <label key={i} className={cn("flex min-h-11 cursor-pointer items-center gap-3 rounded-control border p-3 text-sm", selected.includes(i) ? "border-ink bg-ink/5" : "border-line hover:bg-ink/5")}>
               <input
                 type="checkbox"
                 checked={selected.includes(i)}
@@ -53,8 +57,9 @@ export function QuestionInput({ question, value, onChange }: { question: QuizQue
           type="text"
           value={typeof value === "string" ? value : ""}
           onChange={(e) => onChange(e.target.value)}
+          aria-label="Your answer"
           placeholder="Type your answer…"
-          className="h-11 w-full rounded-lg border border-line px-3 text-sm focus:border-accent"
+          className="h-11 w-full rounded-control border border-line bg-surface px-3 text-base text-ink focus:border-accent sm:text-sm"
         />
       );
     case "matching": {
@@ -68,8 +73,9 @@ export function QuestionInput({ question, value, onChange }: { question: QuizQue
                 type="text"
                 value={map[pair.left] ?? ""}
                 onChange={(e) => onChange({ ...map, [pair.left]: e.target.value })}
+                aria-label={`Match for ${pair.left}`}
                 placeholder="Match…"
-                className="h-9 w-1/2 rounded-lg border border-line px-3 text-sm focus:border-accent"
+                className="h-10 w-1/2 rounded-control border border-line bg-surface px-3 text-base text-ink focus:border-accent sm:text-sm"
               />
             </div>
           ))}

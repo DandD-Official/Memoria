@@ -68,7 +68,7 @@ export function RevisionHistory({ resourceType, resourceId }: { resourceType: Re
   }
 
   const selected = revisions?.find((revision) => revision.id === selectedId) ?? null;
-  const resourceLabel = resourceType === "NOTE" ? "Memory" : "Reviewer";
+  const resourceLabel = resourceType === "NOTE" ? "Note" : "Reviewer";
 
   return (
     <>

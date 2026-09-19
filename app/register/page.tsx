@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { signIn } from "next-auth/react";
-import { BookMarked } from "lucide-react";
+import { AuthFrame } from "@/components/auth/auth-frame";
 import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
@@ -67,17 +67,7 @@ export default function RegisterPage() {
     }
   }
 
-  return (
-    <main className="flex min-h-screen items-center justify-center bg-paper px-6">
-      <div className="w-full max-w-sm">
-        <Link href="/" className="mb-8 flex items-center justify-center gap-2 font-display text-lg text-ink">
-          <BookMarked className="h-5 w-5 text-accent-dark" />
-          Memoria
-        </Link>
-        <div className="card p-7">
-          <h1 className="font-display text-xl text-ink">Create your account</h1>
-          <p className="mt-1 text-sm text-ink-soft">Start turning your notes into structured study material.</p>
-
+  return <AuthFrame title="A fresh page." description="Create an account to keep your material and build a practice that lasts.">
           <form onSubmit={handleSubmit} autoComplete="on" className="mt-6 space-y-4">
             <div>
               <Label htmlFor="name">Name</Label>
@@ -107,7 +97,7 @@ export default function RegisterPage() {
                 required
               />
             </div>
-            {error && <p className="text-sm text-danger">{error}</p>}
+            {error && <p className="rounded-control border border-danger/25 bg-danger/5 p-3 text-sm text-danger" role="alert">{error}</p>}
             <Button type="submit" className="w-full" loading={loading}>
               Create account
             </Button>
@@ -119,8 +109,5 @@ export default function RegisterPage() {
               Sign in
             </Link>
           </p>
-        </div>
-      </div>
-    </main>
-  );
+  </AuthFrame>;
 }

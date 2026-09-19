@@ -28,7 +28,7 @@ export default async function SharedWithMePage() {
 
   return (
     <PageShell className="max-w-5xl">
-      <PageHeader><PageHeaderContent><PageTitle>Shared with Me</PageTitle><PageDescription>Books, Memories, and study resources other people have invited you to use.</PageDescription></PageHeaderContent></PageHeader>
+      <PageHeader><PageHeaderContent><PageTitle>Shared with me</PageTitle><PageDescription>Books, notes, and study resources other people have invited you to use.</PageDescription></PageHeaderContent></PageHeader>
 
       {shares.length === 0 && bookMemberships.length === 0 ? (
         <EmptyState icon={Share2} title="Nothing shared with you yet" description="When someone shares a Book or study resource with your account, it will appear here." />
@@ -43,7 +43,7 @@ export default async function SharedWithMePage() {
             const route = resourceRoutes[share.resourceType] ?? "/shared";
             const href = share.resourceType === "DIAGRAM" ? route : `${route}/${share.resourceId}`;
             return (
-              <ResourceCard key={share.id} href={href} kind={resourceKinds[share.resourceType] ?? "note"} title={titleMap.get(share.resourceId) ?? "Unavailable resource"} badge={share.resourceType === "NOTE" ? "Memory" : share.resourceType} meta={formatRelativeTime(share.createdAt)} description={`Shared by ${share.owner.name || share.owner.email}`}>
+              <ResourceCard key={share.id} href={href} kind={resourceKinds[share.resourceType] ?? "note"} title={titleMap.get(share.resourceId) ?? "Unavailable resource"} badge={share.resourceType === "NOTE" ? "Note" : share.resourceType} meta={formatRelativeTime(share.createdAt)} description={`Shared by ${share.owner.name || share.owner.email}`}>
                 <Badge tone={share.permission === "EDIT" ? "accent" : "neutral"}>{share.permission}</Badge>
               </ResourceCard>
             );

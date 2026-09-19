@@ -137,4 +137,4 @@ The study system persists editable flashcards, schedules reviews with spaced rep
 
 ## Design system
 
-Custom palette and type system in `tailwind.config.ts` and `app/globals.css` — ink-navy primary, amber "highlighter" accent, Fraunces (display serif) + Inter (body) + IBM Plex Mono. Rendered Markdown gets its own typography pass (`.memora-markdown` in `globals.css`) so notes and reviewers look like a designed document, not a raw text dump — and PDF exports inherit the exact same styling.
+The learning-journal design uses warm paper, evergreen actions, lime highlights, editorial serif headings, sans-serif controls, and mono index labels. Semantic tokens in `tailwind.config.ts` and `app/globals.css` support light and dark themes. Desk, Library, Practice, and Together share responsive navigation, with quieter reading and focus layouts. See `docs/frontend-reconstruction.md` for the product map, implementation checkpoint, and verification coverage. PDF and Word exports retain their own document templates.

@@ -3,7 +3,7 @@
 import { FormEvent, Suspense, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { BookMarked } from "lucide-react";
+import { AuthFrame } from "@/components/auth/auth-frame";
 import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/input";
 
@@ -57,15 +57,8 @@ function VerifyEmail() {
     setMessage(response?.ok ? `A new six-digit code was sent to ${email}.` : data?.error ?? "We couldn't send another code.");
   }
 
-  return (
-    <main className="flex min-h-screen items-center justify-center bg-paper px-6">
-      <div className="w-full max-w-sm">
-        <Link href="/" className="mb-8 flex items-center justify-center gap-2 font-display text-lg text-ink">
-          <BookMarked className="h-5 w-5 text-accent-dark" /> Memoria
-        </Link>
-        <div className="card p-7">
-          <h1 className="font-display text-xl text-ink">Verify your email</h1>
-          <p className={`mt-2 text-sm ${status === "error" ? "text-danger" : status === "success" ? "text-success" : "text-ink-soft"}`}>{message}</p>
+  return <AuthFrame title="Check your inbox." description="One small step to make this space yours.">
+          <p role="status" className={`mt-2 text-sm ${status === "error" ? "text-danger" : status === "success" ? "text-success" : "text-ink-soft"}`}>{message}</p>
 
           {status !== "success" && email && (
             <form onSubmit={verify} className="mt-6">
@@ -84,7 +77,7 @@ function VerifyEmail() {
                 autoFocus
                 required
               />
-              <Button type="submit" className="mt-4 w-full" loading={status === "working"} disabled={code.length !== 6}>Verify email</Button>
+              <Button type="submit" className="mt-4 w-full" loading={status === "working"}>Verify email</Button>
             </form>
           )}
 
@@ -97,8 +90,6 @@ function VerifyEmail() {
           ) : (
             <Link href="/register" className="mt-5 inline-flex text-sm font-medium text-ink underline">Return to sign up</Link>
           )}
-        </div>
-      </div>
-    </main>
-  );
+
+  </AuthFrame>;
 }

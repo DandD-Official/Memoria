@@ -1,5 +1,4 @@
 "use client";
-
 import { useEffect, useId, useRef } from "react";
 import { createPortal } from "react-dom";
 import { X } from "lucide-react";
@@ -14,77 +13,41 @@ interface DialogProps {
   footer?: React.ReactNode;
   className?: string;
   fullScreen?: boolean;
+  placement?: "center" | "side";
 }
-
-const focusable = 'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
-
-export function Dialog({ open, onOpenChange, title, description, children, footer, className, fullScreen = false }: DialogProps) {
+export function Dialog({ open, onOpenChange, title, description, children, footer, className, fullScreen = false, placement = "center" }: DialogProps) {
   const titleId = useId();
   const descriptionId = useId();
-  const panelRef = useRef<HTMLDivElement>(null);
+  const dialogRef = useRef<HTMLDialogElement>(null);
   const onOpenChangeRef = useRef(onOpenChange);
   onOpenChangeRef.current = onOpenChange;
-
   useEffect(() => {
-    if (!open) return;
+    if (!open || !dialogRef.current) return;
+    const dialog = dialogRef.current;
     const previousFocus = document.activeElement as HTMLElement | null;
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
-    requestAnimationFrame(() => (panelRef.current?.querySelector<HTMLElement>(focusable) ?? panelRef.current)?.focus());
-
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        event.preventDefault();
-        onOpenChangeRef.current(false);
-        return;
-      }
-      if (event.key !== "Tab" || !panelRef.current) return;
-      const nodes = Array.from(panelRef.current.querySelectorAll<HTMLElement>(focusable));
-      if (nodes.length === 0) return;
-      const first = nodes[0];
-      const last = nodes[nodes.length - 1];
-      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
-      if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
-    }
-
-    document.addEventListener("keydown", handleKeyDown);
+    dialog.showModal();
     return () => {
+      dialog.close();
       document.body.style.overflow = previousOverflow;
-      document.removeEventListener("keydown", handleKeyDown);
-      previousFocus?.focus();
+      if (previousFocus?.isConnected) previousFocus.focus();
     };
   }, [open]);
-
   if (!open || typeof document === "undefined") return null;
   return createPortal(
-    <div className={cn("fixed inset-0 z-[100] flex items-end justify-center sm:items-center", fullScreen ? "p-0" : "p-0 sm:p-5")} role="presentation">
-      <button type="button" className="absolute inset-0 animate-overlay-in bg-ink/45 backdrop-blur-[2px]" onClick={() => onOpenChange(false)} aria-label="Close dialog" tabIndex={-1} />
-      <div
-        ref={panelRef}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={titleId}
-        aria-describedby={description ? descriptionId : undefined}
-        tabIndex={-1}
-        className={cn(
-          "relative w-full animate-panel-in overflow-y-auto border border-line bg-surface-raised shadow-dialog",
-          fullScreen
-            ? "h-full max-h-[100dvh] max-w-none rounded-none border-0 p-5 sm:p-8"
-            : "max-h-[min(42rem,calc(100dvh-1rem))] max-w-lg rounded-t-panel p-5 sm:rounded-panel sm:p-6",
-          className
-        )}
-      >
-        <div className="pr-10">
-          <h2 id={titleId} className="font-display text-xl font-medium tracking-[-0.01em] text-ink">{title}</h2>
-          {description && <p id={descriptionId} className="mt-2 text-sm leading-relaxed text-ink-soft">{description}</p>}
-        </div>
-        <button type="button" onClick={() => onOpenChange(false)} className="absolute end-4 top-4 inline-flex h-10 w-10 items-center justify-center rounded-control text-ink-faint transition-colors hover:bg-ink/5 hover:text-ink" aria-label="Close dialog">
-          <X className="h-4 w-4" aria-hidden="true" />
-        </button>
-        <div className="mt-5">{children}</div>
-        {footer && <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">{footer}</div>}
-      </div>
-    </div>,
-    document.body
+    <dialog ref={dialogRef} aria-labelledby={titleId} aria-describedby={description ? descriptionId : undefined}
+      onCancel={event => { event.preventDefault(); onOpenChangeRef.current(false); }}
+      onClick={event => { if (event.target === event.currentTarget) { const bounds = event.currentTarget.getBoundingClientRect(); if (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom) onOpenChangeRef.current(false); } }}
+      className={cn("native-overlay w-full overscroll-contain border border-line bg-surface-raised p-5 text-ink shadow-dialog sm:p-7",
+        fullScreen ? "fixed inset-0 m-0 h-dvh max-h-dvh max-w-none rounded-none border-0" :
+        placement === "side" ? "fixed inset-x-0 bottom-0 top-auto m-0 max-h-[90dvh] max-w-none rounded-t-panel pb-[max(1.5rem,env(safe-area-inset-bottom))] sm:bottom-0 sm:left-auto sm:right-0 sm:top-0 sm:ms-auto sm:h-dvh sm:max-h-dvh sm:max-w-md sm:rounded-none" :
+        "fixed inset-0 m-auto max-h-[calc(100dvh-2rem)] max-w-[calc(100%-2rem)] rounded-panel sm:max-w-lg",
+        className)}>
+      <div className="border-b border-line pb-5 pe-10"><h2 id={titleId} className="font-display text-2xl leading-tight tracking-tight">{title}</h2>{description && <p id={descriptionId} className="mt-2 text-sm leading-relaxed text-ink-soft">{description}</p>}</div>
+      <button type="button" onClick={() => onOpenChange(false)} className="absolute end-4 top-4 flex h-11 w-11 items-center justify-center rounded-control text-ink-soft hover:bg-surface-muted" aria-label="Close dialog"><X className="h-5 w-5" /></button>
+      <div className="mt-6">{children}</div>
+      {footer && <div className="mt-7 flex flex-col-reverse gap-3 border-t border-line pt-5 sm:flex-row sm:justify-end">{footer}</div>}
+    </dialog>, document.body
   );
 }

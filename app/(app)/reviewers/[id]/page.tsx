@@ -12,6 +12,10 @@ export default async function ReviewerDetailPage(props: { params: Promise<{ id: 
   if (!reviewer) notFound();
   const access = await getAccessLevelForOwner(user.id, "REVIEWER", params.id, reviewer.ownerId);
   if (access === "NONE") notFound();
+  const [sources, quizzes] = await Promise.all([
+    prisma.note.findMany({ where: { ownerId: user.id, reviewerLinks: { some: { reviewerId: reviewer.id } } }, select: { id: true, title: true } }),
+    prisma.quiz.findMany({ where: { ownerId: user.id, archivedAt: null, reviewerLinks: { some: { reviewerId: reviewer.id } } }, select: { id: true, title: true } }),
+  ]);
 
   const noteLinks = reviewer.noteLinks as unknown[];
 
@@ -29,6 +33,8 @@ export default async function ReviewerDetailPage(props: { params: Promise<{ id: 
         favorite: reviewer.isFavorite,
       }}
       isOwner={access === "OWNER"}
+      canEdit={access === "OWNER" || access === "EDIT"}
+      related={[...sources.map(item => ({ ...item, href: `/notes/${item.id}` })), ...quizzes.map(item => ({ ...item, href: `/quizzes/${item.id}` }))]}
       autoSave={settings?.autoSave ?? true}
     />
   );

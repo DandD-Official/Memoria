@@ -1,6 +1,8 @@
 import { requireUser } from "@/lib/auth/session";
 import { prisma } from "@/lib/db";
 import { FlashcardDeck } from "@/components/study/flashcard-deck";
+import { EmptyState } from "@/components/ui/empty-state";
+import { CheckCircle2 } from "lucide-react";
 
 export default async function DueReviewPage() {
   const user = await requireUser();
@@ -8,6 +10,6 @@ export default async function DueReviewPage() {
     where: { ownerId: user.id, OR: [{ progress: { none: { userId: user.id } } }, { progress: { some: { userId: user.id, dueAt: { lte: new Date() } } } }] },
     orderBy: { updatedAt: "asc" }, take: 100, select: { id: true, front: true, back: true },
   });
-  if (!due.length) return <div className="mx-auto max-w-xl text-center"><h1 className="font-display text-2xl text-ink">You&apos;re caught up</h1><p className="mt-2 text-sm text-ink-soft">No flashcards are due right now. New reviews will appear here on schedule.</p></div>;
+  if (!due.length) return <div className="mx-auto max-w-2xl"><h1 className="mb-8 font-display text-3xl">A moment to let it settle.</h1><EmptyState icon={CheckCircle2} title="You’re caught up." description="No cards are due right now. Return when another review is ready, or explore a different study guide." actionLabel="Explore your study guides" actionHref="/reviewers" secondaryActionLabel="Return to practice" secondaryActionHref="/study" /></div>;
   return <FlashcardDeck title="Due flashcards" cards={due} tracked />;
 }

@@ -1,28 +1,41 @@
-import Link from "next/link";
-import { Search, FileText, Layers, ListChecks } from "lucide-react";
+import { Search } from "lucide-react";
 import { requireUser } from "@/lib/auth/session";
-import { prisma } from "@/lib/db";
+import { emptyLibraryResults, searchLibrary } from "@/lib/library-search";
 import { EmptyState } from "@/components/ui/empty-state";
-import { formatRelativeTime } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Input, Label } from "@/components/ui/input";
+import { PageDescription, PageHeader, PageHeaderContent, PageShell, PageTitle } from "@/components/ui/page";
+import { ResourceCard } from "@/components/library/resource-card";
 import { TagList } from "@/components/library/tag-list";
+import { formatRelativeTime } from "@/lib/utils";
 
 export default async function SearchPage({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
   const [{ q: rawQuery }, user] = await Promise.all([searchParams, requireUser()]);
   const query = rawQuery?.trim() ?? "";
-  const match = query ? { contains: query, mode: "insensitive" as const } : undefined;
-  const [notes, reviewers, quizzes] = query ? await Promise.all([
-    prisma.note.findMany({ where: { ownerId: user.id, archivedAt: null, OR: [{ title: match }, { description: match }, { originalFilename: match }, { tags: { some: { tag: { name: match } } } }] }, select: { id: true, title: true, description: true, updatedAt: true, tags: { select: { tag: { select: { id: true, name: true, color: true } } } } }, orderBy: { updatedAt: "desc" }, take: 30 }),
-    prisma.reviewer.findMany({ where: { ownerId: user.id, archivedAt: null, OR: [{ title: match }, { description: match }, { tags: { some: { tag: { name: match } } } }] }, select: { id: true, title: true, description: true, updatedAt: true, tags: { select: { tag: { select: { id: true, name: true, color: true } } } } }, orderBy: { updatedAt: "desc" }, take: 30 }),
-    prisma.quiz.findMany({ where: { ownerId: user.id, archivedAt: null, OR: [{ title: match }, { description: match }, { tags: { some: { tag: { name: match } } } }] }, select: { id: true, title: true, description: true, updatedAt: true, tags: { select: { tag: { select: { id: true, name: true, color: true } } } } }, orderBy: { updatedAt: "desc" }, take: 30 }),
-  ]) : [[], [], []];
+  const { notes, reviewers, quizzes, diagrams, collections } = query
+    ? await searchLibrary(user.id, query, 30)
+    : emptyLibraryResults();
   const sections = [
-    { label: "Notes", icon: FileText, rows: notes, path: "/notes" },
-    { label: "Reviewers", icon: Layers, rows: reviewers, path: "/reviewers" },
-    { label: "Quizzes", icon: ListChecks, rows: quizzes, path: "/quizzes" },
-  ];
-  const total = notes.length + reviewers.length + quizzes.length;
+    { label: "Source notes", kind: "note", rows: notes, path: "/notes/" },
+    { label: "Study guides", kind: "reviewer", rows: reviewers, path: "/reviewers/" },
+    { label: "Quizzes & exams", kind: "quiz", rows: quizzes, path: "/quizzes/" },
+    { label: "Diagrams", kind: "diagram", rows: diagrams, path: "/diagrams?open=" },
+    { label: "Books & study spaces", kind: "book", rows: collections, path: "/books/" },
+  ] as const;
+  const total = sections.reduce((count, section) => count + section.rows.length, 0);
 
-  return <div className="mx-auto max-w-5xl"><h1 className="font-display text-2xl text-ink">Search</h1><p className="mt-1 text-sm text-ink-soft">{query ? `${total} result${total === 1 ? "" : "s"} for “${query}”` : "Use the search box above to find your study material."}</p>
-    {query && total === 0 ? <div className="mt-8"><EmptyState icon={Search} title="No matching study material." description="Try a shorter title, tag, description, or filename." /></div> : <div className="mt-7 space-y-8">{sections.map((section) => section.rows.length > 0 && <section key={section.label}><h2 className="mb-3 flex items-center gap-2 font-display text-lg text-ink"><section.icon className="h-4 w-4 text-accent-dark" />{section.label}</h2><div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{section.rows.map((row) => <Link key={row.id} href={`${section.path}/${row.id}`} className="card p-4 hover:shadow-card-hover"><p className="font-display text-base text-ink line-clamp-1">{row.title}</p>{row.description && <p className="mt-1 text-sm text-ink-soft line-clamp-2">{row.description}</p>}<TagList tags={row.tags.map(({ tag }) => tag)} /><p className="mt-2 text-xs text-ink-faint">Updated {formatRelativeTime(row.updatedAt)}</p></Link>)}</div></section>)}</div>}
-  </div>;
+  return <PageShell className="max-w-5xl">
+    <PageHeader><PageHeaderContent><p className="eyebrow">Find your thread</p><PageTitle className="mt-3">Search your library.</PageTitle><PageDescription>Find a source, a study guide, a diagram, or a space you have put together.</PageDescription></PageHeaderContent></PageHeader>
+    <form action="/search" className="max-w-2xl">
+      <Label htmlFor="library-query">Title, topic, tag, or filename</Label>
+      <div className="flex flex-wrap gap-3"><Input id="library-query" name="q" defaultValue={query} placeholder="e.g. Cell biology" className="min-w-0 flex-1" /><Button type="submit"><Search className="h-4 w-4" aria-hidden="true" />Search</Button></div>
+    </form>
+    {query && <p className="break-words text-sm text-ink-soft">{total} result{total === 1 ? "" : "s"} for ?{query}?{sections.some(section => section.rows.length === 30) ? " ? Showing up to 30 matches of each kind. Refine your search to find more." : ""}</p>}
+    {query && total === 0 ? <EmptyState icon={Search} title="No matching material." description="Try a shorter topic, a different tag, or part of a filename." actionHref="/search" actionLabel="Clear search" /> : sections.map(section => section.rows.length > 0 && <section key={section.kind} aria-labelledby={`results-${section.kind}`}>
+      <div className="journal-rule"><h2 id={`results-${section.kind}`} className="section-heading">{section.label}</h2><span className="font-mono text-xs text-ink-faint">{section.rows.length}</span></div>
+      <div className="divide-y divide-line">{section.rows.map(row => <ResourceCard key={row.id} href={`${section.path}${row.id}`} kind={section.kind} title={row.title} description={"description" in row ? row.description : undefined} favorite={"isFavorite" in row ? row.isFavorite : false} meta={`Updated ${formatRelativeTime(row.updatedAt)}`}>
+        {"tags" in row && <TagList tags={row.tags.map(({ tag }) => tag)} />}
+      </ResourceCard>)}</div>
+    </section>)}
+  </PageShell>;
 }

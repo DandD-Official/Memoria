@@ -13,6 +13,7 @@ export default async function NoteDetailPage(props: { params: Promise<{ id: stri
   if (!note) notFound();
   const access = await getAccessLevelForOwner(user.id, "NOTE", params.id, note.ownerId);
   if (access === "NONE") notFound();
+  const connectedGuides = await prisma.reviewer.findMany({ where: { ownerId: user.id, archivedAt: null, noteLinks: { some: { noteId: note.id } } }, select: { id: true, title: true } });
 
   return (
     <NoteDetail
@@ -30,6 +31,7 @@ export default async function NoteDetailPage(props: { params: Promise<{ id: stri
       isOwner={access === "OWNER"}
       autoSave={settings?.autoSave ?? true}
       systemAvailable={hasSystemAiConnection()}
+      related={connectedGuides.map(item => ({ ...item, href: `/reviewers/${item.id}` }))}
     />
   );
 }

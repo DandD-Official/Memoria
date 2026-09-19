@@ -24,6 +24,7 @@ const PLACEHOLDER_NOTE = "[Paste your notes here before sending this prompt to t
 type TestMode = "review" | "exam";
 
 export function GuestQuizFlow({ activityMode = "quiz" }: { activityMode?: "quiz" | "exam" }) {
+  const fieldId = `guest-${activityMode}`;
   const activityLabel = activityMode === "exam" ? "exam" : "quiz";
   const [source, setSource] = useState<"generate" | "import">("generate");
   const [notesText, setNotesText] = useState("");
@@ -210,14 +211,14 @@ export function GuestQuizFlow({ activityMode = "quiz" }: { activityMode?: "quiz"
           <FileDropzone onFileSelected={handleFileUpload} accept=".md,.txt,.pdf,.docx,.pptx,.json" />
           {uploading && <p className="mt-2 text-xs text-ink-soft">Reading file…</p>}
           {notice && <p className="mt-2 rounded-lg border border-accent/30 bg-accent-soft/40 p-2.5 text-xs text-accent-dark">{notice}</p>}
-          <Textarea rows={6} value={notesText} onChange={(event) => setNotesText(event.target.value)} placeholder="Paste notes or describe the subject…" className="mt-3 font-mono text-sm" />
+          <Label htmlFor={`${fieldId}-notes`} className="mt-4">Source notes or topic</Label><Textarea id={`${fieldId}-notes`} rows={6} value={notesText} onChange={(event) => setNotesText(event.target.value)} placeholder="Paste notes or describe the subject…" className="mt-3 font-mono text-sm" />
           <div className="mt-4 grid grid-cols-2 gap-3">
-            <div><Label htmlFor="guest-qcount">Question count</Label><Input id="guest-qcount" type="number" min={1} max={50} value={questionCount} onChange={(event) => setQuestionCount(Number(event.target.value))} /></div>
-            <div><Label htmlFor="guest-difficulty">Difficulty</Label><select id="guest-difficulty" value={difficulty} onChange={(event) => setDifficulty(event.target.value as typeof difficulty)} className="h-10 w-full rounded-lg border border-line bg-surface px-3 text-sm">{["EASY", "NORMAL", "HARD", "MIXED"].map((item) => <option key={item} value={item}>{item}</option>)}</select></div>
+            <div><Label htmlFor={`${fieldId}-count`}>Question count</Label><Input id={`${fieldId}-count`} type="number" min={1} max={50} value={questionCount} onChange={(event) => setQuestionCount(Number(event.target.value))} /></div>
+            <div><Label htmlFor={`${fieldId}-difficulty`}>Difficulty</Label><select id={`${fieldId}-difficulty`} value={difficulty} onChange={(event) => setDifficulty(event.target.value as typeof difficulty)} className="h-10 w-full rounded-lg border border-line bg-surface px-3 text-sm">{["EASY", "NORMAL", "HARD", "MIXED"].map((item) => <option key={item} value={item}>{item}</option>)}</select></div>
           </div>
           <div className="mt-3">
             <Label>Question types</Label>
-            <div className="flex flex-wrap gap-2">{QUESTION_TYPES.map(([value, label]) => <button type="button" key={value} onClick={() => toggleType(value)} className={cn("rounded-full border px-3 py-1.5 text-xs font-medium", questionTypes.includes(value) ? "border-accent bg-accent-soft text-accent-dark" : "border-line text-ink-soft hover:bg-ink/5")}>{label}</button>)}</div>
+            <div className="flex flex-wrap gap-2">{QUESTION_TYPES.map(([value, label]) => <button type="button" key={value} aria-pressed={questionTypes.includes(value)} onClick={() => toggleType(value)} className={cn("rounded-full border px-3 py-1.5 text-xs font-medium", questionTypes.includes(value) ? "border-accent bg-accent-soft text-accent-dark" : "border-line text-ink-soft hover:bg-ink/5")}>{label}</button>)}</div>
           </div>
           <Button className="mt-4" onClick={generatePrompt} loading={loading} disabled={questionTypes.length === 0}>Generate prompt</Button>
         </div>
@@ -225,15 +226,15 @@ export function GuestQuizFlow({ activityMode = "quiz" }: { activityMode?: "quiz"
         <div className="card p-5">
           <p className="text-sm font-medium text-ink">Import a Memoria JSON file</p>
           <p className="mt-1 text-xs text-ink-soft">The file stays in your browser and is not uploaded.</p>
-          <Input className="mt-3" type="file" accept=".json,application/json" onChange={(event) => { const file = event.target.files?.[0]; if (file) void handleJsonFile(file); }} />
+          <Label htmlFor={`${fieldId}-file`} className="mt-3">JSON file</Label><Input id={`${fieldId}-file`} type="file" accept=".json,application/json" onChange={(event) => { const file = event.target.files?.[0]; if (file) void handleJsonFile(file); }} />
         </div>
       )}
 
       {(source === "import" || prompt) && (
         <div className="card p-5">
-          {source === "generate" && <><p className="mb-2 text-sm font-medium text-ink">2. Copy this prompt into your preferred AI</p><Textarea readOnly rows={10} value={prompt} className="font-mono text-xs" /><Button variant="outline" size="sm" className="mt-2" onClick={copyPrompt}>{copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />} {copied ? "Copied" : "Copy prompt"}</Button></>}
+          {source === "generate" && <><p className="mb-2 text-sm font-medium text-ink">2. Copy this prompt into your preferred AI</p><Textarea aria-label="Generated prompt" readOnly rows={10} value={prompt} className="font-mono text-xs" /><Button variant="outline" size="sm" className="mt-2" onClick={copyPrompt}>{copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />} {copied ? "Copied" : "Copy prompt"}</Button></>}
           <p className={cn("mb-2 text-sm font-medium text-ink", source === "generate" && "mt-5")}>{source === "generate" ? "3. Paste the AI's JSON response" : "Or paste JSON below"}</p>
-          <Textarea rows={8} value={pastedJson} onChange={(event) => { setPastedJson(event.target.value); setValidation(null); }} placeholder='{"format": "memoria-quiz", ...}' className="font-mono text-xs" />
+          <Textarea aria-label="Quiz JSON" rows={8} value={pastedJson} onChange={(event) => { setPastedJson(event.target.value); setValidation(null); }} placeholder='{"format": "memoria-quiz", ...}' className="font-mono text-xs" />
           <Button variant="outline" size="sm" className="mt-2" onClick={() => validateJson()} disabled={!pastedJson.trim()}>Validate</Button>
 
           {validation && !validation.valid && <div className="mt-3 rounded-lg border border-danger/30 bg-danger/5 p-3 text-sm text-danger"><p className="font-medium">This doesn&apos;t match the expected format:</p><ul className="mt-1 list-disc pl-5">{validation.errors.slice(0, 5).map((item) => <li key={item}>{item}</li>)}</ul></div>}
@@ -266,7 +267,7 @@ export function GuestQuizFlow({ activityMode = "quiz" }: { activityMode?: "quiz"
           )}
         </div>
       )}
-      {error && <p className="text-sm text-danger">{error}</p>}
+      {error && <p role="alert" className="text-sm text-danger">{error}</p>}
     </div>
   );
 }

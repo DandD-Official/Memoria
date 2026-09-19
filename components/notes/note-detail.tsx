@@ -3,14 +3,14 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Trash2, Sparkles, ArrowLeft, Pencil, ListChecks } from "lucide-react";
+import { ArrowLeft, ListChecks, Pencil, Workflow, Sparkles, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/input";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Badge } from "@/components/ui/badge";
 import { ShareDialog } from "@/components/sharing/share-dialog";
 import { MarkdownEditor } from "@/components/markdown/editor";
-import { MarkdownRenderer } from "@/components/markdown/renderer";
+import { DocumentReader, type RelatedMaterial } from "@/components/library/document-reader";
 import { formatDate } from "@/lib/utils";
 import { ResourceDetailActions, ResourceFavoriteButton, ResourceUtilityActions } from "@/components/library/resource-actions";
 import { TagEditor } from "@/components/library/tag-editor";
@@ -34,9 +34,10 @@ interface NoteDetailProps {
   isOwner: boolean;
   autoSave: boolean;
   systemAvailable: boolean;
+  related?: RelatedMaterial[];
 }
 
-export function NoteDetail({ note, canEdit, isOwner, autoSave, systemAvailable }: NoteDetailProps) {
+export function NoteDetail({ note, canEdit, isOwner, autoSave, systemAvailable, related }: NoteDetailProps) {
   const router = useRouter();
   const [title, setTitle] = useState(note.title);
   const [content, setContent] = useState(note.content);
@@ -97,17 +98,17 @@ export function NoteDetail({ note, canEdit, isOwner, autoSave, systemAvailable }
   }
 
   return (
-    <div className="mx-auto max-w-4xl">
+    <div className="mx-auto max-w-6xl">
       <Link href="/notes" className="mb-4 inline-flex items-center gap-1 text-sm text-ink-soft hover:text-ink">
         <ArrowLeft className="h-4 w-4" /> Back to notes
       </Link>
 
-      <div className="mb-7 border-b border-line pb-6">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+      <div className="document-heading">
+        <div className="flex flex-col gap-6">
           <div className="min-w-0">
             <Badge tone="neutral">{note.sourceType}</Badge>
-            {!isEditing && <h1 className="mt-3 break-words font-display text-2xl text-ink">{title}</h1>}
-            {!isEditing && <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-ink-faint"><span>Last updated {formatDate(note.updatedAt)}</span><span className="h-1 w-1 rounded-full bg-line-strong" aria-hidden="true" /><span>{canEdit ? "You can edit this Memory" : "Read-only access"}</span></div>}
+            {!isEditing && <h1 className="mt-4 max-w-3xl break-words font-display text-3xl leading-tight tracking-tight text-ink sm:text-4xl">{title}</h1>}
+            {!isEditing && <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-ink-faint"><span>Last updated {formatDate(note.updatedAt)}</span><span className="h-1 w-1 rounded-full bg-line-strong" aria-hidden="true" /><span>{canEdit ? "You can edit this note" : "Read-only access"}</span></div>}
           </div>
           <ResourceDetailActions
             edit={canEdit && !isEditing ? <Button variant="primary" size="sm" onClick={() => { setSaved(false); setIsEditing(true); }}><Pencil className="h-3.5 w-3.5" /> Edit</Button> : undefined}
@@ -145,9 +146,7 @@ export function NoteDetail({ note, canEdit, isOwner, autoSave, systemAvailable }
         </>
       ) : (
         <>
-          <div className="rounded-panel border border-line bg-surface px-5 py-6 shadow-card sm:px-8 sm:py-8">
-            <MarkdownRenderer content={content} />
-          </div>
+          <DocumentReader content={content} kind="note" related={related} next={<><Link href={`/reviewers?fromNote=${note.id}`} className="journal-link">Build a study guide <Sparkles className="h-4 w-4" /></Link><Link href={`/quizzes?fromNote=${note.id}`} className="journal-link">Quiz yourself <ListChecks className="h-4 w-4" /></Link><Link href="/diagrams" className="journal-link">Visualize an idea <Workflow className="h-4 w-4" /></Link></>} />
         </>
       )}
     </div>

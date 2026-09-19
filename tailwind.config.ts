@@ -28,6 +28,10 @@ const config: Config = {
           DEFAULT: "rgb(var(--color-action) / <alpha-value>)",
           foreground: "rgb(var(--color-action-foreground) / <alpha-value>)",
         },
+        panel: {
+          DEFAULT: "rgb(var(--color-panel) / <alpha-value>)",
+          foreground: "rgb(var(--color-panel-foreground) / <alpha-value>)",
+        },
         line: {
           DEFAULT: "rgb(var(--color-line) / <alpha-value>)",
           strong: "rgb(var(--color-line-strong) / <alpha-value>)",
@@ -43,6 +47,10 @@ const config: Config = {
         memory: {
           DEFAULT: "rgb(var(--color-memory) / <alpha-value>)",
           soft: "rgb(var(--color-memory-soft) / <alpha-value>)",
+        },
+        study: {
+          DEFAULT: "rgb(var(--color-study) / <alpha-value>)",
+          soft: "rgb(var(--color-study-soft) / <alpha-value>)",
         },
         book: {
           DEFAULT: "rgb(var(--color-book) / <alpha-value>)",

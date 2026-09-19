@@ -1,17 +1,5 @@
 import { cn } from "@/lib/utils";
-
-const shimmer = "animate-shimmer rounded-full bg-[linear-gradient(90deg,rgb(var(--color-ink)/0.04),rgb(var(--color-ink)/0.1),rgb(var(--color-ink)/0.04))] bg-[length:200%_100%]";
-
-export function LoadingState({ label = "Loading…", rows = 3, className }: { label?: string; rows?: number; className?: string }) {
-  return (
-    <div className={cn("flex flex-col gap-3 py-8", className)} role="status" aria-live="polite">
-      <span className="sr-only">{label}</span>
-      {Array.from({ length: rows }, (_, index) => (
-        <div key={index} className="card overflow-hidden p-4" aria-hidden="true">
-          <div className={cn("h-3 w-24", shimmer)} />
-          <div className={cn("mt-3 h-4 w-2/3", shimmer)} />
-        </div>
-      ))}
-    </div>
-  );
+const shimmer = "animate-pulse rounded-sm bg-ink/[0.08]";
+export function LoadingState({ label = "Opening your learning space…", rows = 3, className, variant = "list" }: { label?: string; rows?: number; className?: string; variant?: "list" | "document" | "page" }) {
+  return <div className={cn("py-5", className)} role="status" aria-live="polite"><span className="sr-only">{label}</span><div aria-hidden="true">{variant !== "list" && <div className="mb-8 border-b border-line pb-7"><div className={cn("h-3 w-32", shimmer)} /><div className={cn("mt-4 h-9 w-2/3", shimmer)} /><div className={cn("mt-4 h-4 w-1/2", shimmer)} /></div>}{variant === "document" ? <div className="space-y-4 border-t-2 border-line bg-surface p-6 sm:p-10">{Array.from({ length: 9 }, (_, index) => <div key={index} className={cn("h-3", index % 3 === 2 ? "w-2/3" : "w-full", shimmer)} />)}</div> : <div className="divide-y divide-line">{Array.from({ length: rows }, (_, index) => <div key={index} className="flex items-center gap-5 py-6"><div className={cn("h-11 w-11 shrink-0", shimmer)} /><div className="w-full"><div className={cn("h-3 w-24", shimmer)} /><div className={cn("mt-3 h-5 w-2/3", shimmer)} /></div></div>)}</div>}</div></div>;
 }

@@ -1,9 +1,12 @@
 import { DiagramEditor } from "@/components/diagrams/diagram-editor";
 import { findDiagramSummariesByOwner } from "@/lib/diagrams/repo";
 import { requireUser } from "@/lib/auth/session";
+import { notFound } from "next/navigation";
+import { PageDescription, PageHeader, PageHeaderContent, PageShell, PageTitle } from "@/components/ui/page";
 
-export default async function DiagramsPage() {
-  const user = await requireUser();
+export default async function DiagramsPage({ searchParams }: { searchParams: Promise<{ open?: string }> }) {
+  const [user, query] = await Promise.all([requireUser(), searchParams]);
   const diagrams = await findDiagramSummariesByOwner(user.id);
-  return <div><div className="mb-6"><p className="text-sm font-medium text-accent-dark">Visual thinking</p><h1 className="font-display text-3xl text-ink">Diagrams</h1><p className="mt-1 text-sm text-ink-soft">Sketch relationships, processes, and systems alongside your study material.</p></div><DiagramEditor initialDiagrams={diagrams.map((diagram) => ({ id: diagram.id, title: diagram.title, updatedAt: diagram.updatedAt.toISOString() }))} /></div>;
+  if (query.open && !diagrams.some(diagram => diagram.id === query.open)) notFound();
+  return <PageShell><PageHeader><PageHeaderContent><p className="eyebrow">Give an idea a shape</p><PageTitle className="mt-3">Diagrams.</PageTitle><PageDescription>Map the relationships in your material, then bring the diagram into a note or study guide.</PageDescription></PageHeaderContent></PageHeader><DiagramEditor key={query.open ?? "library"} initialDiagramId={query.open} initialDiagrams={diagrams.map((diagram) => ({ id: diagram.id, title: diagram.title, updatedAt: diagram.updatedAt.toISOString() }))} /></PageShell>;
 }

@@ -66,7 +66,7 @@ export function CollectionsList({ initialCollections, initiallyCreating = false 
       <PageHeader>
         <PageHeaderContent>
           <PageTitle>Books</PageTitle>
-          <PageDescription>Arrange Memories into a focused reading and study sequence.</PageDescription>
+          <PageDescription>Arrange notes into a focused reading and study sequence.</PageDescription>
         </PageHeaderContent>
         <PageActions><Button onClick={() => setCreating((value) => !value)} className="w-full sm:w-auto"><Plus className="h-4 w-4" /> New Book</Button></PageActions>
       </PageHeader>
@@ -86,7 +86,7 @@ export function CollectionsList({ initialCollections, initiallyCreating = false 
       )}
 
       {books.length === 0 ? (
-        <EmptyState icon={BookOpen} title="Create your first Book" description="Bring related Memories together and choose the order you want to read them." actionLabel="Create a Book" onAction={() => setCreating(true)} />
+        <EmptyState icon={BookOpen} title="Create your first book" description="Bring related notes together and choose the order you want to read them." actionLabel="Create a book" onAction={() => setCreating(true)} />
       ) : (
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {books.map((book) => {

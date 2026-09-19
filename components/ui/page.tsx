@@ -5,7 +5,7 @@ export function PageShell({ className, ...props }: React.HTMLAttributes<HTMLDivE
 }
 
 export function PageHeader({ className, ...props }: React.HTMLAttributes<HTMLElement>) {
-  return <header className={cn("flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between", className)} {...props} />;
+  return <header className={cn("page-header flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between", className)} {...props} />;
 }
 
 export function PageHeaderContent({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
