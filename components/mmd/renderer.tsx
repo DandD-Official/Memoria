@@ -23,11 +23,13 @@ export function MmdRenderer({
   onReplaceBlock,
   mode = "screen",
   assetRegistry,
+  resolvedAssets,
 }: {
   content: string;
   onReplaceBlock?: (raw: string, replacement: string) => void;
   mode?: MmdRenderMode;
   assetRegistry?: MmdAssetRegistry;
+  resolvedAssets?: Record<string, string | null>;
 }) {
   if (isPlainMarkdown(content)) {
     // Fast path, and a deliberate safety net: documents with zero MMD
@@ -36,7 +38,7 @@ export function MmdRenderer({
     // the same react-markdown call — rather than going through the MMD
     // parser and back out again. Existing content cannot regress.
     return (
-      <MmdRenderProvider mode={mode} assetRegistry={assetRegistry}>
+      <MmdRenderProvider mode={mode} assetRegistry={assetRegistry} resolvedAssets={resolvedAssets}>
         <div className="memora-markdown">
           <ReactMarkdown
             remarkPlugins={[remarkGfm]}
@@ -54,7 +56,7 @@ export function MmdRenderer({
 
   const doc = parseMmd(content);
   return (
-    <MmdRenderProvider mode={mode} assetRegistry={assetRegistry}>
+    <MmdRenderProvider mode={mode} assetRegistry={assetRegistry} resolvedAssets={resolvedAssets}>
       <div className="memora-markdown">
         <MmdReplacementProvider onReplace={onReplaceBlock}>
           <MmdNodeList nodes={doc.children} />

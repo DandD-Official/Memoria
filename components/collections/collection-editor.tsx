@@ -3,8 +3,9 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, BookMarked, BookOpen, ChevronUp, ChevronDown, FileText, GripVertical, Layers3, ListChecks, Settings2, Share2, Trash2 } from "lucide-react";
+import { ArrowLeft, BookMarked, ChevronUp, ChevronDown, FileText, GripVertical, Layers3, ListChecks, Settings2, Share2, Trash2 } from "lucide-react";
 import { BookShareDialog, type BookMember, type BookSharePermission } from "@/components/books/book-share-dialog";
+import { BookPreview } from "@/components/books/book-preview";
 import { ExportMenu } from "@/components/exports/export-menu";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -70,12 +71,15 @@ export function CollectionEditor({ initialCollection, access, canExport, rows }:
     const index = collection.items.findIndex((item) => item.id === itemId);
     const target = index + direction;
     if (index < 0 || target < 0 || target >= collection.items.length) return;
+    if (busyId) return;
+    setBusyId(itemId); setError(null);
     const previous = collection.items;
     const next = [...previous];
     [next[index], next[target]] = [next[target], next[index]];
     setCollection((current) => ({ ...current, items: next }));
     try { await request(`/api/collections/${collection.id}/items`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ itemIds: next.map((item) => item.id) }) }); }
     catch (caught) { setCollection((current) => ({ ...current, items: previous })); setError(caught instanceof Error ? caught.message : "Couldn't reorder this Book."); }
+    finally { setBusyId(null); }
   }
 
   async function saveDetails() {
@@ -92,9 +96,8 @@ export function CollectionEditor({ initialCollection, access, canExport, rows }:
     if (format === "json") { window.location.href = `/api/collections/${collection.id}/export?format=json`; return; }
     const response = await fetch(`/api/collections/${collection.id}/export`);
     const data = await response.json().catch(() => null);
-    if (!response.ok) { setError(data?.error ?? "Couldn't export this Book."); return; }
-    if (format === "pdf") { const { exportBookToPdf } = await import("@/lib/pdf-export"); await exportBookToPdf(data.title, data.markdown, { subtitle: data.subtitle, description: data.description, author: data.ownerName }, onProgress); }
-    if (format === "docx") { const { exportBookToWord } = await import("@/lib/word-export"); await exportBookToWord(data.title, data.markdown, { subtitle: data.subtitle, description: data.description, author: data.ownerName }, onProgress); }
+    if (!response.ok) throw new Error(data?.error ?? "Couldn't export this Book.");
+    if (format === "pdf" || format === "docx") { const { downloadBook } = await import("@/lib/books/download"); await downloadBook(data.book, format, onProgress); }
   }
 
   async function deleteBook() {
@@ -107,7 +110,7 @@ export function CollectionEditor({ initialCollection, access, canExport, rows }:
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <Link href="/books" className="inline-flex min-h-10 items-center gap-2 text-sm font-medium text-ink-soft hover:text-ink"><ArrowLeft className="h-4 w-4" />All Books</Link>
         <div className="flex items-center gap-2">
-          {canExport && <ExportMenu options={[{ value: "pdf", label: "PDF document" }, { value: "docx", label: "Word document" }, { value: "json", label: "Memoria JSON" }]} onExport={exportBook} />}
+          {canExport && <ExportMenu options={[{ value: "pdf", label: "PDF ? matching pages" }, { value: "docx", label: "Word ? matching pages" }, { value: "json", label: "Memoria JSON" }]} onExport={exportBook} />}
           {isOwner && <Button size="sm" onClick={() => setShareOpen(true)}><Share2 className="h-4 w-4" />Share</Button>}
         </div>
       </div>
@@ -126,25 +129,13 @@ export function CollectionEditor({ initialCollection, access, canExport, rows }:
         ].map((item) => <button key={item.key} type="button" aria-current={view === item.key ? "page" : undefined} onClick={() => setView(item.key)} className={cn("inline-flex min-h-10 shrink-0 items-center gap-2 rounded-control px-4 text-sm font-medium transition-colors", view === item.key ? "bg-surface text-ink shadow-sm" : "text-ink-soft hover:text-ink")}><item.icon className="h-4 w-4" />{item.label}</button>)}
       </nav>
 
-      {view === "book" && <FullscreenView title={collection.title} description="Full-screen Book preview"><section aria-label="Book preview" className="relative overflow-hidden rounded-[1.35rem] border border-line-strong bg-action p-2 shadow-card-hover sm:p-3">
-        <div className="pointer-events-none absolute inset-y-3 left-1/2 z-10 hidden w-8 -translate-x-1/2 bg-gradient-to-r from-transparent via-ink/15 to-transparent md:block" aria-hidden="true" />
-        <div className="grid min-h-[31rem] overflow-hidden rounded-[0.9rem] md:grid-cols-2">
-          <article className="relative flex min-w-0 flex-col justify-between overflow-hidden bg-surface-muted px-6 py-8 text-ink sm:px-10 sm:py-12 md:rounded-l-[0.75rem] md:border-r md:border-line">
-            <div className="absolute -right-16 -top-16 h-48 w-48 rounded-full border-[28px] border-accent/15" aria-hidden="true" />
-            <div><div className="flex items-center gap-2 text-[0.65rem] font-semibold uppercase tracking-[0.25em] text-accent-dark"><BookOpen className="h-4 w-4" />Memoria Book</div><div className="mt-14 h-px w-12 bg-accent" /><h2 className="mt-6 max-w-md font-display text-4xl leading-[1.08] sm:text-5xl">{collection.title}</h2>{collection.subtitle && <p className="mt-4 max-w-sm font-display text-xl italic text-ink-soft">{collection.subtitle}</p>}{collection.description && <p className="mt-6 max-w-md text-sm leading-7 text-ink-soft">{collection.description}</p>}</div>
-            <div className="mt-12 flex items-end justify-between border-t border-line pt-4 text-xs text-ink-faint"><span>{collection.items.length} chapter{collection.items.length === 1 ? "" : "s"}</span><span>Memoria</span></div>
-          </article>
-          <article className="min-w-0 bg-surface-raised px-5 py-8 text-ink sm:px-9 sm:py-12 md:rounded-r-[0.75rem]">
-            <p className="text-[0.65rem] font-semibold uppercase tracking-[0.22em] text-ink-faint">Table of contents</p><h2 className="mt-2 font-display text-3xl">{collection.tocTitle}</h2>
-            <div className="mt-8">{collection.items.length === 0 ? <div className="rounded-lg border border-dashed border-line p-8 text-center"><BookOpen className="mx-auto h-6 w-6 text-accent-dark" /><p className="mt-3 font-display text-lg">The pages are waiting.</p><p className="mt-1 text-xs leading-relaxed text-ink-faint">Add your first note in the Chapters section.</p></div> : <ol className="space-y-1">{collection.items.map((item, index) => { const row = rowFor(item); const Icon = TABS.find((entry) => entry.type === item.resourceType)?.icon ?? FileText; return <li key={item.id} className="group flex min-w-0 items-center gap-3 border-b border-line py-3"><span className="w-7 shrink-0 font-display text-lg text-accent-dark">{String(index + 1).padStart(2, "0")}</span><Icon className="h-4 w-4 shrink-0 text-ink-faint" /><span className="min-w-0 flex-1 truncate text-sm font-medium">{row?.title ?? "Unavailable chapter"}</span><div className="flex shrink-0 opacity-60 transition-opacity group-hover:opacity-100"><button type="button" aria-label={`Move ${row?.title ?? "chapter"} up`} disabled={index === 0} onClick={() => void moveItem(item.id, -1)} className="rounded p-1 hover:bg-ink/5 disabled:opacity-20"><ChevronUp className="h-4 w-4" /></button><button type="button" aria-label={`Move ${row?.title ?? "chapter"} down`} disabled={index === collection.items.length - 1} onClick={() => void moveItem(item.id, 1)} className="rounded p-1 hover:bg-ink/5 disabled:opacity-20"><ChevronDown className="h-4 w-4" /></button></div></li>; })}</ol>}</div>
-          </article>
-        </div>
-      </section></FullscreenView>}
+      {view === "book" && <FullscreenView title={collection.title} description="Full-screen Book preview"><BookPreview id={collection.id} revision={JSON.stringify([collection.title, collection.subtitle, collection.description, collection.tocTitle, collection.items])} /></FullscreenView>}
 
       {view === "chapters" && <section className="rounded-card border border-line bg-surface p-5 shadow-sm">
           <div className="flex items-start gap-3"><span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-control bg-accent-soft text-accent-dark"><GripVertical className="h-4 w-4" /></span><div><h2 className="font-display text-xl text-ink">Build the chapters</h2><p className="mt-1 text-sm text-ink-soft">{isOwner ? "Choose material and arrange it in reading order." : "Reorder or remove the chapters already in this Book."}</p></div></div>
+          {collection.items.length > 0 && <ol className="mt-5 divide-y divide-line rounded-control border border-line">{collection.items.map((item, index) => <li key={item.id} className="flex items-center gap-3 px-3 py-2"><span className="font-display text-lg text-accent-dark">{String(index + 1).padStart(2, "0")}</span><span className="min-w-0 flex-1 text-sm">{rowFor(item)?.title ?? "Unavailable chapter"}</span><Button variant="ghost" size="sm" aria-label={`Move chapter ${index + 1} up`} disabled={index === 0 || busyId !== null} onClick={() => void moveItem(item.id, -1)}><ChevronUp className="h-4 w-4" /></Button><Button variant="ghost" size="sm" aria-label={`Move chapter ${index + 1} down`} disabled={index === collection.items.length - 1 || busyId !== null} onClick={() => void moveItem(item.id, 1)}><ChevronDown className="h-4 w-4" /></Button></li>)}</ol>}
           <div className="mt-5 flex max-w-full gap-1 overflow-x-auto rounded-control bg-surface-muted p-1">{TABS.map((item) => <button key={item.type} type="button" onClick={() => setTab(item.type)} className={cn("inline-flex min-h-10 shrink-0 items-center gap-2 rounded-control px-3 text-sm font-medium", tab === item.type ? "bg-surface text-ink shadow-sm" : "text-ink-soft hover:text-ink")}><item.icon className="h-4 w-4" />{item.label}</button>)}</div>
-          <div className="mt-3 divide-y divide-line rounded-card border border-line">{rows[tab].length === 0 ? <p className="p-6 text-center text-sm text-ink-faint">No {TABS.find((item) => item.type === tab)!.label.toLowerCase()} available.</p> : rows[tab].map((row) => { const included = collection.items.some((item) => item.resourceType === tab && item.resourceId === row.id); return <label key={row.id} className="flex min-h-12 cursor-pointer items-center gap-3 px-3 py-2 hover:bg-surface-muted"><span className={cn("flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold", included ? "bg-action text-action-foreground" : "bg-ink/5 text-ink-faint")}>{included ? collection.items.findIndex((item) => item.resourceType === tab && item.resourceId === row.id) + 1 : "+"}</span><span className="min-w-0 flex-1 truncate text-sm font-medium text-ink">{row.title}</span><input type="checkbox" checked={included} disabled={busyId === `${tab}:${row.id}`} onChange={() => void toggleItem(tab, row.id)} className="h-4 w-4 shrink-0 accent-accent" /></label>; })}</div>
+          <div className="mt-3 divide-y divide-line rounded-card border border-line">{rows[tab].length === 0 ? <p className="p-6 text-center text-sm text-ink-faint">No {TABS.find((item) => item.type === tab)!.label.toLowerCase()} available.</p> : rows[tab].map((row) => { const included = collection.items.some((item) => item.resourceType === tab && item.resourceId === row.id); return <label key={row.id} className="flex min-h-12 cursor-pointer items-center gap-3 px-3 py-2 hover:bg-surface-muted"><span className={cn("flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold", included ? "bg-action text-action-foreground" : "bg-ink/5 text-ink-faint")}>{included ? collection.items.findIndex((item) => item.resourceType === tab && item.resourceId === row.id) + 1 : "+"}</span><span className="min-w-0 flex-1 truncate text-sm font-medium text-ink">{row.title}</span><input type="checkbox" checked={included} disabled={busyId !== null} onChange={() => void toggleItem(tab, row.id)} className="h-4 w-4 shrink-0 accent-accent" /></label>; })}</div>
       </section>}
 
       {view === "details" && <section className="mx-auto max-w-2xl rounded-card border border-line bg-surface p-5 shadow-sm sm:p-6">

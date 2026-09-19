@@ -3,7 +3,7 @@ import { formatCorrectAnswer } from "@/lib/quiz-grading";
 import type { QuizQuestion } from "@/lib/validation/quiz";
 
 export interface BookChapter { id: string; title: string; description?: string | null; kind: "NOTE" | "REVIEWER" | "QUIZ"; content: string }
-export interface BookDocument { title: string; subtitle?: string | null; description?: string | null; author: string; tocTitle: string; chapters: BookChapter[] }
+export interface BookDocument { title: string; subtitle?: string | null; description?: string | null; author: string; tocTitle: string; chapters: BookChapter[]; assets?: Record<string, string | null> }
 
 export function quizChapterMarkdown(questions: QuizQuestion[]): string {
   const questionsText = questions.map((question, index) => {
@@ -21,11 +21,11 @@ export function collectionBookDocument(collection: PublicCollection): BookDocume
   return {
     title: collection.title, subtitle: collection.subtitle, description: collection.description,
     author: collection.ownerName, tocTitle: collection.tocTitle,
-    chapters: collection.items.map(item => {
+    chapters: collection.items.filter(item => item.resourceType !== "DIAGRAM").map(item => {
       const resource = item.resourceType === "NOTE" ? collection.notes.find(row => row.id === item.resourceId)
         : item.resourceType === "REVIEWER" ? collection.reviewers.find(row => row.id === item.resourceId)
         : collection.quizzes.find(row => row.id === item.resourceId);
-      return { id: item.id, title: resource?.title ?? "Unavailable chapter", description: resource?.description, kind: item.resourceType,
+      return { id: item.id, title: resource?.title ?? "Unavailable chapter", description: resource?.description, kind: item.resourceType as BookChapter["kind"],
         content: resource ? "content" in resource ? resource.content : quizChapterMarkdown(resource.questions as QuizQuestion[]) : "This chapter is no longer available." };
     }),
   };

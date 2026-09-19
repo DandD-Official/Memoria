@@ -1,3 +1,4 @@
+import { resolveBookDocument } from "@/lib/books/resolve";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { getPublicCollectionBySlug } from "@/lib/share-collections-repo";
@@ -33,5 +34,5 @@ export default async function PublicCollectionPage(props: { params: Promise<{ sl
   const collection = await getPublicCollectionBySlug(params.slug, true, user?.id);
   if (!collection) notFound();
 
-  return <PublicCollectionView collection={collection} />;
+  return <PublicCollectionView collection={collection} book={await resolveBookDocument(collection, gate.ownerId)} />;
 }

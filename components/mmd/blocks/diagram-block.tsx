@@ -5,6 +5,9 @@ import { Loader2, Workflow } from "lucide-react";
 import type { MmdBlockNode } from "@/lib/mmd/ast";
 import { useMmdRenderContext } from "@/components/mmd/render-context";
 
+import { diagramToSvg } from "@/lib/diagrams/svg";
+import { diagramDataSchema } from "@/lib/diagrams/schema";
+
 type ResolveState = "loading" | "found" | "not-found";
 
 /**
@@ -21,12 +24,16 @@ type ResolveState = "loading" | "found" | "not-found";
  * difference to show the reader in either case.
  */
 export function DiagramPlaceholder({ node }: { node: MmdBlockNode }) {
-  const { mode, assetRegistry } = useMmdRenderContext();
+  const { mode, assetRegistry, resolvedAssets } = useMmdRenderContext();
   const [state, setState] = useState<ResolveState>("loading");
   const [title, setTitle] = useState<string | null>(null);
   const diagramId = node.attrs.id;
+  const [imageUrl, setImageUrl] = useState("");
+  const resolved = resolvedAssets?.[`diagram://${diagramId}`];
 
   useEffect(() => {
+    if (resolved !== undefined) { setState(resolved ? "found" : "not-found"); setImageUrl(resolved ?? ""); return; }
+    setState("loading");
     const controller = new AbortController();
     const finishAsset = assetRegistry?.begin(`diagram:${diagramId}`);
     if (!diagramId) {
@@ -37,7 +44,9 @@ export function DiagramPlaceholder({ node }: { node: MmdBlockNode }) {
     fetch(`/api/diagrams/${encodeURIComponent(diagramId)}`, { signal: controller.signal })
       .then((res) => (res.ok ? res.json() : null))
       .then((body) => {
-        if (body?.diagram) {
+        const parsed = diagramDataSchema.safeParse(body?.diagram?.data);
+        if (body?.diagram && parsed.success) {
+          setImageUrl(`data:image/svg+xml;charset=utf-8,${encodeURIComponent(diagramToSvg(parsed.data))}`);
           setTitle(body.diagram.title as string);
           setState("found");
         } else {
@@ -53,7 +62,7 @@ export function DiagramPlaceholder({ node }: { node: MmdBlockNode }) {
       controller.abort();
       finishAsset?.();
     };
-  }, [assetRegistry, diagramId]);
+  }, [assetRegistry, diagramId, resolved]);
 
   if (state === "loading") {
     return (
@@ -67,12 +76,8 @@ export function DiagramPlaceholder({ node }: { node: MmdBlockNode }) {
   if (state === "found") {
     return (
       <figure data-mmd-asset-state="ready" className="my-4 overflow-hidden rounded-lg border border-line">
-        {/* No snapshot may exist yet (a diagram saved before ever being
-            rendered once from the editor) — the browser's built-in
-            broken-image fallback is acceptable here since it's paired
-            with the title text right below it, not the only signal. */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={`/api/diagrams/${encodeURIComponent(diagramId)}/preview`} alt={title ?? "Diagram"} loading={mode === "export" ? "eager" : "lazy"} decoding={mode === "export" ? "sync" : "async"} className="w-full" />
+        <img src={imageUrl} alt={title ?? "Diagram"} loading={mode === "export" ? "eager" : "lazy"} decoding={mode === "export" ? "sync" : "async"} className="w-full" />
         <figcaption className="border-t border-line bg-surface px-3 py-2 text-center text-xs text-ink-soft">
           {node.attrs.caption || title}
         </figcaption>
@@ -81,7 +86,7 @@ export function DiagramPlaceholder({ node }: { node: MmdBlockNode }) {
   }
 
   return (
-    <figure className="my-4 flex flex-col items-center rounded-lg border border-dashed border-line bg-ink/[0.02] p-8 text-center">
+    <figure data-mmd-asset-state="error" className="my-4 flex flex-col items-center rounded-lg border border-dashed border-line bg-ink/[0.02] p-8 text-center">
       <Workflow className="h-6 w-6 text-ink-faint" aria-hidden="true" />
       <p className="mt-2 text-sm text-ink-soft">Diagram not found.</p>
       <p className="mt-0.5 font-mono text-xs text-ink-faint">id: {diagramId}</p>

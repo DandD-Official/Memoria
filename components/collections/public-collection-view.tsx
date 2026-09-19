@@ -1,9 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import Link from "next/link";
 import { BookMarked, MessageSquare, ChevronLeft, ChevronRight, RefreshCw, ArrowLeft, Pencil, LogIn } from "lucide-react";
-import { MarkdownRenderer } from "@/components/markdown/renderer";
+import { BookReader } from "@/components/books/book-reader";
+import type { BookDocument } from "@/lib/books/document";
+import { MmdRenderer as MarkdownRenderer } from "@/components/mmd/renderer";
 import { QuestionInput } from "@/components/quizzes/question-input";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -20,10 +22,10 @@ import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { ExportMenu } from "@/components/exports/export-menu";
 import type { ExportProgressHandler } from "@/lib/export/types";
 
-export function PublicCollectionView({ collection }: { collection: PublicCollection }) {
+export function PublicCollectionView({ collection, book }: { collection: PublicCollection; book: BookDocument }) {
   const firstItemId = collection.lastReadItemId && collection.items.some((item) => item.id === collection.lastReadItemId) ? collection.lastReadItemId : collection.items[0]?.id ?? null;
   const [activeItemId, setActiveItemId] = useState<string | null>(firstItemId);
-  const [readerView, setReaderView] = useState<"book" | "feedback">("book");
+  const [readerView, setReaderView] = useState<"book" | "practice" | "feedback">("book");
   const [mobilePage, setMobilePage] = useState<"contents" | "chapter">("contents");
   const [feedback, setFeedback] = useState(collection.feedback);
   const activeIndex = Math.max(0, collection.items.findIndex((item) => item.id === activeItemId));
@@ -36,19 +38,17 @@ export function PublicCollectionView({ collection }: { collection: PublicCollect
     return collection.quizzes.find((entry) => entry.id === item.resourceId)?.title ?? "Unavailable quiz";
   }
 
-  function openChapter(itemId: string) {
+  const openChapter = useCallback((itemId: string) => {
     setActiveItemId(itemId);
-    setMobilePage("chapter");
-    if (collection.viewerUserId) void fetch(`/api/collections/${collection.id}/progress`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ lastItemId: itemId }) });
-  }
+    if (collection.viewerUserId) void fetch(`/api/collections/${collection.id}/progress`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ lastItemId: itemId }) }).catch(() => {});
+  }, [collection.id, collection.viewerUserId]);
 
   async function exportBook(format: string, onProgress?: ExportProgressHandler) {
     if (format === "json") { window.location.href = `/api/collections/public/${collection.slug}/export?format=json`; return; }
     const response = await fetch(`/api/collections/public/${collection.slug}/export`);
     const data = await response.json().catch(() => null);
     if (!response.ok) throw new Error(data?.error ?? "Couldn't export this Book.");
-    if (format === "pdf") { const { exportBookToPdf } = await import("@/lib/pdf-export"); await exportBookToPdf(data.title, data.markdown, { subtitle: data.subtitle, description: data.description, author: data.ownerName }, onProgress); }
-    if (format === "docx") { const { exportBookToWord } = await import("@/lib/word-export"); await exportBookToWord(data.title, data.markdown, { subtitle: data.subtitle, description: data.description, author: data.ownerName }, onProgress); }
+    if (format === "pdf" || format === "docx") { const { downloadBook } = await import("@/lib/books/download"); await downloadBook(data.book, format, onProgress); }
   }
 
   return (
@@ -60,7 +60,7 @@ export function PublicCollectionView({ collection }: { collection: PublicCollect
               <ArrowLeft className="h-4 w-4" /><BookMarked className="h-4 w-4 text-accent-dark" /> Back to Memoria
             </Link>
             <div className="flex flex-wrap items-center gap-2">
-              {collection.canExport && <ExportMenu options={[{ value: "pdf", label: "PDF document" }, { value: "docx", label: "Word document" }, { value: "json", label: "Memoria JSON" }]} onExport={exportBook} />}
+              {collection.canExport && <ExportMenu options={[{ value: "pdf", label: "PDF ? matching pages" }, { value: "docx", label: "Word ? matching pages" }, { value: "json", label: "Memoria JSON" }]} onExport={exportBook} />}
               <Badge tone={collection.viewerPermission === "VIEW" ? "neutral" : "accent"}>{collection.viewerPermission === "OWNER" ? "Owner" : collection.viewerPermission === "EDIT" ? "Editor" : "Viewer"}</Badge>
               {collection.viewerPermission === "EDIT" || collection.viewerPermission === "OWNER" ? collection.viewerUserId ? <Link href={`/books/${collection.id}`} className="inline-flex h-9 items-center gap-2 rounded-control border border-line px-3 text-sm font-medium text-ink hover:bg-surface-muted"><Pencil className="h-4 w-4" />Edit</Link> : <Link href={`/login?callbackUrl=${encodeURIComponent(`/c/${collection.slug}`)}`} className="inline-flex h-9 items-center gap-2 rounded-control border border-line px-3 text-sm font-medium text-ink hover:bg-surface-muted"><LogIn className="h-4 w-4" />Sign in to edit</Link> : null}
               <ThemeToggle />
@@ -72,32 +72,12 @@ export function PublicCollectionView({ collection }: { collection: PublicCollect
       <main className="mx-auto max-w-7xl px-3 py-6 sm:px-6 sm:py-10">
         <nav aria-label="Book sections" className="mb-5 flex w-full gap-1 rounded-card border border-line bg-surface-muted p-1 sm:w-fit">
           <button type="button" aria-current={readerView === "book" ? "page" : undefined} onClick={() => setReaderView("book")} className={cn("inline-flex min-h-10 flex-1 items-center justify-center gap-2 rounded-control px-4 text-sm font-medium transition-colors sm:flex-none", readerView === "book" ? "bg-surface text-ink shadow-sm" : "text-ink-soft hover:text-ink")}><BookMarked className="h-4 w-4" />Read Book</button>
+          <button type="button" aria-current={readerView === "practice" ? "page" : undefined} onClick={() => setReaderView("practice")} className={cn("min-h-10 rounded-control px-4 text-sm font-medium", readerView === "practice" ? "bg-surface text-ink shadow-sm" : "text-ink-soft")}>Practice</button>
           <button type="button" aria-current={readerView === "feedback" ? "page" : undefined} onClick={() => setReaderView("feedback")} className={cn("inline-flex min-h-10 flex-1 items-center justify-center gap-2 rounded-control px-4 text-sm font-medium transition-colors sm:flex-none", readerView === "feedback" ? "bg-surface text-ink shadow-sm" : "text-ink-soft hover:text-ink")}><MessageSquare className="h-4 w-4" />Discussion</button>
         </nav>
 
-        {readerView === "book" && <FullscreenView title={collection.title} description="Full-screen Book reader"><section className="relative overflow-hidden rounded-[1.35rem] border border-line-strong bg-action p-2 shadow-card-hover sm:p-3">
-          <div className="pointer-events-none absolute inset-y-3 left-[35%] z-10 hidden w-8 -translate-x-1/2 bg-gradient-to-r from-transparent via-ink/15 to-transparent lg:block" aria-hidden="true" />
-          <div className="grid min-h-[42rem] overflow-hidden rounded-[0.9rem] lg:grid-cols-[35%_65%]">
-            <aside className={cn("min-w-0 bg-surface-muted px-5 py-8 text-ink sm:px-8 sm:py-10 lg:block lg:border-r lg:border-line", mobilePage === "contents" ? "block" : "hidden")}>
-              <div className="flex items-center gap-2 text-[0.65rem] font-semibold uppercase tracking-[0.25em] text-accent-dark"><BookMarked className="h-4 w-4" />Memoria Book</div>
-              <h1 className="mt-8 font-display text-3xl leading-tight">{collection.title}</h1>{collection.subtitle && <p className="mt-2 font-display text-lg italic text-ink-soft">{collection.subtitle}</p>}<p className="mt-3 text-xs text-ink-faint">By {collection.ownerName}</p>
-              {collection.description && <p className="mt-5 text-sm leading-6 text-ink-soft">{collection.description}</p>}
-              <div className="mt-8 border-t border-line pt-6"><p className="text-[0.65rem] font-semibold uppercase tracking-[0.2em] text-ink-faint">Table of contents</p><h2 className="mt-1 font-display text-2xl">{collection.tocTitle}</h2>
-                {collection.items.length === 0 ? <p className="mt-5 text-sm text-ink-faint">This book is waiting for its first note.</p> : <ol className="mt-5 space-y-1">{collection.items.map((item, index) => <li key={item.id}><button type="button" aria-current={item.id === activeItemId ? "page" : undefined} onClick={() => openChapter(item.id)} className={cn("flex w-full min-w-0 items-center gap-3 border-b border-line py-3 text-left text-ink-soft transition-colors hover:text-accent-dark", item.id === activeItemId && "text-accent-dark")}><span className="w-6 shrink-0 font-display text-base">{String(index + 1).padStart(2, "0")}</span><span className="min-w-0 flex-1 truncate text-sm font-medium">{chapterTitle(item)}</span>{item.id === collection.lastReadItemId && <span className="rounded-full bg-accent-soft px-2 py-0.5 text-[0.6rem] font-semibold uppercase tracking-wide text-accent-dark">Continue</span>}</button></li>)}</ol>}
-              </div>
-            </aside>
-
-            <article className={cn("min-w-0 bg-surface-raised px-5 py-8 text-ink sm:px-10 sm:py-12 lg:block lg:px-14", mobilePage === "chapter" ? "block" : "hidden")}>
-              <button type="button" onClick={() => setMobilePage("contents")} className="mb-6 inline-flex min-h-10 items-center gap-2 text-sm font-medium text-ink-soft hover:text-ink lg:hidden"><ChevronLeft className="h-4 w-4" />Contents</button>
-              {!activeItem || !activeResource ? <div className="flex min-h-[32rem] items-center justify-center text-center"><div><BookMarked className="mx-auto h-8 w-8 text-accent-dark" /><p className="mt-4 font-display text-2xl">The pages are waiting.</p><p className="mt-2 text-sm text-ink-faint">The owner hasn&apos;t added a chapter yet.</p></div></div> : <>
-                <div className="flex items-center justify-between gap-4 border-b border-line pb-4"><p className="text-[0.65rem] font-semibold uppercase tracking-[0.2em] text-ink-faint">Chapter {activeIndex + 1} of {collection.items.length}</p><span className="text-[0.65rem] font-semibold uppercase tracking-wide text-ink-faint">{activeItem.resourceType === "NOTE" ? "Note" : activeItem.resourceType === "REVIEWER" ? "Reviewer" : "Quiz"}</span></div>
-                <h2 className="mt-7 font-display text-3xl leading-tight sm:text-4xl">{activeResource.title}</h2>{activeResource.description && <p className="mt-3 text-sm italic leading-6 text-ink-soft">{activeResource.description}</p>}
-                <div className="mt-8 min-w-0">{activeItem.resourceType === "QUIZ" ? <PublicQuiz title={activeResource.title} description={null} questions={(activeResource as PublicCollection["quizzes"][number]).questions as QuizQuestion[]} /> : <><MarkdownRenderer content={(activeResource as PublicCollection["notes"][number]).content} />{activeItem.resourceType === "REVIEWER" && extractFlashcardsFromMarkdown((activeResource as PublicCollection["reviewers"][number]).content).length > 0 && <div className="mt-10 border-t border-line pt-8"><h3 className="mb-4 font-display text-2xl">Review cards</h3><PublicFlashcardDeck cards={extractFlashcardsFromMarkdown((activeResource as PublicCollection["reviewers"][number]).content)} /></div>}</>}</div>
-                <div className="mt-12 flex items-center justify-between border-t border-line pt-5"><button type="button" disabled={activeIndex === 0} onClick={() => openChapter(collection.items[activeIndex - 1].id)} className="inline-flex items-center gap-2 text-sm font-medium text-ink-soft hover:text-accent-dark disabled:opacity-25"><ChevronLeft className="h-4 w-4" />Previous</button><span className="font-display text-sm text-ink-faint">{activeIndex + 1}</span><button type="button" disabled={activeIndex === collection.items.length - 1} onClick={() => openChapter(collection.items[activeIndex + 1].id)} className="inline-flex items-center gap-2 text-sm font-medium text-ink-soft hover:text-accent-dark disabled:opacity-25">Next<ChevronRight className="h-4 w-4" /></button></div>
-              </>}
-            </article>
-          </div>
-        </section></FullscreenView>}
+        {readerView === "book" && <FullscreenView title={collection.title} description="Full-screen Book reader"><h1 className="sr-only">{collection.title}</h1><BookReader book={book} resumeChapter={collection.lastReadItemId} onChapterChange={openChapter} /></FullscreenView>}
+        {readerView === "practice" && <section className="mx-auto max-w-3xl space-y-6 rounded-card border border-line bg-surface p-5 sm:p-8"><div><h1 className="font-display text-3xl">Practice & recall</h1><p className="mt-2 text-sm text-ink-soft">Read your notes, flip review cards, and try a quiz.</p></div><label className="block text-sm font-medium">Chapter<select className="mt-2 h-11 w-full rounded-control border border-line bg-surface px-3" value={activeItemId ?? ""} onChange={event => openChapter(event.target.value)}>{collection.items.map(item => <option key={item.id} value={item.id}>{chapterTitle(item)}</option>)}</select></label>{activeItem && activeResource ? activeItem.resourceType === "QUIZ" ? <PublicQuiz key={activeItem.id} title={activeResource.title} description={activeResource.description} questions={(activeResource as PublicCollection["quizzes"][number]).questions as QuizQuestion[]} /> : <><MarkdownRenderer content={(activeResource as PublicCollection["notes"][number]).content} resolvedAssets={book.assets} />{activeItem.resourceType === "REVIEWER" && extractFlashcardsFromMarkdown((activeResource as PublicCollection["reviewers"][number]).content).length > 0 && <PublicFlashcardDeck key={activeItem.id} cards={extractFlashcardsFromMarkdown((activeResource as PublicCollection["reviewers"][number]).content)} />}</> : <p className="text-sm text-ink-soft">Add a chapter to start practicing.</p>}</section>}
 
         {readerView === "feedback" && <FeedbackSection slug={collection.slug} viewerUserId={collection.viewerUserId} feedback={feedback} onSubmitted={(f) => setFeedback((prev) => [...prev, f])} onChanged={setFeedback} />}
       </main>
@@ -180,7 +160,7 @@ function PublicFlashcardDeck({ cards }: { cards: { front: string; back: string }
       <div
         onClick={() => setFlipped((f) => !f)}
         className={cn(
-          "card flex min-h-[180px] cursor-pointer items-center justify-center p-8 text-center transition-colors",
+          "card flex w-full min-h-[180px] cursor-pointer items-center justify-center p-8 text-center transition-colors",
           flipped ? "bg-accent-soft/40" : "bg-surface"
         )}
       >

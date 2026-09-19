@@ -1,4 +1,5 @@
 @import "./mmd-export.css";
+@import "./book.css";
 
 @tailwind base;
 @tailwind components;

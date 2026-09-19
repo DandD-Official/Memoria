@@ -1,110 +1,197 @@
 "use client";
 
-import { useEffect, useMemo, useState, type PointerEvent as ReactPointerEvent } from "react";
-import { Check, Circle, Copy, Diamond, Maximize2, Plus, Redo2, Save, Square, Undo2, X, ZoomIn, ZoomOut } from "lucide-react";
+import { useEffect, useId, useRef, useState, type PointerEvent, type KeyboardEvent } from "react";
+import { ArrowDown, ArrowRight, Copy, Download, Hand, Maximize2, MousePointer2, Plus, Redo2, Save, Trash2, Undo2, ZoomIn, ZoomOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Tooltip } from "@/components/ui/tooltip";
-import { emptyDiagramData, type DiagramData, type DiagramEdge, type DiagramNode } from "@/lib/diagrams/schema";
-import { diagramToSvg, getDiagramBounds } from "@/lib/diagrams/svg";
+import { emptyDiagramData, SHAPE_TYPES, diagramDataSchema, type DiagramData, type DiagramNode } from "@/lib/diagrams/schema";
+import { diagramArrow, diagramEdgeMarkup, diagramNodeMarkup, diagramToSvg, getDiagramBounds, type DiagramBounds } from "@/lib/diagrams/svg";
+import { addConnectedNode, arrangeDiagram, attachNearby, diagramTemplate, snap } from "@/lib/diagrams/workspace";
 
-type DiagramSummary = { id: string; title: string; updatedAt: string };
-const W = 900;
-const H = 560;
-const palette = [
-  { shape: "rectangle", label: "Rectangle", icon: Square },
-  { shape: "rounded-rectangle", label: "Rounded", icon: Square },
-  { shape: "circle", label: "Circle", icon: Circle },
-  { shape: "ellipse", label: "Ellipse", icon: Circle },
-  { shape: "diamond", label: "Decision", icon: Diamond },
-  { shape: "parallelogram", label: "Input", icon: Square },
-  { shape: "cylinder", label: "Cylinder", icon: Square },
-  { shape: "document", label: "Document", icon: Square },
-  { shape: "database", label: "Database", icon: Square },
-] as const;
+type Summary = { id: string; title: string; updatedAt: string };
+type Gesture = { kind: "move" | "resize" | "pan"; x: number; y: number; clientX: number; clientY: number; before: DiagramData; ids: string[]; camera: DiagramBounds; scale: number };
+const control = "h-10 w-full rounded-control border border-line-strong bg-surface px-3 text-sm text-ink";
+const signature = (title: string, data: DiagramData) => JSON.stringify([title, data]);
 
-function makeNode(shape: DiagramNode["shape"], index: number): DiagramNode {
-  return { id: `node-${Date.now()}-${index}`, shape, x: 100 + (index % 3) * 240, y: 90 + Math.floor(index / 3) * 150, width: 150, height: 70, label: "New step", style: { fill: "#fffaf0", stroke: "#9b7653", strokeWidth: 2, fontSize: 14, textAlign: "center" } };
-}
-
-function nodePath(node: DiagramNode): string {
-  if (node.shape === "diamond" || node.shape === "decision") return `M ${node.x + node.width / 2} ${node.y} L ${node.x + node.width} ${node.y + node.height / 2} L ${node.x + node.width / 2} ${node.y + node.height} L ${node.x} ${node.y + node.height / 2} Z`;
-  if (node.shape === "circle" || node.shape === "ellipse") return "";
-  if (node.shape === "parallelogram") return `M ${node.x + 18} ${node.y} h ${node.width - 18} l -18 ${node.height} h -${node.width - 18} Z`;
-  if (node.shape === "document") return `M ${node.x} ${node.y} h ${node.width} v ${node.height - 12} q -${node.width / 4} 24 -${node.width / 2} 0 q -${node.width / 4} -24 -${node.width / 2} 0 Z`;
-  return `M ${node.x} ${node.y} h ${node.width} v ${node.height} h -${node.width} Z`;
-}
-
-function center(node: DiagramNode) { return { x: node.x + node.width / 2, y: node.y + node.height / 2 }; }
-
-export function DiagramEditor({ initialDiagrams, initialDiagramId }: { initialDiagrams: DiagramSummary[]; initialDiagramId?: string }) {
-  const initialDiagram = initialDiagrams.find(diagram => diagram.id === initialDiagramId) ?? initialDiagrams[0];
+export function DiagramEditor({ initialDiagrams, initialDiagramId, onInsert, onDirtyChange }: { initialDiagrams: Summary[]; initialDiagramId?: string; onInsert?: (id: string) => void; onDirtyChange?: (dirty: boolean) => void }) {
+  const initial = initialDiagrams.find(item => item.id === initialDiagramId) ?? initialDiagrams[0];
   const [diagrams, setDiagrams] = useState(initialDiagrams);
-  const [selectedId, setSelectedId] = useState<string | null>(initialDiagram?.id ?? null);
-  const [title, setTitle] = useState(initialDiagram?.title ?? "Untitled diagram");
+  const [id, setId] = useState<string | null>(initial?.id ?? null);
+  const [title, setTitle] = useState(initial?.title ?? "Untitled diagram");
   const [data, setData] = useState<DiagramData>(emptyDiagramData);
-  const [history, setHistory] = useState<DiagramData[]>([]);
-  const [future, setFuture] = useState<DiagramData[]>([]);
-  const [selectedNode, setSelectedNode] = useState<string | null>(null);
-  const [connectFrom, setConnectFrom] = useState<string | null>(null);
-  const [drag, setDrag] = useState<{ id: string; dx: number; dy: number } | null>(null);
-  const [resize, setResize] = useState<{ id: string; startX: number; startY: number; width: number; height: number } | null>(null);
-  const [pan, setPan] = useState({ x: 0, y: 0 });
-  const [panDrag, setPanDrag] = useState<{ x: number; y: number; startX: number; startY: number } | null>(null);
-  const [zoom, setZoom] = useState(1);
-  const [saving, setSaving] = useState(false);
-  const [message, setMessage] = useState("");
-  const selected = useMemo(() => data.nodes.find((node) => node.id === selectedNode), [data.nodes, selectedNode]);
+  const [saved, setSaved] = useState(() => signature(initial?.title ?? "Untitled diagram", emptyDiagramData()));
+  const [history, setHistory] = useState<DiagramData[]>([]), [future, setFuture] = useState<DiagramData[]>([]);
+  const [selection, setSelection] = useState<string[]>([]);
+  const [camera, setCamera] = useState<DiagramBounds>({ x: 0, y: 0, width: 1000, height: 620 });
+  const [tool, setTool] = useState<"select" | "pan">("select");
+  const [grid, setGrid] = useState(true), [autoConnect, setAutoConnect] = useState(true);
+  const [shape, setShape] = useState<DiagramNode["shape"]>("rounded-rectangle");
+  const [loading, setLoading] = useState(Boolean(initial)), [saving, setSaving] = useState(false);
+  const [error, setError] = useState(""), [message, setMessage] = useState("");
+  const svg = useRef<SVGSVGElement>(null), gesture = useRef<Gesture | null>(null);
+  const latest = useRef(data); latest.current = data;
+  const request = useRef<AbortController | null>(null);
+  const marker = `arrow-${useId().replaceAll(":", "")}`;
+  const selected = data.nodes.find(node => node.id === selection[0]);
+  const dirty = saved !== signature(title, data), busy = loading || saving;
 
-  useEffect(() => { if (selectedId && data.nodes.length === 0) void selectDiagram(selectedId); // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (initial) void load(initial.id);
+    return () => request.current?.abort();
+    // Subsequent choices are loaded by the saved-diagram control.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+  useEffect(() => { onDirtyChange?.(dirty); }, [dirty, onDirtyChange]);
+  useEffect(() => {
+    if (!dirty) return;
+    const protect = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = ""; };
+    window.addEventListener("beforeunload", protect); return () => window.removeEventListener("beforeunload", protect);
+  }, [dirty]);
 
-  function change(next: DiagramData) { setHistory((items) => [...items.slice(-29), data]); setFuture([]); setData(next); }
-  function addNode(shape: DiagramNode["shape"]) { change({ ...data, nodes: [...data.nodes, makeNode(shape, data.nodes.length)] }); }
-  function updateNode(id: string, patch: Partial<DiagramNode>) { change({ ...data, nodes: data.nodes.map((node) => node.id === id ? { ...node, ...patch } : node) }); }
-  function removeSelected() { if (!selectedNode) return; change({ ...data, nodes: data.nodes.filter((node) => node.id !== selectedNode), edges: data.edges.filter((edge) => edge.source !== selectedNode && edge.target !== selectedNode) }); setSelectedNode(null); }
-  function duplicateSelected() { if (!selected) return; const copy = { ...selected, id: `node-${Date.now()}`, x: selected.x + 30, y: selected.y + 30 }; change({ ...data, nodes: [...data.nodes, copy] }); setSelectedNode(copy.id); }
-  function undo() { const previous = history.at(-1); if (!previous) return; setFuture((items) => [...items, data]); setData(previous); setHistory((items) => items.slice(0, -1)); }
-  function redo() { const next = future.at(-1); if (!next) return; setHistory((items) => [...items, data]); setData(next); setFuture((items) => items.slice(0, -1)); }
-  function clickNode(id: string) { if (connectFrom && connectFrom !== id) { const edge: DiagramEdge = { id: `edge-${Date.now()}`, source: connectFrom, target: id, directional: true, style: { strokeWidth: 2 } }; change({ ...data, edges: [...data.edges, edge] }); setConnectFrom(null); return; } setSelectedNode(id); }
-  function localPoint(event: ReactPointerEvent<SVGSVGElement | SVGGElement>) { const svg = (event.currentTarget.ownerSVGElement ?? event.currentTarget) as SVGSVGElement; const point = svg.createSVGPoint(); point.x = event.clientX; point.y = event.clientY; const matrix = svg.getScreenCTM(); return matrix?.inverse().transformPoint(point); }
-  function pointerDown(event: ReactPointerEvent<SVGGElement>, node: DiagramNode) { const local = localPoint(event); if (!local) return; setHistory((items) => [...items.slice(-29), data]); setFuture([]); setDrag({ id: node.id, dx: local.x - node.x, dy: local.y - node.y }); }
-  function resizeStart(event: ReactPointerEvent<SVGRectElement>, node: DiagramNode) { event.stopPropagation(); const local = localPoint(event); if (!local) return; setHistory((items) => [...items.slice(-29), data]); setFuture([]); setResize({ id: node.id, startX: local.x, startY: local.y, width: node.width, height: node.height }); }
-  function canvasDown(event: ReactPointerEvent<SVGSVGElement>) { if (event.target !== event.currentTarget) return; setPanDrag({ x: pan.x, y: pan.y, startX: event.clientX, startY: event.clientY }); }
-  function pointerMove(event: ReactPointerEvent<SVGSVGElement>) { const local = localPoint(event); if (!local) return; if (panDrag) { setPan({ x: panDrag.x - (event.clientX - panDrag.startX) / zoom, y: panDrag.y - (event.clientY - panDrag.startY) / zoom }); return; } if (resize) { setData((current) => ({ ...current, nodes: current.nodes.map((node) => node.id === resize.id ? { ...node, width: Math.max(60, Math.min(2000, resize.width + local.x - resize.startX)), height: Math.max(40, Math.min(1200, resize.height + local.y - resize.startY)) } : node) })); return; } if (!drag) return; setData((current) => ({ ...current, nodes: current.nodes.map((node) => node.id === drag.id ? { ...node, x: Math.max(-5000, Math.min(5000, local.x - drag.dx)), y: Math.max(-5000, Math.min(5000, local.y - drag.dy)) } : node) })); }
-
-  async function save() {
-    setSaving(true); setMessage("");
-    const body = JSON.stringify({ title: title.trim() || "Untitled diagram", data });
-    const response = await fetch(selectedId ? `/api/diagrams/${selectedId}` : "/api/diagrams", { method: selectedId ? "PATCH" : "POST", headers: { "Content-Type": "application/json" }, body });
-    const result = await response.json().catch(() => null);
-    if (response.ok && result?.diagram) {
-      const diagram = result.diagram as { id: string; title: string; updatedAt: string; data: DiagramData };
-      setSelectedId(diagram.id); setTitle(diagram.title); setData(diagram.data); setDiagrams((items) => [{ id: diagram.id, title: diagram.title, updatedAt: diagram.updatedAt }, ...items.filter((item) => item.id !== diagram.id)]);
-      const svg = `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(diagramToSvg(data))))}`;
-      await fetch(`/api/diagrams/${diagram.id}/preview`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ dataUrl: svg }) }).catch(() => {});
-      setMessage("Saved");
-    } else setMessage(result?.error ?? "Could not save diagram.");
-    setSaving(false);
+  function change(next: DiagramData, before = data) {
+    if (JSON.stringify(next) === JSON.stringify(before)) return;
+    setHistory(items => [...items.slice(-59), before]); setFuture([]); setData(next); setMessage("");
+  }
+  function update(patch: Partial<DiagramNode>) { change({ ...data, nodes: data.nodes.map(node => selection.includes(node.id) ? { ...node, ...patch } : node) }); }
+  function style(patch: NonNullable<DiagramNode["style"]>) { change({ ...data, nodes: data.nodes.map(node => selection.includes(node.id) ? { ...node, style: { ...node.style, ...patch } } : node) }); }
+  function fit(next = data) { setCamera(getDiagramBounds(next)); }
+  function zoom(factor: number) { setCamera(current => { const width = Math.min(12000, Math.max(250, current.width * factor)), height = width * current.height / current.width; return { x: current.x + (current.width - width) / 2, y: current.y + (current.height - height) / 2, width, height }; }); }
+  function add(direction: "right" | "down" = "right") {
+    if (data.nodes.length >= 500 || data.edges.length >= 1000) { setError("This diagram has reached its size limit. Start a second diagram."); return; }
+    const result = addConnectedNode(data, shape, autoConnect ? selection[0] : undefined, direction);
+    change(result.data); setSelection([result.node.id]); fit(result.data);
+  }
+  function remove() { change({ ...data, nodes: data.nodes.filter(node => !selection.includes(node.id)), edges: data.edges.filter(edge => !selection.includes(edge.source) && !selection.includes(edge.target)) }); setSelection([]); }
+  function duplicate() {
+    if (data.nodes.length + selection.length > 500) { setError("Too many nodes to duplicate. Start a second diagram."); return; }
+    const ids = new Map(selection.map(id => [id, crypto.randomUUID()]));
+    const nodes = data.nodes.filter(node => ids.has(node.id)).map(node => ({ ...node, id: ids.get(node.id)!, x: node.x + 40, y: node.y + 40 }));
+    const edges = data.edges.filter(edge => ids.has(edge.source) && ids.has(edge.target)).map(edge => ({ ...edge, id: crypto.randomUUID(), source: ids.get(edge.source)!, target: ids.get(edge.target)! }));
+    if (data.edges.length + edges.length > 1000) return;
+    change({ ...data, nodes: [...data.nodes, ...nodes], edges: [...data.edges, ...edges] }); setSelection(nodes.map(node => node.id));
+  }
+  function undo() { const previous = history.at(-1); if (previous) { setFuture(items => [...items, data]); setHistory(items => items.slice(0, -1)); setData(previous); setSelection([]); } }
+  function redo() { const next = future.at(-1); if (next) { setHistory(items => [...items, data]); setFuture(items => items.slice(0, -1)); setData(next); setSelection([]); } }
+  function arrange(direction: "right" | "down") { const next = arrangeDiagram(data, direction); change(next); fit(next); }
+  function align(axis: "x" | "y") { if (selected) update({ [axis]: selected[axis] }); }
+  function template(kind: "flow" | "mindmap") {
+    if (data.nodes.length && !window.confirm("Replace this canvas with a template? You can undo this change.")) return;
+    const next = diagramTemplate(kind); change(next); setSelection([next.nodes[0].id]); fit(next);
+  }
+  function discard() { return !dirty || window.confirm("Discard unsaved changes to this diagram?"); }
+  function fresh() { if (!discard()) return; request.current?.abort(); setId(null); setTitle("Untitled diagram"); setData(emptyDiagramData()); setSaved(signature("Untitled diagram", emptyDiagramData())); setHistory([]); setFuture([]); setSelection([]); setError(""); setMessage(""); fit(emptyDiagramData()); }
+  async function load(nextId: string) {
+    request.current?.abort(); const controller = new AbortController(); request.current = controller;
+    setLoading(true); setError("");
+    try {
+      const response = await fetch(`/api/diagrams/${encodeURIComponent(nextId)}`, { signal: controller.signal });
+      const body = await response.json();
+      if (!response.ok || !body.diagram) throw new Error(body.error ?? "Could not open this diagram.");
+      const diagram = body.diagram, next = diagramDataSchema.parse(diagram.data);
+      if (controller.signal.aborted) return;
+      setId(diagram.id); setTitle(diagram.title); setData(next); setSaved(signature(diagram.title, next)); setHistory([]); setFuture([]); setSelection([]); setMessage(""); fit(next);
+    } catch (reason) { if (!controller.signal.aborted) setError(reason instanceof Error ? reason.message : "Could not open this diagram."); }
+    finally { if (!controller.signal.aborted) setLoading(false); }
+  }
+  async function save(insert = false) {
+    setSaving(true); setError(""); setMessage("");
+    try {
+      const response = await fetch(id ? `/api/diagrams/${id}` : "/api/diagrams", { method: id ? "PATCH" : "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ title: title.trim() || "Untitled diagram", data }) });
+      const result = await response.json().catch(() => null);
+      if (!response.ok || !result?.diagram) throw new Error(result?.error ?? "Could not save this diagram. Please try again.");
+      const diagram = result.diagram, next = diagramDataSchema.parse(diagram.data);
+      setId(diagram.id); setTitle(diagram.title); setData(next); setSaved(signature(diagram.title, next));
+      setDiagrams(items => [{ id: diagram.id, title: diagram.title, updatedAt: diagram.updatedAt }, ...items.filter(item => item.id !== diagram.id)]);
+      void fetch(`/api/diagrams/${diagram.id}/preview`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ dataUrl: `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(diagramToSvg(next))))}` }) }).catch(() => {});
+      setMessage("All changes saved"); if (insert) onInsert?.(diagram.id);
+    } catch (reason) { setError(reason instanceof Error ? reason.message : "Could not save this diagram."); }
+    finally { setSaving(false); }
+  }
+  function download() {
+    const url = URL.createObjectURL(new Blob([diagramToSvg(data)], { type: "image/svg+xml" }));
+    const link = document.createElement("a"); link.href = url; link.download = `${title.replace(/[^\p{L}\p{N} _-]/gu, "").trim() || "diagram"}.svg`; link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+  async function copyEmbed() {
+    try { await navigator.clipboard.writeText(`:::diagram{id="${id}"}\n:::`); setMessage("Diagram reference copied. Paste it into a memory."); }
+    catch { setError("Clipboard access is unavailable. Use the Diagram button in your memory editor to insert this diagram."); }
+  }
+  function point(event: PointerEvent) { return new DOMPoint(event.clientX, event.clientY).matrixTransform(svg.current!.getScreenCTM()!.inverse()); }
+  function start(event: PointerEvent, node?: DiagramNode, resize = false) {
+    if (busy || event.button !== 0) return;
+    event.stopPropagation(); event.preventDefault(); svg.current?.focus();
+    const p = point(event); let ids = selection;
+    if (node && tool === "select") {
+      ids = event.shiftKey ? selection.includes(node.id) ? selection.filter(id => id !== node.id) : [...selection, node.id] : selection.includes(node.id) ? selection : [node.id];
+      setSelection(ids);
+    } else if (tool === "select") { setSelection([]); ids = []; }
+    gesture.current = { kind: resize ? "resize" : node && tool === "select" ? "move" : "pan", x: p.x, y: p.y, clientX: event.clientX, clientY: event.clientY, before: data, ids, camera, scale: svg.current!.getScreenCTM()!.a };
+    svg.current!.setPointerCapture(event.pointerId);
+  }
+  function move(event: PointerEvent<SVGSVGElement>) {
+    const current = gesture.current; if (!current) return;
+    if (current.kind === "pan") { setCamera({ ...current.camera, x: current.camera.x - (event.clientX - current.clientX) / current.scale, y: current.camera.y - (event.clientY - current.clientY) / current.scale }); return; }
+    const p = point(event), dx = p.x - current.x, dy = p.y - current.y;
+    setData({ ...current.before, nodes: current.before.nodes.map(node => !current.ids.includes(node.id) ? node : current.kind === "resize" ? { ...node, width: Math.max(60, Math.min(2000, snap(node.width + dx, grid))), height: Math.max(40, Math.min(2000, snap(node.height + dy, grid))) } : { ...node, x: snap(node.x + dx, grid), y: snap(node.y + dy, grid) }) });
+  }
+  function end(event: PointerEvent<SVGSVGElement>, cancelled = false) {
+    const current = gesture.current; gesture.current = null;
+    if (svg.current?.hasPointerCapture(event.pointerId)) svg.current.releasePointerCapture(event.pointerId);
+    if (!current || current.kind === "pan") return;
+    if (cancelled) { setData(current.before); return; }
+    let next = latest.current;
+    if (autoConnect && current.kind === "move" && current.ids.length === 1 && next.edges.length < 1000 && JSON.stringify(next) !== JSON.stringify(current.before)) next = attachNearby(next, current.ids[0]);
+    change(next, current.before);
+  }
+  function keyboard(event: KeyboardEvent) {
+    if (busy || /INPUT|TEXTAREA|SELECT/.test((event.target as HTMLElement).tagName)) return;
+    const modifier = event.ctrlKey || event.metaKey;
+    if (modifier && event.key.toLowerCase() === "z") { event.preventDefault(); if (event.shiftKey) redo(); else undo(); }
+    else if (modifier && event.key.toLowerCase() === "a") { event.preventDefault(); setSelection(data.nodes.map(node => node.id)); }
+    else if (modifier && event.key.toLowerCase() === "d") { event.preventDefault(); duplicate(); }
+    else if (event.key === "Delete" || event.key === "Backspace") { event.preventDefault(); remove(); }
+    else if (event.key === "Escape") setSelection([]);
+    else if (event.key.startsWith("Arrow") && selection.length && event.target === svg.current) {
+      event.preventDefault(); const step = event.shiftKey ? 20 : 1;
+      change({ ...data, nodes: data.nodes.map(node => selection.includes(node.id) ? { ...node, x: node.x + (event.key === "ArrowRight" ? step : event.key === "ArrowLeft" ? -step : 0), y: node.y + (event.key === "ArrowDown" ? step : event.key === "ArrowUp" ? -step : 0) } : node) });
+    }
   }
 
-  async function selectDiagram(id: string) { const response = await fetch(`/api/diagrams/${id}`); const result = await response.json().catch(() => null); if (!response.ok || !result?.diagram) return; setSelectedId(id); setTitle(result.diagram.title); setData(result.diagram.data); setHistory([]); setFuture([]); setSelectedNode(null); setMessage(""); }
-  const stopPointer = () => { setDrag(null); setResize(null); setPanDrag(null); };
-
-  return (
-    <div className="grid gap-5 lg:grid-cols-[minmax(12rem,15rem)_minmax(0,1fr)]">
-      <aside className="rounded-panel border border-line bg-surface p-3 shadow-card">
-        <div className="mb-3 flex items-center justify-between"><div><p className="eyebrow text-ink-faint">Workspace</p><span className="font-display text-lg text-ink">Diagrams</span></div><Tooltip content="New diagram"><button type="button" className="inline-flex h-10 w-10 items-center justify-center rounded-control text-ink-soft hover:bg-ink/5 hover:text-ink" onClick={() => { setSelectedId(null); setTitle("Untitled diagram"); setData(emptyDiagramData()); setHistory([]); setFuture([]); setMessage(""); }} aria-label="New diagram"><Plus className="h-4 w-4" aria-hidden="true" /></button></Tooltip></div>
-        <div className="space-y-1">{diagrams.length === 0 && <p className="rounded-control border border-dashed border-line p-3 text-xs leading-relaxed text-ink-faint">Start with a blank canvas and save your first visual.</p>}{diagrams.map((diagram) => <button key={diagram.id} type="button" onClick={() => void selectDiagram(diagram.id)} aria-pressed={selectedId === diagram.id} className={`w-full min-w-0 rounded-control px-3 py-2.5 text-left text-sm transition-colors ${selectedId === diagram.id ? "bg-action text-action-foreground shadow-sm" : "text-ink-soft hover:bg-surface-muted hover:text-ink"}`}><span className="block truncate">{diagram.title}</span><span className="mt-0.5 block text-[0.6875rem] opacity-70">Updated {new Date(diagram.updatedAt).toLocaleDateString()}</span></button>)}</div>
-      </aside>
-
-      <section className="min-w-0">
-        <div className="mb-4 flex flex-wrap items-center gap-2"><input value={title} onChange={(event) => setTitle(event.target.value)} className="h-11 min-w-0 flex-1 rounded-control border border-line-strong bg-surface px-3 text-sm font-medium shadow-sm" aria-label="Diagram title" /><Button size="sm" onClick={() => void save()} loading={saving}><Save className="h-4 w-4" aria-hidden="true" />Save</Button>{message && <span className={`inline-flex items-center gap-1 text-xs ${message === "Saved" ? "text-success" : "text-danger"}`} role="status"><Check className="h-3 w-3" aria-hidden="true" />{message}</span>}</div>
-        <div className="mb-3 flex min-w-0 flex-wrap items-center gap-1.5 rounded-panel border border-line bg-surface p-2 shadow-sm"><span className="px-1.5 text-[0.625rem] font-semibold uppercase tracking-[0.15em] text-ink-faint">Add shape</span>{palette.map(({ shape, label, icon: Icon }) => <Tooltip key={shape} content={label}><button type="button" onClick={() => addNode(shape)} aria-label={`Add ${label}`} className="inline-flex h-9 w-9 items-center justify-center rounded-control text-ink-soft hover:bg-surface-muted hover:text-ink"><Icon className="h-4 w-4" aria-hidden="true" /></button></Tooltip>)}<span className="mx-1 h-5 w-px bg-line" aria-hidden="true" /><Tooltip content="Undo"><button type="button" className="inline-flex h-9 w-9 items-center justify-center rounded-control text-ink-soft hover:bg-surface-muted disabled:opacity-40" onClick={undo} disabled={!history.length} aria-label="Undo"><Undo2 className="h-4 w-4" aria-hidden="true" /></button></Tooltip><Tooltip content="Redo"><button type="button" className="inline-flex h-9 w-9 items-center justify-center rounded-control text-ink-soft hover:bg-surface-muted disabled:opacity-40" onClick={redo} disabled={!future.length} aria-label="Redo"><Redo2 className="h-4 w-4" aria-hidden="true" /></button></Tooltip><Tooltip content="Duplicate selected node"><button type="button" className="inline-flex h-9 w-9 items-center justify-center rounded-control text-ink-soft hover:bg-surface-muted disabled:opacity-40" onClick={duplicateSelected} disabled={!selectedNode} aria-label="Duplicate selected node"><Copy className="h-4 w-4" aria-hidden="true" /></button></Tooltip><span className="mx-1 h-5 w-px bg-line" aria-hidden="true" /><Tooltip content="Zoom in"><button type="button" className="inline-flex h-9 w-9 items-center justify-center rounded-control text-ink-soft hover:bg-surface-muted" onClick={() => setZoom((value) => Math.min(2, value + 0.1))} aria-label="Zoom in"><ZoomIn className="h-4 w-4" aria-hidden="true" /></button></Tooltip><Tooltip content="Zoom out"><button type="button" className="inline-flex h-9 w-9 items-center justify-center rounded-control text-ink-soft hover:bg-surface-muted" onClick={() => setZoom((value) => Math.max(0.5, value - 0.1))} aria-label="Zoom out"><ZoomOut className="h-4 w-4" aria-hidden="true" /></button></Tooltip><Tooltip content="Reset view"><button type="button" className="inline-flex h-9 w-9 items-center justify-center rounded-control text-ink-soft hover:bg-surface-muted" onClick={() => { setZoom(1); setPan({ x: 0, y: 0 }); }} aria-label="Reset zoom and pan"><Maximize2 className="h-4 w-4" aria-hidden="true" /></button></Tooltip><Tooltip content="Delete selected node"><button type="button" className="ms-auto inline-flex h-9 w-9 items-center justify-center rounded-control text-danger hover:bg-danger/10 disabled:opacity-40" onClick={removeSelected} disabled={!selectedNode} aria-label="Delete selected node"><X className="h-4 w-4" aria-hidden="true" /></button></Tooltip></div>
-
-        <div className="diagram-canvas overflow-hidden rounded-panel border border-line-strong shadow-card"><svg viewBox={(() => { const bounds = getDiagramBounds(data); return `${bounds.x + pan.x} ${bounds.y + pan.y} ${bounds.width / zoom} ${bounds.height / zoom}`; })()} className="block min-h-[420px] w-full touch-none" role="application" aria-label="Diagram canvas" aria-describedby="diagram-canvas-help" tabIndex={0} onPointerDown={canvasDown} onPointerMove={pointerMove} onPointerUp={stopPointer} onPointerLeave={stopPointer}>{data.edges.map((edge) => { const source = data.nodes.find((node) => node.id === edge.source); const target = data.nodes.find((node) => node.id === edge.target); if (!source || !target) return null; const a = center(source); const b = center(target); return <g key={edge.id}><line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="rgb(var(--color-diagram-stroke))" strokeWidth={edge.style?.strokeWidth ?? 2} markerEnd="url(#arrow)" strokeDasharray={edge.style?.dashed ? "6 4" : undefined} /></g>; })}<defs><marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="rgb(var(--color-diagram-stroke))" /></marker></defs>{data.nodes.map((node) => <g key={node.id} onPointerDown={(event) => pointerDown(event, node)} onClick={() => clickNode(node.id)} className="cursor-move"><title>{node.label || "Untitled node"}</title>{node.shape === "circle" || node.shape === "ellipse" ? <ellipse cx={node.x + node.width / 2} cy={node.y + node.height / 2} rx={node.width / 2} ry={node.height / 2} fill={node.style?.fill ?? "rgb(var(--color-diagram-node))"} stroke={node.style?.stroke ?? "rgb(var(--color-diagram-stroke))"} strokeWidth={node.style?.strokeWidth ?? 2} /> : <path d={nodePath(node)} fill={node.style?.fill ?? "rgb(var(--color-diagram-node))"} stroke={node.style?.stroke ?? "rgb(var(--color-diagram-stroke))"} strokeWidth={node.style?.strokeWidth ?? 2} />}{<text x={node.x + node.width / 2} y={node.y + node.height / 2} textAnchor="middle" dominantBaseline="middle" fontSize={node.style?.fontSize ?? 14} fill="rgb(var(--color-diagram-text))" pointerEvents="none">{node.label}</text>}{selectedNode === node.id && <><rect x={node.x - 5} y={node.y - 5} width={node.width + 10} height={node.height + 10} fill="none" stroke="rgb(var(--color-diagram-selection))" strokeDasharray="4 3" /><rect x={node.x + node.width - 6} y={node.y + node.height - 6} width="12" height="12" rx="2" fill="rgb(var(--color-diagram-selection))" stroke="rgb(var(--color-surface))" onPointerDown={(event) => resizeStart(event, node)} className="cursor-se-resize" /></>}</g>)}</svg></div>
-        {selected && <div className="mt-3 rounded-panel border border-line bg-surface p-4 shadow-sm"><div className="flex flex-wrap items-end gap-3"><div className="min-w-0 flex-1"><label className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.14em] text-ink-faint" htmlFor="node-label">Selected node</label><input id="node-label" value={selected.label ?? ""} onChange={(event) => updateNode(selected.id, { label: event.target.value })} className="h-10 w-full rounded-control border border-line-strong bg-paper px-3 text-sm text-ink" /></div><button type="button" onClick={() => setConnectFrom(selected.id)} aria-pressed={connectFrom === selected.id} className={`min-h-10 rounded-control px-3 py-2 text-sm font-medium ${connectFrom === selected.id ? "bg-action text-action-foreground" : "bg-ink/5 text-ink hover:bg-ink/10"}`}>{connectFrom === selected.id ? "Select target…" : "Connect from here"}</button></div></div>}
-        <p id="diagram-canvas-help" className="mt-2 text-xs leading-relaxed text-ink-faint">Drag nodes to arrange them. Select a node, then connect it to another node from the inspector below the canvas.</p>
-      </section>
-    </div>
-  );
+  return <section onKeyDown={keyboard} className="min-w-0 space-y-4" aria-label="Diagram workspace">
+    <div className="flex flex-wrap items-end gap-3"><label className="min-w-[160px] flex-1 text-xs font-medium text-ink-soft">Diagram title<input aria-label="Diagram title" maxLength={200} value={title} onChange={event => setTitle(event.target.value)} disabled={busy} className={`${control} mt-1`} /></label><Button variant="outline" disabled={busy} onClick={fresh}><Plus className="h-4 w-4" />New</Button><Button loading={saving} disabled={loading} onClick={() => void save()}><Save className="h-4 w-4" />Save</Button>{onInsert && <Button disabled={busy} onClick={() => void save(true)}>Save & insert into memory</Button>}</div>
+    <div className="flex flex-wrap items-center gap-3"><label className="flex min-w-0 flex-1 items-center gap-2 text-xs text-ink-soft">Saved diagrams<select aria-label="Saved diagrams" className={`${control} max-w-sm`} value={id ?? ""} disabled={busy} onChange={event => { if (event.target.value && discard()) void load(event.target.value); }}><option value="">New diagram</option>{diagrams.map(item => <option key={item.id} value={item.id}>{item.title}</option>)}</select></label><span className="text-xs text-ink-soft" role="status">{loading ? "Opening diagram…" : dirty ? "Unsaved changes" : message || "Ready"}</span></div>
+    {error && <p className="rounded-control bg-danger/10 p-3 text-sm text-danger" role="alert">{error}</p>}
+    <fieldset disabled={busy} className="min-w-0 space-y-3"><legend className="sr-only">Diagram tools</legend>
+      <div className="flex flex-wrap items-center gap-2 rounded-card border border-line bg-surface p-3">
+        <Button size="sm" variant={tool === "select" ? "primary" : "ghost"} aria-label="Select tool" aria-pressed={tool === "select"} onClick={() => setTool("select")}><MousePointer2 className="h-4 w-4" /></Button><Button size="sm" variant={tool === "pan" ? "primary" : "ghost"} aria-label="Pan tool" aria-pressed={tool === "pan"} onClick={() => setTool("pan")}><Hand className="h-4 w-4" /></Button>
+        <select aria-label="New node shape" className={`${control} !w-auto`} value={shape} onChange={event => setShape(event.target.value as DiagramNode["shape"])}>{SHAPE_TYPES.map(shape => <option key={shape} value={shape}>{shape.replaceAll("-", " ")}</option>)}</select>
+        <Button size="sm" variant="outline" onClick={() => add()}><ArrowRight className="h-4 w-4" />{selected && autoConnect ? "Add connected step" : "Add idea"}</Button><Button size="sm" variant="ghost" onClick={() => add("down")}><ArrowDown className="h-4 w-4" />Branch below</Button>
+        <label className="flex min-h-10 items-center gap-2 px-2 text-xs"><input type="checkbox" checked={autoConnect} onChange={event => setAutoConnect(event.target.checked)} />Auto-connect</label><label className="flex min-h-10 items-center gap-2 px-2 text-xs"><input type="checkbox" checked={grid} onChange={event => setGrid(event.target.checked)} />Snap to grid</label>
+      </div>
+      <div className="flex flex-wrap items-center gap-1"><Button size="sm" variant="ghost" aria-label="Undo" disabled={!history.length} onClick={undo}><Undo2 className="h-4 w-4" /></Button><Button size="sm" variant="ghost" aria-label="Redo" disabled={!future.length} onClick={redo}><Redo2 className="h-4 w-4" /></Button><Button size="sm" variant="ghost" aria-label="Duplicate selected nodes" disabled={!selection.length} onClick={duplicate}><Copy className="h-4 w-4" /></Button><Button size="sm" variant="ghost" aria-label="Delete selected nodes" disabled={!selection.length} onClick={remove}><Trash2 className="h-4 w-4" /></Button><Button size="sm" variant="ghost" onClick={() => arrange("right")}>Arrange →</Button><Button size="sm" variant="ghost" onClick={() => arrange("down")}>Arrange ↓</Button><Button size="sm" variant="ghost" onClick={() => template("flow")}>Flow template</Button><Button size="sm" variant="ghost" onClick={() => template("mindmap")}>Mind map</Button><div className="ml-auto flex"><Button size="sm" variant="ghost" aria-label="Zoom out" onClick={() => zoom(1.2)}><ZoomOut className="h-4 w-4" /></Button><Button size="sm" variant="ghost" aria-label="Fit diagram" onClick={() => fit()}><Maximize2 className="h-4 w-4" /></Button><Button size="sm" variant="ghost" aria-label="Zoom in" onClick={() => zoom(1 / 1.2)}><ZoomIn className="h-4 w-4" /></Button></div></div>
+      <div className="grid min-w-0 gap-4 xl:grid-cols-[minmax(0,1fr)_250px]">
+        <div className="relative min-w-0 overflow-hidden rounded-card border border-line-strong bg-[#f7f7ef] shadow-sm">
+          <svg ref={svg} viewBox={`${camera.x} ${camera.y} ${camera.width} ${camera.height}`} className={`block h-[560px] w-full touch-none ${tool === "pan" ? "cursor-grab" : ""}`} role="group" aria-label="Diagram canvas" aria-describedby={`${marker}-help`} tabIndex={busy ? -1 : 0} onPointerDown={event => start(event)} onPointerMove={move} onPointerUp={event => end(event)} onPointerCancel={event => end(event, true)}>
+            <defs dangerouslySetInnerHTML={{ __html: diagramArrow(marker) + `<pattern id="${marker}-grid" width="20" height="20" patternUnits="userSpaceOnUse"><circle cx="1" cy="1" r="1" fill="#ccd3bf"/></pattern>` }} />
+            {grid && <rect x={camera.x} y={camera.y} width={camera.width} height={camera.height} fill={`url(#${marker}-grid)`} />}
+            <g pointerEvents="none" dangerouslySetInnerHTML={{ __html: data.edges.map(edge => diagramEdgeMarkup(edge, data, marker)).join("") }} />
+            {data.nodes.map(node => <g key={node.id} role="button" tabIndex={busy ? -1 : 0} aria-label={`Select ${node.label || "idea"}`} aria-pressed={selection.includes(node.id)} className="cursor-move focus:outline focus:outline-2 focus:outline-[#68882f]" onPointerDown={event => start(event, node)} onKeyDown={event => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); setSelection([node.id]); svg.current?.focus(); } }}>
+              <g pointerEvents="none" dangerouslySetInnerHTML={{ __html: diagramNodeMarkup(node) }} /><rect x={node.x} y={node.y} width={node.width} height={node.height} fill="transparent" />
+              {selection.includes(node.id) && <><rect x={node.x - 6} y={node.y - 6} width={node.width + 12} height={node.height + 12} rx="6" fill="none" stroke="#68882f" strokeWidth="2" strokeDasharray="5 4" pointerEvents="none" /><rect x={node.x + node.width - 8} y={node.y + node.height - 8} width="16" height="16" rx="3" fill="#68882f" className="cursor-se-resize" onPointerDown={event => start(event, node, true)} /></>}
+            </g>)}
+          </svg>
+          {!data.nodes.length && <div className="pointer-events-none absolute inset-0 flex items-center justify-center px-8 text-center text-[#515f53]"><div><p className="font-display text-3xl">Give your ideas room.</p><p className="mt-3 text-sm">Add an idea or start with a template.<br />New steps connect automatically.</p></div></div>}
+        </div>
+        <aside className="min-w-0 rounded-card border border-line bg-surface p-4"><h2 className="font-display text-xl">{selection.length > 1 ? `${selection.length} ideas selected` : "Idea properties"}</h2>{selected ? <div className="mt-4 space-y-3">
+          <label className="block text-xs">Label<textarea aria-label="Node label" maxLength={500} value={selected.label ?? ""} onChange={event => update({ label: event.target.value })} className={`${control} mt-1 !h-20 py-2`} /></label>
+          <label className="block text-xs">Shape<select aria-label="Node shape" className={`${control} mt-1`} value={selected.shape} onChange={event => update({ shape: event.target.value as DiagramNode["shape"] })}>{SHAPE_TYPES.map(shape => <option key={shape}>{shape}</option>)}</select></label>
+          <div className="grid grid-cols-2 gap-2">{(["width", "height"] as const).map(key => <label key={key} className="text-xs capitalize">{key}<input aria-label={`Node ${key}`} className={`${control} mt-1`} type="number" min={40} max={2000} value={selected[key]} onChange={event => { const value = event.target.valueAsNumber; if (Number.isFinite(value) && value >= 40 && value <= 2000) update({ [key]: value }); }} /></label>)}</div>
+          <div className="grid grid-cols-3 gap-2">{([['fill', 'Fill', '#f7f7ef'], ['stroke', 'Border', '#2b4837'], ['textColor', 'Text', '#22312b']] as const).map(([key, label, fallback]) => <label key={key} className="text-xs">{label}<input aria-label={`Node ${label.toLowerCase()} color`} type="color" value={selected.style?.[key]?.length === 7 ? selected.style[key] : fallback} onChange={event => style({ [key]: event.target.value })} className="mt-1 h-10 w-full cursor-pointer rounded border border-line" /></label>)}</div>
+          <div className="grid grid-cols-2 gap-2"><label className="text-xs">Font size<input aria-label="Node font size" type="number" min={8} max={72} value={selected.style?.fontSize ?? 16} onChange={event => { const n = event.target.valueAsNumber; if (n >= 8 && n <= 72) style({ fontSize: n }); }} className={`${control} mt-1`} /></label><label className="text-xs">Text align<select aria-label="Node text alignment" value={selected.style?.textAlign ?? "center"} onChange={event => style({ textAlign: event.target.value as "left" | "center" | "right" })} className={`${control} mt-1`}><option>left</option><option>center</option><option>right</option></select></label></div>
+          <label className="flex min-h-10 items-center gap-2 text-xs"><input type="checkbox" checked={selected.style?.dashed ?? false} onChange={event => style({ dashed: event.target.checked })} />Dashed border</label>
+          {selection.length > 1 && <div className="flex gap-1"><Button variant="outline" size="sm" onClick={() => align("x")}>Align left</Button><Button variant="outline" size="sm" onClick={() => align("y")}>Align top</Button></div>}
+          {data.edges.filter(edge => edge.source === selected.id || edge.target === selected.id).map((edge, index) => <div key={edge.id} className="border-t border-line pt-3"><label className="text-xs">Connection {index + 1}<input aria-label={`Connection ${index + 1} label`} maxLength={200} className={`${control} mt-1`} placeholder="Label (optional)" value={edge.label ?? ""} onChange={event => change({ ...data, edges: data.edges.map(item => item.id === edge.id ? { ...item, label: event.target.value } : item) })} /></label><div className="mt-1 flex items-center justify-between"><label className="flex min-h-10 items-center gap-2 text-xs"><input type="checkbox" checked={edge.directional} onChange={event => change({ ...data, edges: data.edges.map(item => item.id === edge.id ? { ...item, directional: event.target.checked } : item) })} />Arrow</label><Button variant="ghost" size="sm" aria-label={`Remove connection ${index + 1}`} onClick={() => change({ ...data, edges: data.edges.filter(item => item.id !== edge.id) })}><Trash2 className="h-3 w-3" /></Button></div></div>)}
+        </div> : <p className="mt-3 text-sm leading-relaxed text-ink-soft">Select an idea to change its label, shape, size, or colors. Shift-click to select several ideas.</p>}</aside>
+      </div>
+      <div className="flex flex-wrap items-center justify-between gap-3"><p id={`${marker}-help`} className="max-w-2xl text-xs leading-relaxed text-ink-soft">Drag ideas to move them. Drop near the right or bottom of another idea to snap and connect. Drag empty space to pan. Arrow keys move a selection; Ctrl/Cmd+Z undoes; Ctrl/Cmd+D duplicates.</p><div className="flex gap-2"><Button variant="outline" size="sm" disabled={!id || dirty} onClick={() => void copyEmbed()}><Copy className="h-4 w-4" />Copy for memory</Button><Button variant="outline" size="sm" onClick={download}><Download className="h-4 w-4" />SVG</Button></div></div>
+    </fieldset>
+  </section>;
 }

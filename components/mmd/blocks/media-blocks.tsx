@@ -12,7 +12,8 @@ import { useMmdRenderContext } from "@/components/mmd/render-context";
  * the export preparation phase can fetch and embed the same bytes shown in
  * the preview.
  */
-function resolveImageSrc(src: string): { url: string } | { unresolved: true } {
+function resolveImageSrc(src: string, assets?: Record<string, string | null>): { url: string } | { unresolved: true } {
+  if (assets && Object.prototype.hasOwnProperty.call(assets, src)) return assets[src] ? { url: assets[src]! } : { unresolved: true };
   if (src.startsWith("http://") || src.startsWith("https://")) return { url: src };
   if (src.startsWith("media://")) return { url: `/api/media/${encodeURIComponent(src.slice("media://".length))}` };
   return { unresolved: true };
@@ -33,9 +34,9 @@ const ALIGN_CLASS: Record<string, string> = {
 
 function UnresolvedImage({ alt, caption }: { alt: string; caption?: string }) {
   return (
-    <figure className="my-5 flex flex-col items-center rounded-card border border-dashed border-line bg-ink/[0.02] p-7 text-center">
+    <figure data-mmd-asset-state="error" className="my-5 flex flex-col items-center rounded-card border border-dashed border-line bg-ink/[0.02] p-7 text-center">
       <ImageOff className="h-6 w-6 text-ink-faint" aria-hidden="true" />
-      <p className="mt-2 text-sm text-ink-soft">Image storage isn&apos;t set up yet.</p>
+      <p className="mt-2 text-sm text-ink-soft">This image is unavailable.</p>
       <p className="mt-0.5 text-xs text-ink-faint">{alt}</p>
       {caption && <figcaption className="mt-1 text-xs text-ink-faint">{caption}</figcaption>}
     </figure>
@@ -44,9 +45,9 @@ function UnresolvedImage({ alt, caption }: { alt: string; caption?: string }) {
 
 /** :::image{src="..." alt="..." caption="..." align="..." size="..."} */
 export function ImageBlock({ node }: { node: MmdBlockNode }) {
-  const { mode } = useMmdRenderContext();
+  const { mode, resolvedAssets } = useMmdRenderContext();
   const { src, alt, caption, align = "center", size = "medium" } = node.attrs;
-  const resolved = resolveImageSrc(src);
+  const resolved = resolveImageSrc(src, resolvedAssets);
   const [open, setOpen] = useState(false);
 
   if ("unresolved" in resolved) return <UnresolvedImage alt={alt} caption={caption} />;
@@ -108,7 +109,7 @@ function extractGalleryImages(children: MmdNode[]): GalleryImage[] {
  * lightbox. Bare Markdown images and any other body text render normally
  * via InlineMarkdown alongside the grid (handled by the caller). */
 export function GalleryBlock({ node }: { node: MmdBlockNode }) {
-  const { mode } = useMmdRenderContext();
+  const { mode, resolvedAssets } = useMmdRenderContext();
   const images = extractGalleryImages(node.children);
   const [openIndex, setOpenIndex] = useState<number | null>(null);
 
@@ -118,7 +119,7 @@ export function GalleryBlock({ node }: { node: MmdBlockNode }) {
     <>
       <div data-export-block="gallery" className="my-5 grid min-w-0 grid-cols-2 gap-3 sm:grid-cols-3">
         {images.map((img, i) => {
-          const resolved = resolveImageSrc(img.src);
+          const resolved = resolveImageSrc(img.src, resolvedAssets);
           if ("unresolved" in resolved) {
             return <UnresolvedImage key={i} alt={img.alt} caption={img.caption} />;
           }
@@ -149,7 +150,8 @@ export function GalleryBlock({ node }: { node: MmdBlockNode }) {
 }
 
 function GalleryLightbox({ image, onClose }: { image: GalleryImage; onClose: () => void }) {
-  const resolved = resolveImageSrc(image.src);
+  const { resolvedAssets } = useMmdRenderContext();
+  const resolved = resolveImageSrc(image.src, resolvedAssets);
   if ("unresolved" in resolved) return null;
 
   return (

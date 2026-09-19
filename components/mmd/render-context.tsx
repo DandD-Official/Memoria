@@ -9,6 +9,7 @@ export type MmdRenderMode = "screen" | "export";
 interface MmdRenderContextValue {
   mode: MmdRenderMode;
   assetRegistry?: MmdAssetRegistry;
+  resolvedAssets?: Record<string, string | null>;
 }
 
 const MmdRenderContext = createContext<MmdRenderContextValue>({ mode: "screen" });
@@ -16,9 +17,10 @@ const MmdRenderContext = createContext<MmdRenderContextValue>({ mode: "screen" }
 export function MmdRenderProvider({
   mode,
   assetRegistry,
+  resolvedAssets,
   children,
 }: MmdRenderContextValue & { children: ReactNode }) {
-  return <MmdRenderContext.Provider value={{ mode, assetRegistry }}>{children}</MmdRenderContext.Provider>;
+  return <MmdRenderContext.Provider value={{ mode, assetRegistry, resolvedAssets }}>{children}</MmdRenderContext.Provider>;
 }
 
 export function useMmdRenderContext(): MmdRenderContextValue {

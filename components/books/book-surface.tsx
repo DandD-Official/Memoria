@@ -22,7 +22,7 @@ export function BookSurface({ book, assetRegistry }: { book: BookDocument; asset
       <div className="mmd-export-flow">
         <header className="mmd-export-brand-header book-chapter-kicker"><span>CHAPTER {String(index + 1).padStart(2, "0")}</span><span>{chapter.kind === "QUIZ" ? "Practice & recall" : "Read & connect"}</span></header>
         <div className="mmd-export-document-title book-chapter-title"><h2>{chapter.title}</h2>{chapter.description && <p>{chapter.description}</p>}</div>
-        <MmdRenderer content={chapter.content} mode="export" assetRegistry={assetRegistry} />
+        <MmdRenderer content={chapter.content} mode="export" assetRegistry={assetRegistry} resolvedAssets={book.assets} />
       </div>
     </section>)}</CodeThemeProvider>
   </div>;

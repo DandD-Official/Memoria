@@ -38,6 +38,7 @@ const nodeStyleSchema = z
   .object({
     fill: hexColor,
     stroke: hexColor,
+    textColor: hexColor,
     strokeWidth: z.number().min(0).max(20).optional(),
     dashed: z.boolean().optional(),
     fontSize: z.number().min(8).max(72).optional(),
