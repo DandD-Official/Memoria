@@ -8,6 +8,8 @@ import { TagList } from "@/components/library/tag-list";
 import { ButtonLink } from "@/components/ui/button";
 import { PageActions, PageDescription, PageHeader, PageHeaderContent, PageShell, PageTitle } from "@/components/ui/page";
 import { ResourceCard } from "@/components/library/resource-card";
+import { GenerateNoteDialog } from "@/components/notes/generate-note-dialog";
+import { hasSystemAiConnection } from "@/lib/ai/system";
 
 const sourceLabels: Record<string, string> = {
   PDF: "PDF",
@@ -33,6 +35,7 @@ export default async function NotesPage({ searchParams }: { searchParams: Promis
           <PageDescription>Your captured notes and source material, ready to read, shape, and study.</PageDescription>
         </PageHeaderContent>
         <PageActions>
+          <GenerateNoteDialog systemAvailable={hasSystemAiConnection()} />
           <ButtonLink href="/notes/import" className="w-full sm:w-auto"><Plus className="h-4 w-4" /> Import Memory</ButtonLink>
         </PageActions>
       </PageHeader>

@@ -23,6 +23,14 @@ const STYLE_INSTRUCTIONS: Record<ProcessingStyle, string> = {
     "Create a visually rich, memorable reviewer. Keep all important source facts, but actively look for concepts that become clearer as a process flow, timeline, hierarchy, comparison, cycle, map, or labeled system. Add purposeful self-contained HTML/SVG visuals when the source supports them, using the supported :::svg block and concise explanatory text. Visuals should clarify the source rather than decorate it, and must never introduce facts that are not present in the source.",
 };
 
+const TOPIC_STYLE_INSTRUCTIONS: Record<ProcessingStyle, string> = {
+  preserve: "Cover the topic comprehensively, including important background, terminology, mechanisms, examples, and practical implications.",
+  balanced: "Give a clear, well-scoped explanation with the essential context, key ideas, examples, and a concise recap.",
+  condensed: "Focus on the smallest set of ideas needed to understand and remember the topic. Avoid repetition and minor tangents.",
+  exam_focused: "Prioritize definitions, distinctions, processes, facts, common misconceptions, and questions a learner may be tested on.",
+  visual_creative: "Make the explanation memorable with purposeful visuals such as a process flow, timeline, hierarchy, comparison, cycle, or labeled system when one genuinely clarifies the topic.",
+};
+
 interface NoteForPrompt {
   title: string;
   content: string;
@@ -69,6 +77,30 @@ SOURCE MATERIAL
 ${sourceBlock}
 
 Return the complete reformatted document as described above, using the outer-fence rule above.`;
+}
+
+/** Builds a prompt for creating a new note from a user-provided topic. */
+export function buildTopicNotePrompt(topic: string, style: ProcessingStyle): string {
+  return `You are creating a self-contained educational note about the topic below.
+
+TOPIC
+${topic.trim()}
+
+TASK
+Write a useful Memoria Markdown note that teaches this topic to a curious learner. ${TOPIC_STYLE_INSTRUCTIONS[style]}
+
+RULES
+- Start with exactly one top-level # heading that names the topic.
+- Explain the core idea before adding detail, and use logical ## and ### headings.
+- Define important terminology with "**Term**: definition" or :::definition{term="..."} blocks.
+- Include concrete examples, comparisons, or step-by-step explanations when they improve understanding.
+- Be accurate and honest. Do not invent citations, sources, data, quotations, or specific claims you cannot support.
+- If the topic has multiple interpretations, state the interpretation you are using.
+- Do not include an introduction or explanation outside the note.
+
+${buildMmdOutputRules()}
+
+Return the complete note using the outer-fence rule above.`;
 }
 
 /**

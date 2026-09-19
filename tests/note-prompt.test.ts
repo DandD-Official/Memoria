@@ -1,5 +1,17 @@
 import { describe, expect, it } from "vitest";
-import { buildNoteReformatPrompt, buildSourcePackage } from "@/lib/prompts/note-prompt";
+import { buildNoteReformatPrompt, buildSourcePackage, buildTopicNotePrompt } from "@/lib/prompts/note-prompt";
+
+describe("topic note prompting", () => {
+  it("builds a self-contained prompt for a user-provided topic", () => {
+    const prompt = buildTopicNotePrompt("TCP congestion control", "visual_creative");
+
+    expect(prompt).toContain("TCP congestion control");
+    expect(prompt).toContain("self-contained educational note");
+    expect(prompt).toContain("purposeful visuals");
+    expect(prompt).toContain(":::svg");
+    expect(prompt).toContain("MEMORIA MARKDOWN OUTPUT RULES");
+  });
+});
 
 describe("visual and creative reviewer prompting", () => {
   const notes = [{ title: "Photosynthesis", content: "Light energy drives the process. Carbon dioxide becomes glucose." }];
