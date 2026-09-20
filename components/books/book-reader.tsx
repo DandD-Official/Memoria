@@ -56,6 +56,6 @@ export function BookReader({ book, resumeChapter, onChapterChange }: { book: Boo
       {total > 0 && <div className="book-reader-frame" style={{ width: 794 * scale, height: height * scale }}><div ref={paper} onClick={event => { const link = (event.target as HTMLElement).closest<HTMLElement>("[data-book-goto]"); const target = link && rendered.current?.chapterPages[link.dataset.bookGoto!]; if (target) { event.preventDefault(); navigate(target - 1); } }} style={{ width: 794, transform: `scale(${scale})`, transformOrigin: "top left" }} /></div>}
     </div>
     <div className="book-reader-toolbar"><Button variant="ghost" size="sm" disabled={!total || page === 0} onClick={() => navigate(page - 1)}><ChevronLeft className="h-4 w-4" />Previous</Button><p role="status" className="text-xs tabular-nums text-ink-soft">{total ? `Page ${page + 1} of ${total}` : "Preparing pages"}</p><Button variant="ghost" size="sm" disabled={!total || page >= total - 1} onClick={() => navigate(page + 1)}>Next<ChevronRight className="h-4 w-4" /></Button></div>
-    <p className="px-4 pb-4 text-xs text-ink-faint">PDF and Word preserve these pages as images. Use JSON for editable content, or 100% zoom to read small details.</p>
+    <p className="px-4 pb-4 text-xs text-ink-faint">Export to Word to edit the text, or PDF to keep a reading copy. Use 100% zoom to read small details.</p>
   </section>;
 }

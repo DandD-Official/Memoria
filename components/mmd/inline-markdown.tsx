@@ -3,6 +3,8 @@ import remarkGfm from "remark-gfm";
 import { ResponsiveTable } from "@/components/ui/responsive-table";
 import { remarkMmdMath } from "@/lib/mmd/math";
 import { TableCellContent } from "@/components/markdown/table-cell";
+import { Children, isValidElement, type ReactElement } from "react";
+import { CodeBlock } from "@/components/mmd/blocks/code-block";
 
 /**
  * Renders a run of ordinary Markdown. Used both for top-level content and
@@ -23,6 +25,12 @@ export function InlineMarkdown({ content }: { content: string }) {
     <ReactMarkdown
       remarkPlugins={[remarkGfm, remarkMmdMath]}
       components={{
+        pre: ({ children }) => {
+          const child = Children.toArray(children).find(isValidElement) as ReactElement<{ children?: string; className?: string }> | undefined;
+          const source = String(child?.props.children ?? "").replace(/\n$/, "");
+          const language = child?.props.className?.replace(/^language-/, "") || "text";
+          return <CodeBlock node={{ type: "block", block: "code", attrs: { language }, raw: source, children: [{ type: "markdown", content: source }] }} />;
+        },
         table: ({ children, ...props }) => (
           <ResponsiveTable>
             <table {...props}>{children}</table>

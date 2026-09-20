@@ -110,7 +110,7 @@ export function CollectionEditor({ initialCollection, access, canExport, rows }:
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <Link href="/books" className="inline-flex min-h-10 items-center gap-2 text-sm font-medium text-ink-soft hover:text-ink"><ArrowLeft className="h-4 w-4" />All Books</Link>
         <div className="flex items-center gap-2">
-          {canExport && <ExportMenu options={[{ value: "pdf", label: "PDF ? matching pages" }, { value: "docx", label: "Word ? matching pages" }, { value: "json", label: "Memoria JSON" }]} onExport={exportBook} />}
+          {canExport && <ExportMenu options={[{ value: "pdf", label: "PDF document" }, { value: "docx", label: "Word - editable text" }, { value: "json", label: "Memoria JSON" }]} onExport={exportBook} />}
           {isOwner && <Button size="sm" onClick={() => setShareOpen(true)}><Share2 className="h-4 w-4" />Share</Button>}
         </div>
       </div>

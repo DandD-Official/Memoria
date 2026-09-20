@@ -3,7 +3,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BookMarked, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { MemoryMark } from "@/components/layout/brand";
+import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { isNavigationItemActive, navigationGroups, utilityNavigation, type NavigationItem } from "@/components/layout/navigation";
 
@@ -50,7 +51,7 @@ export function Sidebar({ mode, initialCollapsed }: { mode: SidebarMode; initial
         )}
       >
         <Link href="/dashboard" aria-label="Memoria dashboard" className={cn("flex h-16 shrink-0 items-center border-b border-line px-4", labelsHidden ? "justify-center" : "gap-2.5", hoverMode && "min-w-64")}>
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-control border border-accent/25 bg-accent-soft text-accent-dark shadow-sm"><BookMarked className="h-5 w-5" aria-hidden="true" /></span>
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-control border border-accent/25 bg-accent-soft text-accent-dark shadow-sm"><MemoryMark className="h-5 w-5" /></span>
           <span className={cn("whitespace-nowrap font-display text-xl font-medium text-ink transition-opacity", labelsHidden && "sr-only", hoverMode && "opacity-0 group-hover/sidebar:opacity-100")}>Memoria</span>
         </Link>
 

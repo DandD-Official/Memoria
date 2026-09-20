@@ -15,7 +15,7 @@ import {
   isCalloutBlock,
 } from "@/lib/mmd/export-helpers";
 import type { ExportProgressHandler } from "@/lib/export/types";
-import { createBookWordBlob, createMarkdownWordBlob, downloadBlob } from "@/lib/word-export";
+
 import { CODE_THEMES, getStoredCodeTheme, type CodeTheme } from "@/lib/mmd/code-themes";
 import { tokeniseCodeLine, type CodeTokenKind } from "@/lib/mmd/code-highlight";
 import { renderMathFormula } from "@/lib/mmd/math";
@@ -418,59 +418,14 @@ export function buildMarkdownPdf(title: string, markdown: string, options: Markd
   return doc;
 }
 
-async function convertWordBlobToPdf(
-  title: string,
-  wordBlob: Blob,
-  fallback: () => jsPDF,
-  onProgress?: ExportProgressHandler,
-) {
-  onProgress?.({ phase: "preparing", message: "Preparing the Word source document…" });
-
-  try {
-    const response = await fetch("/api/exports/word-to-pdf", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        "X-Memoria-Filename": sanitizeFilename(title),
-      },
-      body: wordBlob,
-    });
-
-    if (response.ok) {
-      onProgress?.({ phase: "creating", message: "Converting the Word document to PDF…" });
-      await downloadBlob(await response.blob(), title, "pdf");
-      return;
-    }
-
-    // Keep real client errors visible, but use the local renderer when the
-    // deployment cannot run Word or LibreOffice (typically a 5xx response).
-    if (response.status < 500) {
-      const error = await response.json().catch(() => null) as { error?: string } | null;
-      throw new Error(error?.error ?? "Could not convert the Word document to PDF.");
-    }
-  } catch (error) {
-    // A failed/unavailable conversion endpoint should not prevent export.
-    // TypeError is the browser's usual fetch-network error across devices.
-    if (error instanceof Error && !(error instanceof TypeError) && !/failed to fetch|networkerror|load failed/i.test(error.message)) {
-      throw error;
-    }
-  }
-
-  onProgress?.({ phase: "creating", message: "Creating a device-compatible PDF…" });
-  await downloadBlob(fallback().output("blob"), title, "pdf");
-}
-
 export async function exportMarkdownToPdf(title: string, markdown: string, onProgress?: ExportProgressHandler) {
-  await convertWordBlobToPdf(title, await createMarkdownWordBlob(title, markdown), () => buildMarkdownPdf(title, markdown), onProgress);
+  const { exportEditableMarkdown } = await import("@/lib/export/editable-markdown");
+  await exportEditableMarkdown(title, markdown, "pdf", undefined, onProgress);
 }
 
 export async function exportBookToPdf(title: string, markdown: string, cover: NonNullable<MarkdownPdfOptions["bookCover"]>, onProgress?: ExportProgressHandler) {
-  await convertWordBlobToPdf(
-    title,
-    await createBookWordBlob(title, markdown, cover),
-    () => buildMarkdownPdf(title, markdown, { bookCover: cover }),
-    onProgress,
-  );
+  const { exportEditableMarkdown } = await import("@/lib/export/editable-markdown");
+  await exportEditableMarkdown(title, markdown, "pdf", cover, onProgress);
 }
 
 export interface QuizExportMetadata {
@@ -479,116 +434,7 @@ export interface QuizExportMetadata {
   date?: Date;
 }
 
-/**
- * Renders a print-first quiz/exam with explicit black text on white pages.
- * Drawing text directly avoids browser theme/CSS and html2canvas visibility
- * bugs that previously produced blank or dark exports.
- */
-export function exportQuizToPdf(title: string, questions: QuizQuestion[], metadata: QuizExportMetadata = {}) {
-  const doc = new jsPDF({ unit: "pt", format: "a4" });
-  const pageWidth = doc.internal.pageSize.getWidth();
-  const pageHeight = doc.internal.pageSize.getHeight();
-  const contentWidth = pageWidth - PAGE_MARGIN * 2;
-  let y = PAGE_MARGIN;
-
-  function startPage() {
-    doc.setFillColor(255, 255, 255);
-    doc.rect(0, 0, pageWidth, pageHeight, "F");
-    doc.setTextColor(20, 24, 39);
-  }
-
-  function ensureSpace(needed: number) {
-    if (y + needed > pageHeight - PAGE_MARGIN) {
-      doc.addPage();
-      startPage();
-      y = PAGE_MARGIN;
-    }
-  }
-
-  function writeWrapped(
-    text: string,
-    options: { size?: number; style?: "normal" | "bold" | "italic"; indent?: number; gapAfter?: number } = {}
-  ) {
-    const size = options.size ?? 11;
-    const indent = options.indent ?? 0;
-    const lineHeight = size * 1.35;
-    doc.setFont("helvetica", options.style ?? "normal");
-    doc.setFontSize(size);
-    doc.setTextColor(20, 24, 39);
-    const lines = doc.splitTextToSize(text || " ", contentWidth - indent) as string[];
-    for (const line of lines) {
-      ensureSpace(lineHeight);
-      doc.text(line, PAGE_MARGIN + indent, y);
-      y += lineHeight;
-    }
-    y += options.gapAfter ?? 0;
-  }
-
-  function questionOptions(question: QuizQuestion): string[] {
-    if (question.type === "multiple_choice" || question.type === "multiple_select") {
-      return question.choices.map((choice, index) => `${String.fromCharCode(65 + index)}. ${choice}`);
-    }
-    if (question.type === "true_false") return ["A. True", "B. False"];
-    if (question.type === "matching") return question.pairs.map((pair, index) => `${index + 1}. ${pair.left}  ____________________`);
-    return ["Answer: ________________________________________________"];
-  }
-
-  startPage();
-
-  // 1. Header
-  y = drawBrandHeader(doc, pageWidth);
-  writeWrapped(title, { size: 22, style: "bold", gapAfter: 8 });
-
-  const exportDate = (metadata.date ?? new Date()).toLocaleDateString();
-  const mode = metadata.mode ? metadata.mode.replace(/_/g, " ") : "Quiz / Exam";
-  writeWrapped(`Date: ${exportDate}    |    Questions: ${questions.length}    |    Type: ${mode}`, { size: 9, gapAfter: 3 });
-  writeWrapped(`Author: ${metadata.author?.trim() || "Memoria user"}`, { size: 9, gapAfter: 10 });
-  doc.setDrawColor(190, 190, 190);
-  doc.line(PAGE_MARGIN, y, pageWidth - PAGE_MARGIN, y);
-  y += 22;
-
-  // 2. Questions
-  writeWrapped("QUESTIONS", { size: 14, style: "bold", gapAfter: 12 });
-
-  questions.forEach((q, i) => {
-    ensureSpace(54);
-    writeWrapped(`${i + 1}. ${q.question}`, { size: 11, style: "bold", gapAfter: 5 });
-    for (const option of questionOptions(q)) {
-      writeWrapped(option, { size: 10, indent: 18, gapAfter: 2 });
-    }
-    y += 10;
-  });
-
-  // 3. Answer key at the end
-  doc.addPage();
-  startPage();
-  y = PAGE_MARGIN;
-  writeWrapped("ANSWER KEY", { size: 16, style: "bold", gapAfter: 14 });
-
-  questions.forEach((q, i) => {
-    ensureSpace(58);
-    writeWrapped(`${i + 1}. ${q.question}`, { size: 11, style: "bold", gapAfter: 4 });
-    writeWrapped(`Correct Answer: ${formatCorrectAnswer(q)}`, { size: 10, gapAfter: 3 });
-    writeWrapped(`Explanation: ${q.explanation?.trim() || "No detailed explanation was provided."}`, {
-      size: 10,
-      style: "italic",
-      gapAfter: 12,
-    });
-  });
-
-  const totalPages = doc.getNumberOfPages();
-  for (let page = 1; page <= totalPages; page += 1) {
-    doc.setPage(page);
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(8);
-    doc.setTextColor(90, 90, 90);
-    doc.text(`Made with Memoria  |  ${title}`, PAGE_MARGIN, pageHeight - 20);
-    doc.text(`Page ${page} of ${totalPages}`, pageWidth - PAGE_MARGIN, pageHeight - 20, { align: "right" });
-  }
-
-  doc.save(`${sanitizeFilename(title)}.pdf`);
-}
-
-function sanitizeFilename(name: string): string {
-  return name.replace(/[^a-z0-9-_]+/gi, "-").toLowerCase() || "memoria-export";
+export async function exportQuizToPdf(title: string, questions: QuizQuestion[], metadata: QuizExportMetadata = {}) {
+  const { exportQuizDocument } = await import("@/lib/export/editable-markdown");
+  await exportQuizDocument(title, questions, "pdf", metadata);
 }

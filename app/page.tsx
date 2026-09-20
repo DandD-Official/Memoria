@@ -3,6 +3,7 @@ import { ArrowDown, ArrowRight, ArrowUpRight, FileText, Workflow, Share2, Downlo
 import { Brand, MemoryMark } from "@/components/layout/brand";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { ButtonLink } from "@/components/ui/button";
+import { BrandHero, BrandScenes } from "@/components/landing/brand-scenes";
 import { LearningExample } from "@/components/landing/learning-example";
 
 export default function LandingPage() {
@@ -22,8 +23,10 @@ export default function LandingPage() {
           <p className="mt-5 text-xs text-ink-faint">Your material. Your pace. One connected place.</p>
           <a href="#possibilities" className="mt-12 inline-flex min-h-11 items-center gap-3 text-xs text-ink-soft"><ArrowDown className="h-4 w-4" /> Follow the thread</a>
         </div>
-        <div className="relative"><div className="absolute -inset-4 -z-10 hidden rotate-2 border border-line bg-surface-muted sm:block" /><LearningExample /><p className="mt-4 text-center font-display text-sm italic text-ink-soft">From “I read this” to “I know this.”</p></div>
+        <div className="relative"><div className="absolute -inset-4 -z-10 hidden rotate-2 border border-line bg-surface-muted sm:block" /><BrandHero /><p className="mt-4 text-center font-display text-sm italic text-ink-soft">From “I read this” to “I know this.”</p></div>
       </section>
+      <BrandScenes />
+      <section className="mx-auto max-w-3xl px-page pb-16"><LearningExample /></section>
       <section id="possibilities" className="border-y border-line bg-surface">
         <div className="mx-auto grid max-w-7xl gap-8 px-page py-14 sm:py-20 lg:grid-cols-[0.7fr_1.3fr] lg:gap-16">
           <div><p className="eyebrow">A connected way to learn</p><h2 className="mt-5 max-w-sm font-display text-3xl leading-tight tracking-tight sm:text-4xl">Your library is<br />only the beginning.</h2><p className="mt-5 max-w-sm text-sm leading-relaxed text-ink-soft">Notes, diagrams, guides, and practice belong together. Memoria helps you move between them, without losing the source.</p><div className="mt-8 flex items-center gap-3"><MemoryMark className="h-12 w-12 text-action" /><span className="font-display text-base italic text-ink-soft">Keep the thread.</span></div></div>

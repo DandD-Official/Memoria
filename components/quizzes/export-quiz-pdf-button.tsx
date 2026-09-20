@@ -5,7 +5,7 @@ import { ExportMenu } from "@/components/exports/export-menu";
 
 export function ExportQuizPdfButton({ quizId, title, questions, author, mode }: { quizId: string; title: string; questions: QuizQuestion[]; author?: string | null; mode?: string }) {
   async function handleExport(format: string) {
-    if (format === "pdf") { const { exportQuizToPdf } = await import("@/lib/pdf-export"); exportQuizToPdf(title, questions, { author, mode }); return; }
+    if (format === "pdf") { const { exportQuizToPdf } = await import("@/lib/pdf-export"); await exportQuizToPdf(title, questions, { author, mode }); return; }
     if (format === "docx") { const { exportQuizToWord } = await import("@/lib/word-export"); await exportQuizToWord(title, questions, { author, mode }); return; }
     window.location.href = `/api/quizzes/export?id=${quizId}&format=${format}`;
   }

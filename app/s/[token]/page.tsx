@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
-import { BookMarked } from "lucide-react";
+import { Users } from "lucide-react";
+import { Brand } from "@/components/layout/brand";
 import { prisma } from "@/lib/db";
 import { findNoteById } from "@/lib/notes-repo";
 import { MarkdownRenderer } from "@/components/markdown/renderer";
@@ -34,15 +34,13 @@ export default async function SharedMemoryPage(props: { params: Promise<{ token:
     <div className="min-h-screen bg-paper">
       <header className="border-b border-line bg-surface">
         <div className="mx-auto flex max-w-4xl items-center justify-between gap-4 px-6 py-4">
-          <Link href="/" className="inline-flex items-center gap-2 font-display text-lg text-ink">
-            <BookMarked className="h-5 w-5 text-accent-dark" /> Memoria
-          </Link>
+          <Brand />
           <ThemeToggle />
         </div>
       </header>
       <main className="mx-auto max-w-4xl px-6 py-10">
-        <p className="text-xs font-medium uppercase tracking-wide text-accent-dark">Shared Note · View only</p>
-        <h1 className="mt-2 font-display text-3xl text-ink">{shared.note.title}</h1>
+        <p className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-accent-dark"><Users className="h-4 w-4" aria-hidden="true" />Shared Note · View only</p>
+        <h1 className="mt-2 break-words font-display text-3xl text-ink">{shared.note.title}</h1>
         {shared.note.description && <p className="mt-2 text-sm text-ink-soft">{shared.note.description}</p>}
         <p className="mt-2 text-xs text-ink-faint">Shared by {shared.ownerName}</p>
         <article className="mt-8 rounded-card border border-line bg-surface p-6 sm:p-8">

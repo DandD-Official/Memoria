@@ -2,7 +2,7 @@
 
 import { useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { Archive, ArchiveRestore, Copy, MoreHorizontal, Star, Wrench, Sparkles } from "lucide-react";
+import { Archive, ArchiveRestore, Copy, MoreHorizontal, Star, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet } from "@/components/ui/sheet";
 
@@ -33,25 +33,6 @@ export function ResourceActions({ resourceType, resourceId, archived, favorite }
 function resourcePath(resourceType: ResourceType, resourceId: string) {
   const collection = resourceType === "NOTE" ? "notes" : resourceType === "REVIEWER" ? "reviewers" : "quizzes";
   return `/${collection}/${resourceId}`;
-}
-
-function ActionMenu({ label, icon, children }: { label: string; icon: ReactNode; children: ReactNode }) {
-  const [open, setOpen] = useState(false);
-  return (
-    <div className="relative">
-      <Button variant="outline" size="sm" aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen((value) => !value)}>
-        {icon} {label}
-      </Button>
-      {open && (
-        <>
-          <button type="button" className="fixed inset-0 z-20 cursor-default" aria-label={`Close ${label} menu`} onClick={() => setOpen(false)} />
-          <div role="menu" aria-label={`${label} actions`} className="absolute end-0 top-11 z-30 min-w-56 rounded-card border border-line bg-surface-raised p-2 shadow-card-hover">
-            <div className="space-y-1 [&>a]:w-full [&>button]:w-full [&>div]:w-full">{children}</div>
-          </div>
-        </>
-      )}
-    </div>
-  );
 }
 
 export function ResourceFavoriteButton({ resourceType, resourceId, favorite }: { resourceType: ResourceType; resourceId: string; favorite: boolean }) {
@@ -120,26 +101,13 @@ export function ResourceUtilityActions({ resourceType, resourceId, archived }: {
   );
 }
 
-export function ResourceDetailActions({ edit, study, favorite, share, tools }: { edit?: ReactNode; study: ReactNode; favorite: ReactNode; share?: ReactNode; tools: ReactNode }) {
+export function ResourceDetailActions({ edit, study, favorite, share, tools, exportAction }: { edit?: ReactNode; study: ReactNode; favorite: ReactNode; share?: ReactNode; tools: ReactNode; exportAction?: ReactNode }) {
   const [studyOpen, setStudyOpen] = useState(false);
   const [toolsOpen, setToolsOpen] = useState(false);
-  return (
-    <div className="flex min-w-0 items-center justify-end gap-1.5">
-      <div className="hidden items-center gap-1.5 sm:flex">
-        {edit}
-        <ActionMenu label="Study / Create" icon={<Sparkles className="h-3.5 w-3.5" />}>{study}</ActionMenu>
-        {favorite}
-        {share}
-        <ActionMenu label="Tools" icon={<Wrench className="h-3.5 w-3.5" />}>{tools}</ActionMenu>
-      </div>
-      <div className="sticky top-[4.25rem] z-20 flex w-full items-center gap-1.5 rounded-card border border-line bg-paper/90 p-1 backdrop-blur sm:hidden">
-        {edit}
-        <Button variant="secondary" size="sm" onClick={() => setStudyOpen(true)}><Sparkles className="h-3.5 w-3.5" /> Study</Button>
-        {favorite}
-        <Button variant="outline" size="icon" aria-label="More resource actions" onClick={() => setToolsOpen(true)}><MoreHorizontal className="h-4 w-4" /></Button>
-      </div>
-      <Sheet open={studyOpen} onOpenChange={setStudyOpen} title="Study / Create" description="Create a study resource from this content.">{study}</Sheet>
-      <Sheet open={toolsOpen} onOpenChange={setToolsOpen} title="Resource tools" description="Secondary actions for this resource."><div className="space-y-2">{share}{tools}</div></Sheet>
-    </div>
-  );
+  return <div className="flex flex-wrap items-center justify-between gap-3 rounded-card border border-line bg-surface p-2" aria-label="Document actions">
+    <div className="flex flex-wrap items-center gap-2">{edit}<Button variant="secondary" size="sm" onClick={() => setStudyOpen(true)}><Sparkles className="h-4 w-4" /> Study</Button></div>
+    <div className="flex flex-wrap items-center gap-2">{exportAction}{share}<Button variant="ghost" size="sm" onClick={() => setToolsOpen(true)}><MoreHorizontal className="h-4 w-4" /> More</Button></div>
+    <Sheet open={studyOpen} onOpenChange={setStudyOpen} title="Study this material" description="Choose what to create next."><div className="grid gap-3 [&_button]:w-full [&_button]:justify-start">{study}</div></Sheet>
+    <Sheet open={toolsOpen} onOpenChange={setToolsOpen} title="Manage document"><div className="grid gap-3 [&_button]:w-full [&_button]:justify-start">{favorite}<div className="space-y-3 border-t border-line pt-3">{tools}</div></div></Sheet>
+  </div>;
 }

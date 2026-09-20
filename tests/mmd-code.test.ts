@@ -2,8 +2,20 @@ import { describe, expect, it } from "vitest";
 import { parseMmd } from "@/lib/mmd/parser";
 import { tokeniseCodeLine } from "@/lib/mmd/code-highlight";
 import { CODE_THEME_IDS } from "@/lib/mmd/code-themes";
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import { MmdRenderer } from "@/components/mmd/renderer";
+import { CodeThemeProvider } from "@/components/mmd/code-theme-context";
 
 describe("editable MMD code blocks", () => {
+  it("uses the themed code UI for fenced Markdown without changing inline code", () => {
+    const markup = renderToStaticMarkup(createElement(CodeThemeProvider, null, createElement(MmdRenderer, { content: "Use `answer` here.\n\n```typescript\nconst answer = 42;\n\nconsole.log(answer);\n```" })));
+    expect(markup).toContain('<code>answer</code>');
+    expect(markup).toContain('class="mmd-code-pre"');
+    expect(markup).toContain('aria-label="typescript code"');
+    expect(markup.match(/class="mmd-code-line"/g)).toHaveLength(3);
+    expect(markup).toContain('tabindex="0"');
+  });
   it("preserves the custom code block body and attributes", () => {
     const document = parseMmd(':::code{language="typescript" theme="dracula"}\n\tconst answer = 42;\n:::');
     const node = document.children[0];

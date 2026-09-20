@@ -239,10 +239,6 @@ function markdownParagraphs(title: string, markdown: string) {
   return rows;
 }
 
-async function downloadDocument(document: Document, filename: string) {
-  await downloadBlob(await Packer.toBlob(document), filename, "docx");
-}
-
 export async function createMarkdownWordBlob(title: string, markdown: string) {
   return Packer.toBlob(await buildEditableMarkdownWord(title, markdown));
 }
@@ -553,7 +549,8 @@ async function buildEditableMarkdownWord(title: string, markdown: string, option
 }
 
 export async function exportMarkdownToWord(title: string, markdown: string, onProgress?: ExportProgressHandler) {
-  await downloadDocument(await buildEditableMarkdownWord(title, markdown, { onProgress }), title);
+  const { exportEditableMarkdown } = await import("@/lib/export/editable-markdown");
+  await exportEditableMarkdown(title, markdown, "docx", undefined, onProgress);
 }
 
 export interface BookWordMetadata { subtitle?: string | null; description?: string | null; author?: string | null }
@@ -572,33 +569,13 @@ export function buildBookWord(title: string, markdown: string, metadata: BookWor
 }
 
 export async function exportBookToWord(title: string, markdown: string, metadata: BookWordMetadata = {}, onProgress?: ExportProgressHandler) {
-  await downloadDocument(await buildEditableMarkdownWord(title, markdown, { bookCover: metadata, onProgress }), title);
-}
-
-function options(question: QuizQuestion) {
-  if (question.type === "multiple_choice" || question.type === "multiple_select") return question.choices.map((choice, index) => `${String.fromCharCode(65 + index)}. ${choice}`);
-  if (question.type === "true_false") return ["A. True", "B. False"];
-  if (question.type === "matching") return question.pairs.map((pair, index) => `${index + 1}. ${pair.left}  ____________________`);
-  return ["Answer: ________________________________________________"];
+  const { exportEditableMarkdown } = await import("@/lib/export/editable-markdown");
+  await exportEditableMarkdown(title, markdown, "docx", metadata, onProgress);
 }
 
 export async function exportQuizToWord(title: string, questions: QuizQuestion[], metadata: { author?: string | null; mode?: string } = {}) {
-  const children: Paragraph[] = [
-    ...brandHeader(),
-    new Paragraph({ heading: HeadingLevel.TITLE, children: [new TextRun({ text: title, bold: true, size: 40, color: "1B1F3B" })] }),
-    new Paragraph({ children: [new TextRun(`${new Date().toLocaleDateString()}  |  ${questions.length} questions  |  ${metadata.mode?.replace(/_/g, " ") ?? "Quiz / Exam"}`)] }),
-    new Paragraph({ children: [new TextRun(`Author: ${metadata.author?.trim() || "Memoria user"}`)] }),
-    new Paragraph({ heading: HeadingLevel.HEADING_1, children: [new TextRun({ text: "QUESTIONS", bold: true })] }),
-  ];
-  questions.forEach((question, index) => {
-    children.push(new Paragraph({ keepNext: true, children: [new TextRun({ text: `${index + 1}. ${question.question}`, bold: true })] }));
-    for (const option of options(question)) children.push(new Paragraph({ indent: { left: 360 }, children: [new TextRun(option)] }));
-  });
-  children.push(new Paragraph({ children: [new PageBreak()] }), new Paragraph({ heading: HeadingLevel.HEADING_1, children: [new TextRun({ text: "ANSWER KEY", bold: true })] }));
-  questions.forEach((question, index) => {
-    children.push(new Paragraph({ keepNext: true, children: [new TextRun({ text: `${index + 1}. ${question.question}`, bold: true })] }), new Paragraph({ children: [new TextRun({ text: "Correct Answer: ", bold: true }), new TextRun(formatCorrectAnswer(question))] }), new Paragraph({ children: [new TextRun({ text: "Explanation: ", bold: true }), new TextRun({ text: question.explanation?.trim() || "No detailed explanation was provided.", italics: true })] }));
-  });
-  await downloadDocument(baseDocument(title, children), title);
+  const { exportQuizDocument } = await import("@/lib/export/editable-markdown");
+  await exportQuizDocument(title, questions, "docx", metadata);
 }
 
 function sanitize(value: string) { return value.replace(/[^a-z0-9-_]+/gi, "-").toLowerCase() || "memoria-export"; }

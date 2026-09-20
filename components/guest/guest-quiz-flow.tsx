@@ -185,7 +185,7 @@ export function GuestQuizFlow({ activityMode = "quiz" }: { activityMode?: "quiz"
   async function exportPdf() {
     if (!quiz) return;
     const { exportQuizToPdf } = await import("@/lib/pdf-export");
-    exportQuizToPdf(quiz.title, quiz.questions, { mode: quiz.settings.mode, author: "Guest" });
+    await exportQuizToPdf(quiz.title, quiz.questions, { mode: quiz.settings.mode, author: "Guest" });
   }
 
   async function exportQuiz(format: string) {

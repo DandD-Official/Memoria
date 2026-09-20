@@ -54,6 +54,8 @@
 .book-reader-stage { max-height: 78dvh; overflow: auto; overscroll-behavior: contain; padding: 16px; background: rgb(var(--color-surface-muted)); border-block: 1px solid rgb(var(--color-line)); }
 .book-reader-frame { margin-inline: auto; box-shadow: 0 5px 20px rgb(25 40 28 / .1); }
 .book-reader-stage .book-paper { max-width: none; }
+.book-reader-stage { scrollbar-width: none; }
+.book-reader-stage::-webkit-scrollbar { display: none; }
 @media print { .book-reader-toolbar { display: none; } .book-reader-stage { max-height: none; overflow: visible; padding: 0; } }
 .book-thumbnail { position: relative; display: flex; flex-direction: column; min-height: 360px; overflow: hidden; padding: 26px 24px 20px 30px; border: 1px solid #bac3ab; border-left: 10px solid #2b4837; border-radius: 3px 12px 12px 3px; background: #f7f7ef; color: #22312b; box-shadow: 3px 4px 0 #e4e6d9, 6px 8px 0 #d6dacb, 0 12px 26px rgb(25 40 28 / .08); transition: transform .2s; }
 .group:hover .book-thumbnail { transform: translateY(-4px); }

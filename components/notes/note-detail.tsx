@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, ListChecks, Pencil, Workflow, Sparkles, Trash2 } from "lucide-react";
+import { ArrowLeft, ListChecks, Pencil, Workflow, Sparkles, Trash2, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/input";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -106,7 +106,7 @@ export function NoteDetail({ note, canEdit, isOwner, autoSave, systemAvailable, 
       <div className="document-heading">
         <div className="flex flex-col gap-6">
           <div className="min-w-0">
-            <Badge tone="neutral">{note.sourceType}</Badge>
+            <div className="flex flex-wrap items-center gap-2"><Badge tone="neutral">{note.sourceType}</Badge>{!isOwner && <Badge tone="accent"><Users className="me-1 h-3.5 w-3.5" />Shared note</Badge>}</div>
             {!isEditing && <h1 className="mt-4 max-w-3xl break-words font-display text-3xl leading-tight tracking-tight text-ink sm:text-4xl">{title}</h1>}
             {!isEditing && <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-ink-faint"><span>Last updated {formatDate(note.updatedAt)}</span><span className="h-1 w-1 rounded-full bg-line-strong" aria-hidden="true" /><span>{canEdit ? "You can edit this note" : "Read-only access"}</span></div>}
           </div>
@@ -118,9 +118,10 @@ export function NoteDetail({ note, canEdit, isOwner, autoSave, systemAvailable, 
             </>}
             favorite={isOwner ? <ResourceFavoriteButton resourceType="NOTE" resourceId={note.id} favorite={note.favorite} /> : <span />}
             share={isOwner ? <ShareDialog resourceType="NOTE" resourceId={note.id} /> : undefined}
+            exportAction={<ExportMenu options={[{ value: "pdf", label: "PDF document" }, { value: "docx", label: "Word document" }, { value: "md", label: "Markdown" }, { value: "json", label: "Memoria JSON" }]} onExport={handleExport} />}
             tools={<>
               {canEdit && <RepromptDialog noteId={note.id} systemAvailable={systemAvailable} />}
-              <ExportMenu options={[{ value: "pdf", label: "PDF document" }, { value: "docx", label: "Word document" }, { value: "md", label: "Markdown" }, { value: "json", label: "Memoria JSON" }]} onExport={handleExport} />
+
               {isOwner && <ResourceUtilityActions resourceType="NOTE" resourceId={note.id} archived={note.archived} />}
               {isOwner && <RevisionHistory resourceType="NOTE" resourceId={note.id} />}
               {isOwner && <ConfirmDialog trigger={<Button variant="ghost" size="sm"><Trash2 className="h-3.5 w-3.5 text-danger" /> Delete</Button>} title="Delete this note?" description="This can't be undone. Reviewers built from this note will keep their content." confirmLabel="Delete" destructive onConfirm={handleDelete} />}

@@ -41,7 +41,7 @@ export function CodeBlock({ node }: { node: MmdBlockNode }) {
           <span className="mmd-code-language">{language}</span>
         </figcaption>
       )}
-      <pre className="mmd-code-pre" aria-label={`${language} code`}><code>
+      <pre className="mmd-code-pre" tabIndex={0} aria-label={`${language} code`}><code>
         {lines.map((line, index) => (
           <span className="mmd-code-line" key={`${index}-${line}`}>
             <span className="mmd-code-gutter" aria-hidden="true">{index + 1}</span>

@@ -356,13 +356,13 @@
     text-transform: uppercase;
     letter-spacing: 0.08em;
   }
-  .mmd-code-pre {
+  .memora-markdown .mmd-code-pre {
     @apply m-0 overflow-x-auto p-0;
     background: transparent;
     color: inherit;
     tab-size: 4;
   }
-  .mmd-code-pre code {
+  .memora-markdown .mmd-code-pre code {
     @apply block bg-transparent p-0;
     color: inherit;
     font: inherit;
@@ -381,6 +381,7 @@
     @apply px-4;
     white-space: pre;
     tab-size: 4;
+    min-height: 1.6em;
   }
   .memora-markdown hr {
     @apply my-6 border-line;
@@ -448,6 +449,7 @@
 /* The learning journal: workspace, reading and focus are distinct environments. */
 @layer components {
   .workspace-header { @apply sticky top-0 z-40 border-b border-line bg-paper; }
+  .reading-workspace-shell .workspace-header { position: static; }
   .workspace-content { @apply w-full min-w-0; }
   .context-index { @apply border-b border-line bg-surface; }
   .top-nav-link { @apply relative inline-flex min-h-14 items-center px-5 text-sm text-ink-soft; }
@@ -476,7 +478,8 @@
   .document-body .memora-markdown { font-size: 1.0625rem; line-height: 1.8; }
   .document-body .memora-markdown > p { max-width: 68ch; }
   .document-layout { @apply grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_14rem]; }
-  .document-margin { @apply space-y-6 text-sm lg:sticky lg:top-28; }
+  .document-margin { @apply min-w-0 space-y-6 text-sm lg:sticky lg:top-6; max-height: calc(100dvh - 3rem); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: none; overflow-wrap: anywhere; }
+  .document-margin::-webkit-scrollbar { display: none; }
   .resource-list { @apply divide-y divide-line border-y border-line; }
   .resource-entry { @apply relative grid min-w-0 gap-4 py-5 sm:grid-cols-[2.75rem_minmax(0,1fr)_auto] sm:items-center; }
   .resource-entry:hover { background: rgb(var(--color-surface-muted) / 0.6); }

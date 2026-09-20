@@ -1,14 +1,11 @@
 "use client";
 
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
+import { InlineMarkdown } from "@/components/mmd/inline-markdown";
 import { parseMmd, isPlainMarkdown } from "@/lib/mmd/parser";
 import { MmdNodeList } from "@/components/mmd/node-list";
 import { MmdReplacementProvider } from "@/components/mmd/replacement-context";
-import { ResponsiveTable } from "@/components/ui/responsive-table";
 import { MmdRenderProvider, type MmdRenderMode } from "@/components/mmd/render-context";
 import type { MmdAssetRegistry } from "@/lib/export/asset-registry";
-import { TableCellContent } from "@/components/markdown/table-cell";
 
 /**
  * Renders Memoria Markdown (MMD) — see .context/mmd-spec.md. This is the
@@ -32,23 +29,12 @@ export function MmdRenderer({
   resolvedAssets?: Record<string, string | null>;
 }) {
   if (isPlainMarkdown(content)) {
-    // Fast path, and a deliberate safety net: documents with zero MMD
-    // fences (100% of existing Notes/Reviewers today) render through
-    // exactly the same code path as before MMD existed — byte-for-byte
-    // the same react-markdown call — rather than going through the MMD
-    // parser and back out again. Existing content cannot regress.
+    // Skip MMD parsing, while sharing code, table, and inline rendering
+    // with Markdown inside custom blocks.
     return (
       <MmdRenderProvider mode={mode} assetRegistry={assetRegistry} resolvedAssets={resolvedAssets}>
         <div className="memora-markdown">
-          <ReactMarkdown
-            remarkPlugins={[remarkGfm]}
-            components={{
-              table: ({ children, ...props }) => (
-                <ResponsiveTable><table {...props}>{children}</table></ResponsiveTable>
-              ),
-              td: ({ children, ...props }) => <td {...props}><TableCellContent>{children}</TableCellContent></td>,
-            }}
-          >{content}</ReactMarkdown>
+          <InlineMarkdown content={content} />
         </div>
       </MmdRenderProvider>
     );

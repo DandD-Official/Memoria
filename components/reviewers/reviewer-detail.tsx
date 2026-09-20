@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, BookOpen, Pencil, Sparkles } from "lucide-react";
+import { ArrowLeft, BookOpen, Pencil, Sparkles, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/input";
@@ -86,7 +86,7 @@ export function ReviewerDetail({ reviewer, isOwner, canEdit, autoSave, related }
       <div className="document-heading">
         <div className="flex flex-col gap-6">
           <div className="min-w-0">
-            <Badge tone="accent">{reviewer.style}</Badge>
+            <div className="flex flex-wrap items-center gap-2"><Badge tone="accent">{reviewer.style}</Badge>{!isOwner && <Badge tone="accent"><Users className="me-1 h-3.5 w-3.5" />Shared guide</Badge>}</div>
             {!editing && <h1 className="mt-4 max-w-3xl break-words font-display text-3xl leading-tight tracking-tight text-ink sm:text-5xl">{title}</h1>}
             {!editing && reviewer.description && <p className="mt-1 text-ink-soft">{reviewer.description}</p>}
             {!editing && <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-ink-faint"><span>Last updated {formatDate(reviewer.updatedAt)}</span>{reviewer.noteCount > 0 && <><span className="h-1 w-1 rounded-full bg-line-strong" aria-hidden="true" /><span>Built from {reviewer.noteCount} {reviewer.noteCount === 1 ? "note" : "notes"}</span></>}</div>}
@@ -96,8 +96,9 @@ export function ReviewerDetail({ reviewer, isOwner, canEdit, autoSave, related }
             study={<div className="space-y-2"><Link href={`/study/flashcards/${reviewer.id}`} className="flex min-h-10 w-full items-center gap-2 rounded-control border border-line bg-surface px-3 text-sm font-medium text-ink hover:border-accent hover:bg-accent-soft"><BookOpen className="h-3.5 w-3.5 text-accent-dark" /> Study flashcards</Link><Link href={`/quizzes?fromReviewer=${reviewer.id}`} className="flex min-h-10 w-full items-center gap-2 rounded-control bg-accent px-3 text-sm font-medium text-ink hover:bg-accent-dark hover:text-white"><Sparkles className="h-3.5 w-3.5" /> Create quiz</Link></div>}
             favorite={isOwner ? <ResourceFavoriteButton resourceType="REVIEWER" resourceId={reviewer.id} favorite={reviewer.favorite} /> : <span />}
             share={isOwner ? <ShareDialog resourceType="REVIEWER" resourceId={reviewer.id} /> : undefined}
+            exportAction={<ExportMenu options={[{ value: "pdf", label: "PDF document" }, { value: "docx", label: "Word document" }, { value: "md", label: "Markdown" }, { value: "json", label: "Memoria JSON" }]} onExport={handleExport} />}
             tools={<>
-              <ExportMenu options={[{ value: "pdf", label: "PDF document" }, { value: "docx", label: "Word document" }, { value: "md", label: "Markdown" }, { value: "json", label: "Memoria JSON" }]} onExport={handleExport} />
+
               {isOwner && <ResourceUtilityActions resourceType="REVIEWER" resourceId={reviewer.id} archived={reviewer.archived} />}
               {isOwner && <RevisionHistory resourceType="REVIEWER" resourceId={reviewer.id} />}
               {isOwner && <DeleteReviewerButton reviewerId={reviewer.id} />}

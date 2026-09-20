@@ -1,12 +1,12 @@
 import Link from "next/link";
-import { BookMarked } from "lucide-react";
+import { MemoryMark } from "@/components/layout/brand";
 
 export function LandingFooter() {
   return (
     <footer className="border-t border-line px-6 py-10">
       <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 text-sm text-ink-soft sm:flex-row">
         <div className="flex items-center gap-2 font-display text-ink">
-          <BookMarked className="h-4 w-4 text-accent-dark" />
+          <MemoryMark className="h-4 w-4 text-accent-dark" />
           Memoria
         </div>
         <p>Turn your notes into knowledge.</p>

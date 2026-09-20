@@ -19,8 +19,8 @@ export function WorkspaceShell({ children, userName, unreadNotifications, studyS
   }, [reduceMotion]);
   const focus = /\/quizzes\/[^/]+\/play$/.test(pathname) || pathname === "/study/review" || pathname.startsWith("/study/flashcards/");
   const library = libraryNavigation.some(item => pathname === item.href);
-  const reading = /^\/(notes|reviewers)\/[^/]+$/.test(pathname) && !pathname.endsWith("/import");
-  return <div className={cn("workspace min-h-dvh", focus && "focus-workspace", compact && "compact-layout", reduceMotion && "reduce-motion")}>
+  const reading = /^\/(notes|reviewers|books)\/[^/]+$/.test(pathname) && !pathname.endsWith("/import");
+  return <div className={cn("workspace min-h-dvh", reading && "reading-workspace-shell", focus && "focus-workspace", compact && "compact-layout", reduceMotion && "reduce-motion")}>
     <a href="#main-content" className="skip-link">Skip to content</a>
     {focus ? <header className="focus-header"><Link href="/study" className="inline-flex min-h-11 items-center gap-2 text-sm text-ink-soft"><ArrowLeft className="h-4 w-4" /> Leave focus</Link><Brand href="/dashboard" compact /><span className="hidden font-mono text-xs uppercase tracking-widest text-ink-faint sm:block">One thing at a time</span></header> : <Topbar userName={userName} unreadNotifications={unreadNotifications} studyStreak={studyStreak} />}
     {!focus && library && <div className="context-index" onMouseEnter={() => { if (indexMode === "HOVER") setCollapsed(false); }} onMouseLeave={() => { if (indexMode === "HOVER" && indexCollapsed) setCollapsed(true); }}>
