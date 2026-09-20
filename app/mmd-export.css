@@ -4,9 +4,9 @@
 
 .mmd-export-surface {
 
-  --font-display: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif;
-  --font-sans: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
-  --font-mono: "Cascadia Code", "SFMono-Regular", Consolas, monospace;
+  --font-display: Georgia, Cambria, serif;
+  --font-sans: Arial, Calibri, sans-serif;
+  --font-mono: Consolas, "Courier New", monospace;
   --color-paper: 247 247 239;
   --color-ink: 34 49 43;
   --color-ink-soft: 81 95 83;
@@ -249,3 +249,44 @@
 .mmd-export-surface [data-export-svg="true"] {
   overflow: visible;
 }
+
+/* Canonical export reflow: no screen scrollports or viewport-dependent columns. */
+.mmd-export-surface .responsive-table,
+.mmd-export-surface .responsive-table__viewport,
+.mmd-export-surface .memora-markdown pre,
+.mmd-export-surface .mmd-code-pre {
+  overflow: visible !important;
+  max-height: none !important;
+  max-width: 100%;
+}
+.mmd-export-surface .responsive-table__hint { display: none !important; }
+.mmd-export-surface table { table-layout: fixed; width: 100%; min-width: 0 !important; }
+.mmd-export-surface th,
+.mmd-export-surface td { padding: 8px; white-space: normal !important; overflow-wrap: anywhere; word-break: break-word; min-width: 0; }
+.mmd-export-surface pre,
+.mmd-export-surface pre code,
+.mmd-export-surface .mmd-code-line,
+.mmd-export-surface .mmd-code-content { white-space: pre-wrap !important; overflow-wrap: anywhere; word-break: break-word; min-width: 0 !important; }
+.mmd-export-surface .mmd-code-line { grid-template-columns: 3.25rem minmax(0, 1fr); }
+.mmd-export-surface .mmd-code-content { padding-inline-start: 1em; text-indent: -1em; }
+.mmd-export-surface .memora-markdown { line-height: 1.5; }
+.mmd-export-surface .memora-markdown :is(h1,h2,h3,h4,h5,h6) { line-height: 1.25; }
+.mmd-export-surface .memora-markdown :is(p,li) { margin-bottom: .5em; }
+.mmd-export-surface .memora-markdown article,
+.mmd-export-surface [data-export-block="column"] { padding: 16px; }
+.mmd-export-table-caption { margin: 8px 0 4px; text-align: start; font: 11px Arial, sans-serif; color: rgb(var(--color-ink-soft)); }
+.mmd-export-surface > .mmd-export-flow { display: flow-root; }
+.mmd-export-surface .mmd-page-window > .mmd-export-flow { padding: 48px; display: flow-root; }
+.mmd-export-surface [data-export-repeated-header] { table-layout: fixed; }
+.mmd-export-surface .mmd-export-document-title,
+.mmd-export-surface .mmd-export-cover h1 { line-height: 1.25; }
+
+.mmd-export-surface .mmd-code-block { overflow: visible; }
+
+/* Book pages are measured and rendered with the same export font policy. */
+.mmd-export-surface.book-paper {
+  --font-display: Georgia, Cambria, serif;
+  --font-sans: Arial, Calibri, sans-serif;
+  --font-mono: Consolas, "Courier New", monospace;
+}
+.mmd-export-surface.book-paper :is(.book-cover h1, .book-section-heading h2, .book-chapter-title h2) { line-height: 1.25; }

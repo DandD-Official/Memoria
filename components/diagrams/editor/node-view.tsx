@@ -14,6 +14,6 @@ export const NodeView = memo(function NodeView({ node, images, selected, onPoint
     {icon&&<path d={icon} transform={`translate(${node.x} ${node.y}) scale(${node.width/24} ${node.height/24})`} fill="none" vectorEffect="non-scaling-stroke"/>}
     {image&&<image x={node.x} y={node.y} width={node.width} height={node.height} href={image} preserveAspectRatio="xMidYMid meet"/>}
     {s.highlight&&<rect x={node.x+8} y={text.y-text.size} width={Math.max(0,node.width-16)} height={text.lines.length*text.step} fill={s.highlight} stroke="none"/>}
-    <text fontFamily={text.font} fontSize={text.size} textAnchor={text.anchor as "start"|"middle"|"end"} fill={s.textColor??"#22312b"} stroke="none" fontWeight={s.bold?700:400} fontStyle={s.italic?"italic":"normal"} textDecoration={[s.underline?"underline":"",s.strike?"line-through":""].filter(Boolean).join(" ")||"none"}>{text.lines.map((line,i)=><tspan key={i} x={text.x} y={text.y+i*text.step}>{line}</tspan>)}</text>
+    <text dominantBaseline={text.baseline} fontFamily={text.font} fontSize={text.size} textAnchor={text.anchor as "start"|"middle"|"end"} fill={s.textColor??"#22312b"} stroke="none" fontWeight={s.bold?700:400} fontStyle={s.italic?"italic":"normal"} textDecoration={[s.underline?"underline":"",s.strike?"line-through":""].filter(Boolean).join(" ")||"none"}>{text.lines.map((line,i)=><tspan key={i} x={text.x} y={text.y+i*text.step}>{line}</tspan>)}</text>
   </g>;
 });

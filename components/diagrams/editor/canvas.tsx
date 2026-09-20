@@ -3,7 +3,7 @@ import { useCallback,useEffect,useRef,useState,type PointerEvent } from "react";
 import type { DiagramDataV2,NodeV2,Point,Endpoint } from "@/lib/diagrams/schema";
 import { routeEdge } from "@/lib/diagrams/routing";
 import { center } from "@/lib/diagrams/geometry";
-import { moveNodes,snapGuides,adoptContainers,connect,reconnect,newNode } from "@/lib/diagrams/editing";
+import { moveNodes,snapGuides,adoptContainers,snapConnect,connect,reconnect,newNode } from "@/lib/diagrams/editing";
 import type { DiagramBounds } from "@/lib/diagrams/svg";
 import type { DiagramImages } from "@/lib/diagrams/svg-v2";
 import { NodeView } from "./node-view";
@@ -14,9 +14,9 @@ import { ContextMenu } from "./context-menu";
 import { TextOverlay } from "./text-overlay";
 
 type Gesture={kind:"move"|"resize"|"rotate"|"pan"|"marquee"|"connect"|"endpoint"|"bend"|"label";start:Point;client:Point;before:DiagramDataV2;ids:string[];camera:DiagramBounds;handle?:Handle;source?:Endpoint;edge?:string;end?:"source"|"target";bend?:number;shift?:boolean};
-interface Props {data:DiagramDataV2;images:DiagramImages;selection:string[];select:(ids:string[])=>void;change:(data:DiagramDataV2)=>void;camera:DiagramBounds;setCamera:(camera:DiagramBounds)=>void;tool:"select"|"pan"|"text"|"connect";grid:boolean;act:(action:string)=>void;announce:(message:string)=>void;disabled:boolean;add:(shape:string,point?:Point)=>void;zoom:(factor:number)=>void}
+interface Props {data:DiagramDataV2;images:DiagramImages;selection:string[];select:(ids:string[])=>void;change:(data:DiagramDataV2)=>void;camera:DiagramBounds;setCamera:(camera:DiagramBounds)=>void;tool:"select"|"pan"|"text"|"connect";snapConnectEnabled:boolean;grid:boolean;act:(action:string)=>void;announce:(message:string)=>void;disabled:boolean;add:(shape:string,point?:Point)=>void;zoom:(factor:number)=>void}
 export function Canvas(props:Props){
-  const {data,images,selection,select,change,camera,setCamera,tool,grid,act,announce,disabled,add,zoom}=props;
+  const {snapConnectEnabled,data,images,selection,select,change,camera,setCamera,tool,grid,act,announce,disabled,add,zoom}=props;
   const svg=useRef<SVGSVGElement>(null),host=useRef<HTMLDivElement>(null),gesture=useRef<Gesture|null>(null),previewRef=useRef<DiagramDataV2|null>(null),raf=useRef<number>(0),longPress=useRef<ReturnType<typeof setTimeout>>();
   const pointers=useRef(new Map<number,Point>()),pinch=useRef<{distance:number;camera:DiagramBounds;mid:Point}>(),space=useRef(false);
   const [preview,setPreview]=useState<DiagramDataV2|null>(null),[marquee,setMarquee]=useState<DiagramBounds|null>(null),[connection,setConnection]=useState<{source:Endpoint;point:Point}|null>(null),[pending,setPending]=useState<{source:Endpoint;point:Point}|null>(null);
@@ -48,7 +48,7 @@ export function Canvas(props:Props){
     // eslint-disable-next-line react-hooks/exhaustive-deps
   },[data,selection,tool,keyboardSource,disabled,camera]);
   function move(event:PointerEvent<SVGSVGElement>){
-    pointers.current.set(event.pointerId,{x:event.clientX,y:event.clientY});
+    if(pointers.current.has(event.pointerId))pointers.current.set(event.pointerId,{x:event.clientX,y:event.clientY});
     if(pinch.current&&pointers.current.size>=2){const [a,b]=[...pointers.current.values()],p=pinch.current;const ratio=p.distance/Math.max(1,Math.hypot(a.x-b.x,a.y-b.y));const width=Math.max(250,Math.min(10000,p.camera.width*ratio)),height=width*p.camera.height/p.camera.width;setCamera({...p.camera,width,height,x:p.camera.x+(p.camera.width-width)/2-((a.x+b.x)/2-p.mid.x)/scale,y:p.camera.y+(p.camera.height-height)/2-((a.y+b.y)/2-p.mid.y)/scale});return;}
     const g=gesture.current;if(!g)return;const p=point(event);let dx=p.x-g.start.x,dy=p.y-g.start.y;
     if(Math.hypot(event.clientX-g.client.x,event.clientY-g.client.y)>5)clearTimeout(longPress.current);
@@ -69,7 +69,7 @@ export function Canvas(props:Props){
       if(g.kind==="marquee"&&marquee)select(g.before.nodes.filter(n=>n.x>=marquee.x&&n.y>=marquee.y&&n.x+n.width<=marquee.x+marquee.width&&n.y+n.height<=marquee.y+marquee.height).map(n=>n.id));
       else if(g.kind==="connect"){const target=endpoint(event);if("nodeId" in target){change(connect(g.before,g.source!,target));announce("Connected two shapes");}else setPending({source:g.source!,point:target});}
       else if(g.kind==="endpoint")change(reconnect(g.before,g.edge!,g.end!,endpoint(event)));
-      else if(previewRef.current)change(g.kind==="move"?adoptContainers(previewRef.current,g.ids):previewRef.current);
+      else if(previewRef.current){let next=g.kind==="move"?adoptContainers(previewRef.current,g.ids):previewRef.current;if(snapConnectEnabled&&g.kind==="move"&&g.ids.length===1)next=snapConnect(next,g.ids[0]);change(next);}
     }
     previewRef.current=null;setPreview(null);setMarquee(null);setConnection(null);setGuides([]);
   }

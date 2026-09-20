@@ -52,3 +52,15 @@ an SVG snapshot to `Diagram.previewImage`; the preview route serves it to MMD
 embeds. Exporters may later embed these stored snapshots directly.
 
 Guest mode does not persist diagrams or media because both require an owner.
+
+## Native workspace v2 ? 2026-09-21
+
+Version 1 remains readable and its direct SVG output is protected by an original-output golden fixture. Version 2 requires a paper color and adds kinds, ports/free endpoints, rotation, container ownership, richer styling, bend points, routing and markers. `hydrate` upgrades only in memory; saves write schemaVersion 2. No database migration was added. Failed hydration is marked `loadError` and cannot be saved over.
+
+`geometry.ts` and `shapes.ts` supply the native React SVG canvas and serialized SVG. `icons.ts` stores static paths. Routing, editing, layouts and history are DOM-free modules. The old editor entry point delegates to components/diagrams/editor (workspace, toolbar, canvas, node/edge views, handles, palette, inspector, minimap, text overlay, context menu, library and templates). Source SVG strings are no longer injected during pointer moves. Gesture previews use refs and requestAnimationFrame; commit creates one history entry (200 retained).
+
+The library and inspector use collapsible panels; on narrow screens these are bottom disclosures. Connections are explicit port drags or keyboard C/arrows/Enter. Proximity Snap-connect is optional and off by default. Shape and edge labels remain escaped text, never HTML.
+
+Owned media is resolved server-side against the diagram owner, sanitized for SVG, re-encoded as WebP with Sharp, and reduced to at most 1024 pixels plus a count-based byte budget. Diagram SVGs contain inline raster data and an explicit paper rectangle. Books resolve the same images after access checks. Preview upload failures are visible. Existing API permission checks remain.
+
+Verification and remaining runtime limitations: implementation-review.md. Direct v1 output is byte-identical in the golden test; no claim of measured Office or browser visual fidelity is made.

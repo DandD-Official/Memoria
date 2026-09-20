@@ -632,3 +632,13 @@ application code:
    provider-free in v1; image requests use uploads, deterministic SVG
    templates, or saved diagrams. The only remaining check is the signed-in
    browser/dev-server smoke test against a reachable database.
+
+## MMD editor and diagram workspace ? 2026-09-21
+
+Part 1: CodeMirror source editing, shared indentation-aware grammar, source spans, compiler diagnostics, completion, fixes and save notices. Removed block map. Gate: lint, 235 tests / 38 files, full Prisma/Next build passed. Browser unavailable.
+
+Part 2: additive v2 diagram persistence, native React SVG editor modules, shared geometry, explicit connections, richer shapes/styles, grouping, clipboard, layouts, image embedding and PNG/SVG downloads. Gate: lint and 336 tests / 41 files passed; full Prisma/Next build passed after the final containment-layout adjustment. Runtime UI/DB checks remain unverified. See implementation-review.md.
+
+## Export pagination and editable text - 2026-09-21
+
+Part 3: nested geometric pagination, table width/column planning and repeated headers, wrapped code, canonical responsive layout, merged editable line runs, safe font policy, width compensation and exact Word spacing. Lint and full Prisma/Next build passed. Final suite: 353 tests / 42 files. Browser export metrics and Office rendering remain unverified; see implementation-review.md for exact checks and limitations.

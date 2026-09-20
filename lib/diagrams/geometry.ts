@@ -19,7 +19,7 @@ export function shapePrimitives(node: NodeV2): Primitive[] {
   const { x, y, width: w, height: h, shape } = node;
   if ((SHAPE_TYPES as readonly string[]).includes(shape)) {
     const markup = legacyShapeMarkup(node as DiagramNode);
-    return [...markup.matchAll(/<(path|rect|ellipse) ([^>]+)\/>/g)].map(item => ({ tag: item[1] as Primitive["tag"], attrs: Object.fromEntries([...item[2].matchAll(/([\w-]+)="([^"]*)"/g)].map(attr => [attr[1], attr[2]])) }));
+    return [...markup.matchAll(/<(path|rect|ellipse) ([^>]+)\/>/g)].map(item => ({ tag: item[1] as Primitive["tag"], attrs: { ...Object.fromEntries([...item[2].matchAll(/([\w-]+)="([^"]*)"/g)].map(attr => [attr[1], attr[2]])), ...(!node.legacy && item[1] === "rect" && node.style?.radius !== undefined ? { rx: node.style.radius } : {}) } }));
   }
   const rect: Primitive = { tag: "rect", attrs: { x, y, width: w, height: h, rx: node.style?.radius ?? 0 } };
   const poly = (points: number[][]) => path(points.map(([px, py], i) => `${i ? "L" : "M"} ${x + px * w} ${y + py * h}`).join(" ") + " Z");
@@ -67,11 +67,18 @@ export function rotatePoint(point: Point, center: Point, degrees: number): Point
 }
 export const center = (node: Pick<NodeV2, "x" | "y" | "width" | "height">): Point => ({ x: node.x+node.width/2, y: node.y+node.height/2 });
 export function ports(node: NodeV2) {
-  return ([{ id: "top", x: node.x+node.width/2, y: node.y }, { id: "right", x: node.x+node.width, y: node.y+node.height/2 }, { id: "bottom", x: node.x+node.width/2, y: node.y+node.height }, { id: "left", x: node.x, y: node.y+node.height/2 }] as const).map(port => ({ ...port, ...rotatePoint(port, center(node), node.rotation) }));
+  return ([{ id: "top", x: node.x+node.width/2, y: node.y }, { id: "right", x: node.x+node.width, y: node.y+node.height/2 }, { id: "bottom", x: node.x+node.width/2, y: node.y+node.height }, { id: "left", x: node.x, y: node.y+node.height/2 }] as const).map(port => ({ ...port, ...perimeter(node, rotatePoint(port, center(node), node.rotation)) }));
 }
 export function perimeter(node: NodeV2, toward: Point): Point {
   const c = center(node), local = rotatePoint(toward, c, -node.rotation); const dx = local.x-c.x, dy = local.y-c.y;
-  if (!dx && !dy) return ports(node)[1];
+  if (!dx && !dy) return rotatePoint({x:c.x+node.width/2,y:c.y},c,node.rotation);
+  const outline=shapePrimitives(node)[0];const d=outline?.tag==="path"?String(outline.attrs.d):"";
+  if(d&&/^[MLZ\d.e+\-\s]+$/i.test(d)){
+    const values=d.match(/-?\d+(?:\.\d+)?(?:e[+-]?\d+)?/gi)?.map(Number)??[];const vertices:Point[]=[];for(let i=0;i<values.length;i+=2)vertices.push({x:values[i],y:values[i+1]});
+    let nearest=Infinity;
+    for(let i=0;i<vertices.length;i++){const a=vertices[i],b=vertices[(i+1)%vertices.length],sx=b.x-a.x,sy=b.y-a.y,den=dx*sy-dy*sx;if(Math.abs(den)<1e-8)continue;const t=((a.x-c.x)*sy-(a.y-c.y)*sx)/den,u=((a.x-c.x)*dy-(a.y-c.y)*dx)/den;if(t>=0&&u>=0&&u<=1)nearest=Math.min(nearest,t);}
+    if(Number.isFinite(nearest))return rotatePoint({x:c.x+dx*nearest,y:c.y+dy*nearest},c,node.rotation);
+  }
   const elliptical = ["circle", "ellipse", "use-case", "attribute", "key-attribute", "connector"].includes(node.shape);
   const diamond = ["diamond", "decision", "relationship"].includes(node.shape);
   const divisor = elliptical ? Math.hypot(dx/(node.width/2), dy/(node.height/2)) : diamond ? Math.abs(dx)/(node.width/2)+Math.abs(dy)/(node.height/2) : Math.max(Math.abs(dx)/(node.width/2), Math.abs(dy)/(node.height/2));
@@ -88,6 +95,12 @@ export function wrapText(text: string, width: number, size: number): string[] {
 }
 export const FONT_FAMILIES = { sans: "Arial, sans-serif", serif: "Georgia, serif", mono: "Consolas, monospace", handwriting: "Comic Sans MS, cursive" };
 export function nodeText(node: NodeV2) {
+  if (node.legacy) {
+    const size=node.style?.fontSize??16,limit=Math.max(4,Math.floor((node.width-24)/(size*.56))),lines:string[]=[];
+    for(const paragraph of (node.label??"").split("\n")){let line="";for(const word of paragraph.split(/\s+/)){if(line&&line.length+word.length+1>limit){lines.push(line);line="";}line+=(line?" ":"")+word;}lines.push(line);}
+    const align=node.style?.textAlign??"center",x=align==="left"?node.x+12:align==="right"?node.x+node.width-12:node.x+node.width/2;
+    return {lines,x,y:node.y+node.height/2-(lines.length-1)*size*.65,step:size*1.3,size,width:node.width-24,anchor:align==="left"?"start":align==="right"?"end":"middle",font:"Segoe UI, Arial, sans-serif",baseline:"middle" as const};
+  }
   const size = node.style?.fontSize ?? 16, padding = node.style?.padding ?? 12;
   const inset = ["diamond", "decision", "relationship", "triangle", "star"].includes(node.shape) ? node.width*.22 : padding;
   const width = Math.max(1, node.width-2*inset), step = size*(node.style?.lineHeight ?? 1.3);
@@ -98,7 +111,7 @@ export function nodeText(node: NodeV2) {
   const align = node.style?.textAlign ?? "center";
   const x = align === "left" ? node.x+inset : align === "right" ? node.x+node.width-inset : node.x+node.width/2;
   const top = node.kind === "container" ? node.y+padding : node.style?.verticalAlign === "top" ? node.y+padding : node.style?.verticalAlign === "bottom" ? node.y+node.height-padding-visible.length*step : node.y+(node.height-visible.length*step)/2;
-  return { lines: visible, x, y: top+size*.85, step, size, width, anchor: align === "left" ? "start" : align === "right" ? "end" : "middle", font: FONT_FAMILIES[node.style?.fontFamily ?? "sans"] };
+  return { lines: visible, x, y: top+size*.85, step, size, width, anchor: align === "left" ? "start" : align === "right" ? "end" : "middle", font: FONT_FAMILIES[node.style?.fontFamily ?? "sans"], baseline:"auto" as const };
 }
 export function iconPath(node: NodeV2): string | undefined { return node.iconId ? ICONS[node.iconId] : undefined; }
 
@@ -119,4 +132,3 @@ export function edgeGeometry(source: Pick<DiagramNode, "x" | "y" | "width" | "he
   const y = (a.y + b.y) / 2;
   return { path: `M ${a.x} ${a.y} V ${y} H ${b.x} V ${b.y}`, x: (a.x + b.x) / 2, y };
 }
-

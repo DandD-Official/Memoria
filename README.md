@@ -138,3 +138,11 @@ The study system persists editable flashcards, schedules reviews with spaced rep
 ## Design system
 
 The learning-journal design uses warm paper, evergreen actions, lime highlights, editorial serif headings, sans-serif controls, and mono index labels. Semantic tokens in `tailwind.config.ts` and `app/globals.css` support light and dark themes. Desk, Library, Practice, and Together share responsive navigation, with quieter reading and focus layouts. See `docs/frontend-reconstruction.md` for the product map, implementation checkpoint, and verification coverage. PDF and Word exports retain their own document templates.
+
+### Memoria authoring tools
+
+Notes and reviewers use a dynamically loaded CodeMirror editor with indentation, block completion, line-numbered diagnostics, quick fixes, folding, search and undo/redo. Invalid MMD can still be saved.
+
+The native SVG diagram workspace includes a searchable shape/icon library, explicit port connections, routing and arrowheads, free text, containers, grouping, multi-selection, alignment, clipboard, gesture undo/redo, and SVG/PNG downloads. Version-1 diagrams remain readable; saves use additive version 2. Owned images are embedded into self-contained previews. See `.context/implementation-review.md` for tested coverage and runtime checks still needed.
+
+Word/PDF exports retain editable positioned text over 2x artwork. Nested content uses geometric page breaks, tables reflow and repeat headers, wide tables split into column segments, and code wraps. Word lines contain formatted runs with Office-safe fonts and exact spacing. Browser/Office fidelity checks remain outstanding; see `.context/implementation-review.md`.

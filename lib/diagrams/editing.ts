@@ -22,6 +22,14 @@ export function removeItems(data: DiagramDataV2, ids: string[]): DiagramDataV2 {
 export function connect(data: DiagramDataV2, source: Endpoint, target: Endpoint, id = crypto.randomUUID()): DiagramDataV2 {
   return diagramDataV2Schema.parse({ ...data, edges: [...data.edges,{ id,source,target }] });
 }
+export function snapConnect(data: DiagramDataV2, id: string): DiagramDataV2 {
+  const node=data.nodes.find(n=>n.id===id);if(!node)return data;
+  const candidates=data.nodes.filter(n=>n.id!==id&&n.kind!=="container").flatMap(parent=>[{x:parent.x+parent.width+80,y:parent.y},{x:parent.x,y:parent.y+parent.height+80}].map(point=>({parent,point,distance:Math.hypot(node.x-point.x,node.y-point.y)}))).sort((a,b)=>a.distance-b.distance);
+  const target=candidates[0];if(!target||target.distance>65)return data;
+  const next=moveNodes(data,[id],target.point.x-node.x,target.point.y-node.y);
+  if(data.edges.some(e=>"nodeId" in e.source&&"nodeId" in e.target&&((e.source.nodeId===id&&e.target.nodeId===target.parent.id)||(e.target.nodeId===id&&e.source.nodeId===target.parent.id))))return next;
+  return connect(next,{nodeId:target.parent.id},{nodeId:id});
+}
 export function reconnect(data: DiagramDataV2, edgeId: string, end: "source" | "target", endpoint: Endpoint): DiagramDataV2 {
   return diagramDataV2Schema.parse({ ...data, edges:data.edges.map(edge => edge.id===edgeId ? { ...edge,[end]:endpoint,legacy:false } : edge) });
 }

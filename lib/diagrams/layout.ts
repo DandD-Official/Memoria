@@ -3,6 +3,12 @@ import { emptyDiagramV2 } from "@/lib/diagrams/schema";
 import { connect, newNode } from "@/lib/diagrams/editing";
 import type { ShapeId } from "@/lib/diagrams/shapes";
 export function layoutDiagram(data: DiagramDataV2, mode: "right" | "down" | "tree" | "radial"): DiagramDataV2 {
+  if(data.nodes.some(node=>node.parentId)){
+    const roots=data.nodes.filter(node=>!node.parentId),rootIds=new Set(roots.map(node=>node.id));
+    const arranged=layoutDiagram({...data,nodes:roots,edges:data.edges.filter(edge=>"nodeId" in edge.source&&"nodeId" in edge.target&&rootIds.has(edge.source.nodeId)&&rootIds.has(edge.target.nodeId))},mode);
+    const original=new Map(data.nodes.map(node=>[node.id,node])),positions=new Map(arranged.nodes.map(node=>[node.id,node]));
+    return {...data,nodes:data.nodes.map(node=>{let root=node;while(root.parentId&&original.has(root.parentId))root=original.get(root.parentId)!;const moved=positions.get(root.id)!;return {...node,x:node.x+moved.x-root.x,y:node.y+moved.y-root.y};})};
+  }
   const incoming=new Set(data.edges.flatMap(e=>"nodeId" in e.target?[e.target.nodeId]:[]));
   const adjacency=new Map<string,string[]>();for(const edge of data.edges)if("nodeId" in edge.source&&"nodeId" in edge.target)adjacency.set(edge.source.nodeId,[...(adjacency.get(edge.source.nodeId)??[]),edge.target.nodeId]);
   const levels=new Map<string,number>(),queue=data.nodes.filter(n=>!incoming.has(n.id)).map(n=>n.id);if(!queue.length&&data.nodes.length)queue.push(data.nodes[0].id);queue.forEach(id=>levels.set(id,0));

@@ -1,0 +1,174 @@
+{
+  "data": {
+    "version": 1,
+    "type": "memoria-diagram",
+    "nodes": [
+      {
+        "id": "n0",
+        "shape": "rectangle",
+        "x": 0,
+        "y": 0,
+        "width": 180,
+        "height": 100,
+        "label": "rectangle <&> label",
+        "style": {
+          "textAlign": "center",
+          "fontSize": 16
+        }
+      },
+      {
+        "id": "n1",
+        "shape": "rounded-rectangle",
+        "x": 200,
+        "y": 130,
+        "width": 180,
+        "height": 100,
+        "label": "rounded-rectangle <&> label",
+        "style": {
+          "textAlign": "left",
+          "fontSize": 16
+        }
+      },
+      {
+        "id": "n2",
+        "shape": "circle",
+        "x": 400,
+        "y": 0,
+        "width": 180,
+        "height": 100,
+        "label": "circle <&> label",
+        "style": {
+          "textAlign": "center",
+          "fontSize": 16
+        }
+      },
+      {
+        "id": "n3",
+        "shape": "ellipse",
+        "x": 600,
+        "y": 130,
+        "width": 180,
+        "height": 100,
+        "label": "ellipse <&> label",
+        "style": {
+          "textAlign": "left",
+          "fontSize": 16
+        }
+      },
+      {
+        "id": "n4",
+        "shape": "diamond",
+        "x": 800,
+        "y": 0,
+        "width": 180,
+        "height": 100,
+        "label": "diamond <&> label",
+        "style": {
+          "textAlign": "center",
+          "fontSize": 16
+        }
+      },
+      {
+        "id": "n5",
+        "shape": "parallelogram",
+        "x": 1000,
+        "y": 130,
+        "width": 180,
+        "height": 100,
+        "label": "parallelogram <&> label",
+        "style": {
+          "textAlign": "left",
+          "fontSize": 16
+        }
+      },
+      {
+        "id": "n6",
+        "shape": "cylinder",
+        "x": 1200,
+        "y": 0,
+        "width": 180,
+        "height": 100,
+        "label": "cylinder <&> label",
+        "style": {
+          "textAlign": "center",
+          "fontSize": 16
+        }
+      },
+      {
+        "id": "n7",
+        "shape": "document",
+        "x": 1400,
+        "y": 130,
+        "width": 180,
+        "height": 100,
+        "label": "document <&> label",
+        "style": {
+          "textAlign": "left",
+          "fontSize": 16
+        }
+      },
+      {
+        "id": "n8",
+        "shape": "decision",
+        "x": 1600,
+        "y": 0,
+        "width": 180,
+        "height": 100,
+        "label": "decision <&> label",
+        "style": {
+          "textAlign": "center",
+          "fontSize": 16
+        }
+      },
+      {
+        "id": "n9",
+        "shape": "terminator",
+        "x": 1800,
+        "y": 130,
+        "width": 180,
+        "height": 100,
+        "label": "terminator <&> label",
+        "style": {
+          "textAlign": "left",
+          "fontSize": 16
+        }
+      },
+      {
+        "id": "n10",
+        "shape": "database",
+        "x": 2000,
+        "y": 0,
+        "width": 180,
+        "height": 100,
+        "label": "database <&> label",
+        "style": {
+          "textAlign": "center",
+          "fontSize": 16
+        }
+      },
+      {
+        "id": "n11",
+        "shape": "process",
+        "x": 2200,
+        "y": 130,
+        "width": 180,
+        "height": 100,
+        "label": "process <&> label",
+        "style": {
+          "textAlign": "left",
+          "fontSize": 16
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e",
+        "source": "n0",
+        "target": "n1",
+        "directional": true,
+        "label": "old edge"
+      }
+    ]
+  },
+  "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"-64 -64 2508 688\"><defs><marker id=\"arrow\" markerWidth=\"8\" markerHeight=\"8\" refX=\"7\" refY=\"4\" orient=\"auto\" markerUnits=\"userSpaceOnUse\"><path d=\"M0,0 L8,4 L0,8 z\" fill=\"#607652\"/></marker></defs><path d=\"M 90 100 V 115 H 290 V 130\" fill=\"none\" stroke=\"#607652\" stroke-width=\"2\" marker-end=\"url(#arrow)\"/><text x=\"190\" y=\"106\" text-anchor=\"middle\" font-size=\"12\" font-family=\"Segoe UI, Arial, sans-serif\" fill=\"#22312b\" stroke=\"#f7f7ef\" stroke-width=\"5\" paint-order=\"stroke\">old edge</text><g fill=\"#f7f7ef\" stroke=\"#2b4837\" stroke-width=\"2\"><rect x=\"0\" y=\"0\" width=\"180\" height=\"100\" rx=\"0\"/><text text-anchor=\"middle\" dominant-baseline=\"middle\" font-family=\"Segoe UI, Arial, sans-serif\" font-size=\"16\" fill=\"#22312b\" stroke=\"none\"><tspan x=\"90\" y=\"39.6\">rectangle &lt;&amp;&gt;</tspan><tspan x=\"90\" y=\"60.400000000000006\">label</tspan></text></g><g fill=\"#f7f7ef\" stroke=\"#2b4837\" stroke-width=\"2\"><rect x=\"200\" y=\"130\" width=\"180\" height=\"100\" rx=\"18\"/><text text-anchor=\"start\" dominant-baseline=\"middle\" font-family=\"Segoe UI, Arial, sans-serif\" font-size=\"16\" fill=\"#22312b\" stroke=\"none\"><tspan x=\"212\" y=\"169.6\">rounded-rectangle</tspan><tspan x=\"212\" y=\"190.4\">&lt;&amp;&gt; label</tspan></text></g><g fill=\"#f7f7ef\" stroke=\"#2b4837\" stroke-width=\"2\"><ellipse cx=\"490\" cy=\"50\" rx=\"90\" ry=\"50\"/><text text-anchor=\"middle\" dominant-baseline=\"middle\" font-family=\"Segoe UI, Arial, sans-serif\" font-size=\"16\" fill=\"#22312b\" stroke=\"none\"><tspan x=\"490\" y=\"50\">circle &lt;&amp;&gt; label</tspan></text></g><g fill=\"#f7f7ef\" stroke=\"#2b4837\" stroke-width=\"2\"><ellipse cx=\"690\" cy=\"180\" rx=\"90\" ry=\"50\"/><text text-anchor=\"start\" dominant-baseline=\"middle\" font-family=\"Segoe UI, Arial, sans-serif\" font-size=\"16\" fill=\"#22312b\" stroke=\"none\"><tspan x=\"612\" y=\"180\">ellipse &lt;&amp;&gt; label</tspan></text></g><g fill=\"#f7f7ef\" stroke=\"#2b4837\" stroke-width=\"2\"><path d=\"M 890 0 L 980 50 L 890 100 L 800 50 Z\"/><text text-anchor=\"middle\" dominant-baseline=\"middle\" font-family=\"Segoe UI, Arial, sans-serif\" font-size=\"16\" fill=\"#22312b\" stroke=\"none\"><tspan x=\"890\" y=\"50\">diamond &lt;&amp;&gt; label</tspan></text></g><g fill=\"#f7f7ef\" stroke=\"#2b4837\" stroke-width=\"2\"><path d=\"M 1018 130 h 162 l -18 100 h -162 Z\"/><text text-anchor=\"start\" dominant-baseline=\"middle\" font-family=\"Segoe UI, Arial, sans-serif\" font-size=\"16\" fill=\"#22312b\" stroke=\"none\"><tspan x=\"1012\" y=\"169.6\">parallelogram &lt;&amp;&gt;</tspan><tspan x=\"1012\" y=\"190.4\">label</tspan></text></g><g fill=\"#f7f7ef\" stroke=\"#2b4837\" stroke-width=\"2\"><path d=\"M 1200 12 a 90 12 0 0 1 180 0 v 76 a 90 12 0 0 1 -180 0 Z M 1200 12 a 90 12 0 0 0 180 0\"/><text text-anchor=\"middle\" dominant-baseline=\"middle\" font-family=\"Segoe UI, Arial, sans-serif\" font-size=\"16\" fill=\"#22312b\" stroke=\"none\"><tspan x=\"1290\" y=\"39.6\">cylinder &lt;&amp;&gt;</tspan><tspan x=\"1290\" y=\"60.400000000000006\">label</tspan></text></g><g fill=\"#f7f7ef\" stroke=\"#2b4837\" stroke-width=\"2\"><path d=\"M 1400 130 h 180 v 88 q -45 24 -90 0 q -45 -24 -90 0 Z\"/><text text-anchor=\"start\" dominant-baseline=\"middle\" font-family=\"Segoe UI, Arial, sans-serif\" font-size=\"16\" fill=\"#22312b\" stroke=\"none\"><tspan x=\"1412\" y=\"169.6\">document &lt;&amp;&gt;</tspan><tspan x=\"1412\" y=\"190.4\">label</tspan></text></g><g fill=\"#f7f7ef\" stroke=\"#2b4837\" stroke-width=\"2\"><path d=\"M 1690 0 L 1780 50 L 1690 100 L 1600 50 Z\"/><text text-anchor=\"middle\" dominant-baseline=\"middle\" font-family=\"Segoe UI, Arial, sans-serif\" font-size=\"16\" fill=\"#22312b\" stroke=\"none\"><tspan x=\"1690\" y=\"39.6\">decision &lt;&amp;&gt;</tspan><tspan x=\"1690\" y=\"60.400000000000006\">label</tspan></text></g><g fill=\"#f7f7ef\" stroke=\"#2b4837\" stroke-width=\"2\"><rect x=\"1800\" y=\"130\" width=\"180\" height=\"100\" rx=\"18\"/><text text-anchor=\"start\" dominant-baseline=\"middle\" font-family=\"Segoe UI, Arial, sans-serif\" font-size=\"16\" fill=\"#22312b\" stroke=\"none\"><tspan x=\"1812\" y=\"169.6\">terminator &lt;&amp;&gt;</tspan><tspan x=\"1812\" y=\"190.4\">label</tspan></text></g><g fill=\"#f7f7ef\" stroke=\"#2b4837\" stroke-width=\"2\"><path d=\"M 2000 12 a 90 12 0 0 1 180 0 v 76 a 90 12 0 0 1 -180 0 Z M 2000 12 a 90 12 0 0 0 180 0\"/><text text-anchor=\"middle\" dominant-baseline=\"middle\" font-family=\"Segoe UI, Arial, sans-serif\" font-size=\"16\" fill=\"#22312b\" stroke=\"none\"><tspan x=\"2090\" y=\"39.6\">database &lt;&amp;&gt;</tspan><tspan x=\"2090\" y=\"60.400000000000006\">label</tspan></text></g><g fill=\"#f7f7ef\" stroke=\"#2b4837\" stroke-width=\"2\"><rect x=\"2200\" y=\"130\" width=\"180\" height=\"100\" rx=\"0\"/><text text-anchor=\"start\" dominant-baseline=\"middle\" font-family=\"Segoe UI, Arial, sans-serif\" font-size=\"16\" fill=\"#22312b\" stroke=\"none\"><tspan x=\"2212\" y=\"180\">process &lt;&amp;&gt; label</tspan></text></g></svg>"
+}

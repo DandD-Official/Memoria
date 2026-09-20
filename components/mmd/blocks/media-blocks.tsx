@@ -117,7 +117,7 @@ export function GalleryBlock({ node }: { node: MmdBlockNode }) {
 
   return (
     <>
-      <div data-export-block="gallery" className="my-5 grid min-w-0 grid-cols-2 gap-3 sm:grid-cols-3">
+      <div data-export-block="gallery" style={mode === "export" ? { gridTemplateColumns: "repeat(3, minmax(0, 1fr))" } : undefined} className="my-5 grid min-w-0 grid-cols-2 gap-3 sm:grid-cols-3">
         {images.map((img, i) => {
           const resolved = resolveImageSrc(img.src, resolvedAssets);
           if ("unresolved" in resolved) {

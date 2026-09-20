@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import JSZip from "jszip";
-import { readFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
 import { createEditablePagesWord, createEditablePagesPdf, type EditablePage } from "@/lib/export/editable-pages";
 
 const background = `data:image/png;base64,${readFileSync("public/brand/memoria/logo.png").toString("base64")}`;
@@ -11,6 +12,38 @@ const pages: EditablePage[] = [0, 1].map(index => ({ width: 794, height: 1123, b
 afterEach(() => vi.unstubAllGlobals());
 
 describe("editable page exports", () => {
+  it("puts mixed formatting and both link types in one precisely spaced line box", async () => {
+    const base = { ...pages[0].text[1], group: "paragraph", y: 90, height: 20, lineHeight: 24, baseline: 106, font: "Arial", italic: false, underline: false, href: undefined, maxRight: 746 };
+    const text = [
+      { ...base, text: "Mixed ", x: 48, width: 40, naturalWidth: 42 },
+      { ...base, text: "bold ", x: 88, width: 32, naturalWidth: 34, bold: true },
+      { ...base, text: "source ", x: 120, width: 46, naturalWidth: 48, italic: true, underline: true, href: "https://example.com/source" },
+      { ...base, text: "chapter", x: 166, width: 45, naturalWidth: 47, targetPage: 2 },
+    ];
+    const blob = await createEditablePagesWord("Mixed lines", [{ ...pages[0], text }, pages[1]]);
+    const zip = await JSZip.loadAsync(await blob.arrayBuffer());
+    const xml = await zip.file("word/document.xml")!.async("string");
+    const box = xml.match(/<w:txbxContent>([\s\S]*?)<\/w:txbxContent>/)![1];
+    expect(box.match(/<w:r>/g)).toHaveLength(4);
+    expect(box).toContain('w:anchor="page_2"');
+    expect(xml).toContain('w:name="page_2"');
+    expect(box).toContain('w:line="360"');
+    expect(box).toContain('w:lineRule="exact"');
+    expect(box).toContain('<w:w w:val="95"/>');
+    expect(box).toContain('w:ascii="Arial"');
+    expect(box).toContain('<w:b/>');
+    expect(box).toContain('<w:i/>');
+    expect(box).toContain('<w:u');
+    expect(xml).not.toContain('w:line="1"');
+    expect(xml).toContain('mso-fit-shape-to-text:f');
+    const rels = await zip.file("word/_rels/document.xml.rels")!.async("string");
+    expect(rels).toContain('Target="https://example.com/source"');
+    if (process.env.MEMORIA_EXPORT_ARTIFACTS) {
+      mkdirSync(process.env.MEMORIA_EXPORT_ARTIFACTS, { recursive: true });
+      writeFileSync(join(process.env.MEMORIA_EXPORT_ARTIFACTS, "mixed-lines.docx"), Buffer.from(await blob.arrayBuffer()));
+    }
+  });
+
   it("stores editable Unicode text, formatting, hyperlinks, and the original page dimensions in Word", async () => {
     const fixture = [...pages, { ...pages[0], text: [{ ...pages[0].text[0], text: "Recall → 理解 café" }] }];
     const blob = await createEditablePagesWord("Memory", fixture);

@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/db";
 import type { Diagram as DbDiagram, Prisma } from "@prisma/client";
-import { diagramDataSchema, upgradeDiagram, emptyDiagramV2, type DiagramDataV2, type PersistedDiagramData } from "@/lib/diagrams/schema";
+import { diagramDataSchema, upgradeDiagram, emptyDiagramV2, type PersistedDiagramData } from "@/lib/diagrams/schema";
 
 /**
  * The Diagram shape the rest of the app works with — identical to
@@ -13,7 +13,7 @@ import { diagramDataSchema, upgradeDiagram, emptyDiagramV2, type DiagramDataV2, 
  * rule as lib/notes-repo.ts for `prisma.note`, so there's exactly one
  * place that knows `data` needs validating on the way in and out.
  */
-export type Diagram = Omit<DbDiagram, "data" | "previewImage"> & { data: DiagramDataV2; loadError?: boolean };
+export type Diagram = Omit<DbDiagram, "data" | "previewImage"> & { data: PersistedDiagramData; loadError?: boolean };
 export type DiagramSummary = Pick<DbDiagram, "id" | "ownerId" | "title" | "createdAt" | "updatedAt">;
 
 function hydrate(diagram: DbDiagram): Diagram {
@@ -40,7 +40,7 @@ export async function createDiagram(params: { ownerId: string; title: string; da
   return hydrate(created);
 }
 
-export async function updateDiagram(id: string, data: { title?: string; data?: DiagramData }): Promise<Diagram> {
+export async function updateDiagram(id: string, data: { title?: string; data?: PersistedDiagramData }): Promise<Diagram> {
   const updated = await prisma.diagram.update({
     where: { id },
     data: { title: data.title, data: data.data ? upgradeDiagram(data.data) : undefined, schemaVersion: data.data ? 2 : undefined },

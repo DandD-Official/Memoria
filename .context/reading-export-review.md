@@ -40,3 +40,13 @@ Not verified: browser screenshots and interactions, 320px/200% zoom behavior, Wo
 ## Verdict
 
 Approve the source and automated checks within the coverage above. Visual and Office fidelity remain unverified; do not treat this report as visual sign-off.
+
+## September 2026 export revision
+
+The current paginator is `lib/export/geometric-pages.ts`, with the DOM-free numeric planner in `page-planner.ts`. It measures nested lines, rows, headings and visuals once and clips pruned copies of the flow at safe boundaries. Book pages keep their styling during measurement; the public paginator signature and post-pagination TOC derivation are unchanged. Text is never uniformly scaled to fit. An impossible protected cut produces an explicit error.
+
+`table-fit.ts` plans proportional widths, a 10px font floor and repeated-first-column segments; `table-layout.ts` applies them before geometry measurement. Export CSS removes scrollports, wraps code and cells, and supplies breathing room. Table continuation headers reserve space and are cloned with the same colgroup. Export columns/gallery/section sizes no longer depend on screen breakpoints.
+
+`text-lines.ts` merges baseline fragments within their paragraph/cell into styled runs, selects Office-safe fonts, clamps character scaling to 92-108%, bounds width slack to the cell and detects/resolves ordinary overlaps. `editable-pages.ts` creates one native Word text box per line with exact measured line spacing. External and Book internal links remain runs. Background rasterization remains 2x. jsPDF fallback uses the merged lines, with its existing standard-font substitution and non-Latin limitations.
+
+Automated gate: lint, 353 tests / 42 files, full Prisma + Next build passed. No browser was available: stress-fixture fill, blank pages, clipping and overlap counts were not measured. Word COM failed in the sandbox and stalled outside it; no PDF was produced, and the test process was cleaned up. LibreOffice was not found. The earlier verification totals above are historical. See implementation-review.md for the complete inventory, decisions, known limitations and reproducible manual checks.
