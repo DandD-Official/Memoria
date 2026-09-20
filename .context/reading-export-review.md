@@ -1,5 +1,9 @@
 # Reading and export fixes — September 20, 2026
 
+## Correction: artwork is standalone
+
+The user clarified that the generated logo, hero, and three illustrations must not be applied to the application. The image integration and associated branding substitutions documented below were reverted. The original landing page and interactive learning example were restored. Scrolling, export, action, shared-status, and code-rendering fixes remain. Historical artwork findings below no longer describe the current UI.
+
 ## Scope and coverage
 
 Reviewed the note and study-guide readers, public note and book views, shared action controls, code rendering, landing artwork, and PDF/Word download entry points. The project uses Next.js 15, React 18, Tailwind semantic tokens, native dialog sheets, docx, and jsPDF. References: `.context/Export_Context.md`, `.context/books.md`, `.context/mmd-spec.md`, and `public/brand/memoria/README.md`. No AGENTS.md was found.

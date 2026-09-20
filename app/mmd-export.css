@@ -103,7 +103,7 @@
   color: rgb(var(--color-accent));
 }
 
-.mmd-export-brand-mark svg, .mmd-export-brand-mark img {
+.mmd-export-brand-mark svg {
   display: block;
   width: 100%;
   height: 100%;

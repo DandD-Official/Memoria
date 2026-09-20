@@ -1,0 +1,29 @@
+# Memoria standalone image edits
+
+Generated with the built-in image generation tool on September 20, 2026. These assets are not integrated into the website. The original landing page and branding have been restored. The unedited source artwork remains in public/brand/memoria.
+
+Files:
+- hero-with-text.png
+- 01-capture-with-text.png
+- 02-connect-with-text.png
+- 03-remember-with-text.png
+- logo.png and logo.svg (copies of the existing supplied logo)
+
+The images were visually inspected for spelling, composition, contrast, and margins. Headlines, captions and labels are embedded in the PNGs.
+
+## Hero prompt
+
+Use case: compositing. Edit target: first image, the existing wide green Memoria journal hero. Supporting insert: second image, the user's existing Memoria logo. Create ONE finished landscape hero image, 16:9. Preserve the existing journal, cards, plant, lighting, paper textures, evergreen/ivory/sage palette and composition on the right. Integrate the exact continuous-line logo mark and lowercase 'memoria.' wordmark from image 2 near the upper left; use ivory ink on green, without a rectangular logo background. Add beautiful legible editorial typography directly INSIDE THE BITMAP in the empty left third. Large ivory serif headline, verbatim, line-broken: 'Make room' / 'for what stays.' Under it smaller clean sans-serif copy, verbatim: 'Capture an idea.' / 'Connect the dots.' / 'Remember more.' Keep text within generous safe margins separate from the journal. Add small tasteful paper labels 'Notes', 'Ideas', 'Recall' to three existing cards if space allows. This is a standalone branded marketing image with logo and text permanently in its pixels. No invented logo, no web UI, no buttons, no collage. Save output for the user as a separate image; this will not be installed on their website.
+
+## 01-capture prompt
+
+Use case: compositing. First image is the edit target; second is the existing Memoria logo reference. Create ONE square finished editorial marketing illustration with all specified words permanently embedded in the bitmap. Preserve the original ivory paper texture, evergreen/sage/pale-lime palette, dimensional paper art, soft shadows and warm scholarly style. Recompose only enough to leave clean top space (about 25%) for typography; use the recognizable scene in the lower area. Keep generous safe margins, crisp type, large legible dark evergreen serif headline, smaller clean sans-serif support copy. Add a tasteful lowercase 'memoria.' wordmark signature near a bottom corner matching the reference. No web UI, no buttons, no extra claims, no watermarks. Standalone file only; not for insertion into the user's website. Preserve the documents gathering into the open green-bound notebook, botanical drawings and arrows. At top small letterspaced label verbatim '01 / CAPTURE'. Large headline below on two lines: 'Every idea starts' / 'somewhere.' Put readable labels on existing papers: 'Lecture notes', 'Key ideas', 'Questions'. On the open notebook add the small heading 'My learning journal'. Bottom copy verbatim: 'Bring your notes. Keep your curiosity.' Make text feel thoughtfully typeset into the original illustration.
+
+## 02-connect prompt
+
+Use case: compositing. First image is the edit target; second is the existing Memoria logo reference. Create ONE square finished editorial marketing illustration with all specified words permanently embedded in the bitmap. Preserve the original ivory paper texture, evergreen/sage/pale-lime palette, dimensional paper art, soft shadows and warm scholarly style. Recompose only enough to leave clean top space (about 25%) for typography; use the recognizable scene in the lower area. Keep generous safe margins, crisp type, large legible dark evergreen serif headline, smaller clean sans-serif support copy. Add a tasteful lowercase 'memoria.' wordmark signature near a bottom corner matching the reference. No web UI, no buttons, no extra claims, no watermarks. Standalone file only; not for insertion into the user's website. Preserve the open green-bound book and paper concept-map circles with botanical connections. At top small letterspaced label verbatim '02 / CONNECT'. Large headline below on two lines: 'Turn notes into' / 'understanding.' Add short readable labels to the concept-map nodes: center 'Big idea', other nodes 'Sources', 'Examples', 'Questions', 'Connections'. Keep recognizable icons and clear connecting lines, simplify only to fit labels. Bottom copy verbatim: 'Find the thread. See the bigger picture.'
+
+## 03-remember prompt
+
+Use case: compositing. First image is the edit target; second is the existing Memoria logo reference. Create ONE square finished editorial marketing illustration with all specified words permanently embedded in the bitmap. Preserve the original ivory paper texture, evergreen/sage/pale-lime palette, dimensional paper art, soft shadows and warm scholarly style. Recompose only enough to leave clean top space (about 25%) for typography; use the recognizable scene in the lower area. Keep generous safe margins, crisp type, large legible dark evergreen serif headline, smaller clean sans-serif support copy. Add a tasteful lowercase 'memoria.' wordmark signature near a bottom corner matching the reference. No web UI, no buttons, no extra claims, no watermarks. Standalone file only; not for insertion into the user's website. Preserve the flashcard stack, open practice journal, calendar with lime checkmarks, looped connecting line and plant. At top small letterspaced label verbatim '03 / REMEMBER'. Large headline below on two lines: 'Make it yours,' / 'for longer.' On two cards put readable prompts 'What do you recall?' and 'Explain it simply.' Label the calendar 'Review rhythm' and the journal 'What I learned'. Bottom copy verbatim: 'Recall. Revisit. Remember.'
+

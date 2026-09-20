@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { Users } from "lucide-react";
-import { Brand } from "@/components/layout/brand";
+import Link from "next/link";
+import { Users, BookMarked } from "lucide-react";
 import { prisma } from "@/lib/db";
 import { findNoteById } from "@/lib/notes-repo";
 import { MarkdownRenderer } from "@/components/markdown/renderer";
@@ -34,7 +34,9 @@ export default async function SharedMemoryPage(props: { params: Promise<{ token:
     <div className="min-h-screen bg-paper">
       <header className="border-b border-line bg-surface">
         <div className="mx-auto flex max-w-4xl items-center justify-between gap-4 px-6 py-4">
-          <Brand />
+          <Link href="/" className="inline-flex items-center gap-2 font-display text-lg text-ink">
+            <BookMarked className="h-5 w-5 text-accent-dark" /> Memoria
+          </Link>
           <ThemeToggle />
         </div>
       </header>

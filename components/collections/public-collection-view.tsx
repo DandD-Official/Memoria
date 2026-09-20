@@ -18,7 +18,6 @@ import { extractFlashcardsFromMarkdown } from "@/lib/flashcards";
 import { cn, formatRelativeTime } from "@/lib/utils";
 import type { QuizQuestion } from "@/lib/validation/quiz";
 import type { PublicCollection } from "@/lib/share-collections-repo";
-import { MemoryMark } from "@/components/layout/brand";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { ExportMenu } from "@/components/exports/export-menu";
 import type { ExportProgressHandler } from "@/lib/export/types";
@@ -58,7 +57,7 @@ export function PublicCollectionView({ collection, book }: { collection: PublicC
         <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <Link href={collection.viewerUserId ? "/shared" : "/"} className="inline-flex items-center gap-2 text-sm font-medium text-ink-soft hover:text-ink">
-              <ArrowLeft className="h-4 w-4" /><MemoryMark className="h-6 w-6" /> Back to Memoria
+              <ArrowLeft className="h-4 w-4" /><BookMarked className="h-4 w-4 text-accent-dark" /> Back to Memoria
             </Link>
             <div className="flex flex-wrap items-center gap-2">
               {collection.canExport && <ExportMenu options={[{ value: "pdf", label: "PDF document" }, { value: "docx", label: "Word - editable text" }, { value: "json", label: "Memoria JSON" }]} onExport={exportBook} />}

@@ -4,7 +4,7 @@ The existing continuous-line mark and lowercase serif wordmark are retained, as 
 
 `hero.png` is a wide illustration. The three square product scenes are `01-capture.png`, `02-connect.png`, and `03-remember.png`. Use with alt text describing their learning activity, or empty alt text when decorative beside an equivalent heading.
 
-The landing page now uses these assets through `components/landing/brand-scenes.tsx`. The hero includes the existing logo and “Make room for what stays.” The three scenes have numbered Capture / Connect / Remember labels, headlines, and explanatory captions. Text is rendered as accessible HTML so it stays sharp and adapts to small screens. The original illustration files remain available as backgrounds.
+These are the generated assets currently stored in this brand folder. They are available for use by the site, but the current landing page does not directly render them; replacing these files does not change the application layout or branding.
 
 Illustrations generated with the built-in imagegen tool. Final prompts:
 
