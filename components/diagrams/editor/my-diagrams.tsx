@@ -1,0 +1,7 @@
+export interface DiagramSummary {id:string;title:string;updatedAt:string}
+export function MyDiagrams({diagrams,open,duplicate,remove,rename,fresh}:{diagrams:DiagramSummary[];open:(id:string)=>void;duplicate:(id:string)=>void;remove:(id:string)=>void;rename:(id:string,title:string)=>void;fresh:()=>void}){
+  return <div className="space-y-2 p-3"><button type="button" className="min-h-11 w-full rounded-control border border-line px-3 text-sm text-ink" onClick={fresh}>New from template</button>{diagrams.map(diagram=><article key={diagram.id} className="overflow-hidden rounded-card border border-line bg-surface"><button type="button" className="w-full text-left" onClick={()=>open(diagram.id)}>
+    {/* eslint-disable-next-line @next/next/no-img-element */}
+    <img src={`/api/diagrams/${diagram.id}/preview`} alt="" className="h-24 w-full bg-surface-muted object-contain" loading="lazy"/>
+    <span className="block break-words p-3 text-sm font-semibold text-ink">{diagram.title}</span></button><div className="flex flex-wrap border-t border-line">{["Rename","Duplicate","Delete"].map(label=><button key={label} type="button" className={`min-h-11 px-2 text-xs ${label==="Delete"?"text-danger":"text-ink-soft"}`} onClick={()=>{if(label==="Duplicate")duplicate(diagram.id);else if(label==="Delete")remove(diagram.id);else{const title=window.prompt("Diagram title",diagram.title);if(title?.trim())rename(diagram.id,title.trim());}}}>{label}</button>)}</div></article>)}{!diagrams.length&&<p className="text-sm text-ink-soft">Saved diagrams appear here.</p>}</div>;
+}

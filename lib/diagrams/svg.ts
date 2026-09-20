@@ -1,3 +1,8 @@
+import { v2Svg, v2Bounds, type DiagramImages } from "@/lib/diagrams/svg-v2";
+import type { PersistedDiagramData } from "@/lib/diagrams/schema";
+import { edgeGeometry } from "@/lib/diagrams/geometry";
+export { edgeGeometry } from "@/lib/diagrams/geometry";
+import { legacyShapeMarkup as shapeMarkup } from "@/lib/diagrams/geometry";
 import type { DiagramData, DiagramNode, DiagramEdge } from "@/lib/diagrams/schema";
 
 export const DIAGRAM_VIEWBOX = { width: 900, height: 560 } as const;
@@ -6,7 +11,8 @@ export interface DiagramBounds { x: number; y: number; width: number; height: nu
 
 /** Expands the drawing area around every node so moving an object beyond the
  * starter frame never clips it in the editor or in exports. */
-export function getDiagramBounds(data: DiagramData, padding = 64): DiagramBounds {
+export function getDiagramBounds(data: PersistedDiagramData, padding = 64): DiagramBounds {
+  if (data.version === 2) return v2Bounds(data, padding);
   if (data.nodes.length === 0) return { x: 0, y: 0, width: DIAGRAM_VIEWBOX.width, height: DIAGRAM_VIEWBOX.height };
   const minX = Math.min(0, ...data.nodes.map((node) => node.x)) - padding;
   const minY = Math.min(0, ...data.nodes.map((node) => node.y)) - padding;
@@ -17,35 +23,6 @@ export function getDiagramBounds(data: DiagramData, padding = 64): DiagramBounds
 
 function escapeXml(value: string): string {
   return value.replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&apos;" }[char] ?? char));
-}
-
-function shapeMarkup(node: DiagramNode): string {
-  const { x, y, width: w, height: h } = node;
-  if (node.shape === "diamond" || node.shape === "decision") return `<path d="M ${x + w / 2} ${y} L ${x + w} ${y + h / 2} L ${x + w / 2} ${y + h} L ${x} ${y + h / 2} Z"/>`;
-  if (node.shape === "parallelogram") return `<path d="M ${x + 18} ${y} h ${w - 18} l -18 ${h} h -${w - 18} Z"/>`;
-  if (node.shape === "document") return `<path d="M ${x} ${y} h ${w} v ${h - 12} q -${w / 4} 24 -${w / 2} 0 q -${w / 4} -24 -${w / 2} 0 Z"/>`;
-  if (node.shape === "circle" || node.shape === "ellipse") return `<ellipse cx="${x + w / 2}" cy="${y + h / 2}" rx="${w / 2}" ry="${h / 2}"/>`;
-  if (node.shape === "cylinder" || node.shape === "database") return `<path d="M ${x} ${y + 12} a ${w / 2} 12 0 0 1 ${w} 0 v ${h - 24} a ${w / 2} 12 0 0 1 -${w} 0 Z M ${x} ${y + 12} a ${w / 2} 12 0 0 0 ${w} 0"/>`;
-  const radius = node.shape === "rounded-rectangle" || node.shape === "terminator" ? Math.min(18, h / 2) : 0;
-  return `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${radius}"/>`;
-}
-
-
-/** Orthogonal connectors meet the shape boundary instead of crossing its label. */
-export function edgeGeometry(source: DiagramNode, target: DiagramNode) {
-  const a = { x: source.x + source.width / 2, y: source.y + source.height / 2 };
-  const b = { x: target.x + target.width / 2, y: target.y + target.height / 2 };
-  const horizontal = Math.abs(b.x - a.x) / Math.max(source.width, target.width) >= Math.abs(b.y - a.y) / Math.max(source.height, target.height);
-  if (horizontal) {
-    const sign = b.x >= a.x ? 1 : -1;
-    a.x += sign * source.width / 2; b.x -= sign * target.width / 2;
-    const x = (a.x + b.x) / 2;
-    return { path: `M ${a.x} ${a.y} H ${x} V ${b.y} H ${b.x}`, x, y: (a.y + b.y) / 2 };
-  }
-  const sign = b.y >= a.y ? 1 : -1;
-  a.y += sign * source.height / 2; b.y -= sign * target.height / 2;
-  const y = (a.y + b.y) / 2;
-  return { path: `M ${a.x} ${a.y} V ${y} H ${b.x} V ${b.y}`, x: (a.x + b.x) / 2, y };
 }
 
 export function diagramEdgeMarkup(edge: DiagramEdge, data: DiagramData, marker = "arrow"): string {
@@ -75,7 +52,8 @@ export function diagramNodeMarkup(node: DiagramNode): string {
 
 export const diagramArrow = (id = "arrow") => `<marker id="${id}" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,0 L8,4 L0,8 z" fill="#607652"/></marker>`;
 
-export function diagramToSvg(data: DiagramData): string {
+export function diagramToSvg(data: PersistedDiagramData, images: DiagramImages = {}): string {
+  if (data.version === 2) return v2Svg(data, images, node => diagramNodeMarkup(node as DiagramNode));
   const bounds = getDiagramBounds(data);
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${bounds.x} ${bounds.y} ${bounds.width} ${bounds.height}"><defs>${diagramArrow()}</defs>${data.edges.map(edge => diagramEdgeMarkup(edge, data)).join("")}${data.nodes.map(diagramNodeMarkup).join("")}</svg>`;
 }

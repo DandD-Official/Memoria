@@ -1,0 +1,3 @@
+export function ContextMenu({x,y,act,close}:{x:number;y:number;act:(command:string)=>void;close:()=>void}){
+  return <div className="absolute z-30 grid w-48 max-w-[90%] rounded-card border border-line bg-surface-raised p-1 shadow-card" style={{left:x,top:y}} onKeyDown={event=>{if(event.key==="Escape")close();}} aria-label="Selection actions">{["Duplicate","Copy","Paste","Group","Ungroup","Bring to front","Send to back","Lock / unlock","Delete"].map(label=><button key={label} type="button" autoFocus={label==="Duplicate"} className={`min-h-11 rounded-control px-3 text-left text-sm hover:bg-surface-muted ${label==="Delete"?"text-danger":"text-ink"}`} onClick={()=>{act(label);close();}}>{label}</button>)}</div>;
+}

@@ -1,0 +1,1464 @@
+[
+  {
+    "name": "template:note",
+    "source": ":::note\nWrite your note here.\n:::\n",
+    "expected": {
+      "mmdVersion": 1,
+      "children": [
+        {
+          "type": "block",
+          "block": "note",
+          "attrs": {},
+          "children": [
+            {
+              "type": "markdown",
+              "content": "Write your note here."
+            }
+          ],
+          "raw": ":::note\nWrite your note here.\n:::"
+        }
+      ]
+    }
+  },
+  {
+    "name": "template:tip",
+    "source": ":::tip\nWrite a helpful tip here.\n:::\n",
+    "expected": {
+      "mmdVersion": 1,
+      "children": [
+        {
+          "type": "block",
+          "block": "tip",
+          "attrs": {},
+          "children": [
+            {
+              "type": "markdown",
+              "content": "Write a helpful tip here."
+            }
+          ],
+          "raw": ":::tip\nWrite a helpful tip here.\n:::"
+        }
+      ]
+    }
+  },
+  {
+    "name": "template:warning",
+    "source": ":::warning{title=\"Important\"}\nWrite your warning here.\n:::\n",
+    "expected": {
+      "mmdVersion": 1,
+      "children": [
+        {
+          "type": "block",
+          "block": "warning",
+          "attrs": {
+            "title": "Important"
+          },
+          "children": [
+            {
+              "type": "markdown",
+              "content": "Write your warning here."
+            }
+          ],
+          "raw": ":::warning{title=\"Important\"}\nWrite your warning here.\n:::"
+        }
+      ]
+    }
+  },
+  {
+    "name": "template:danger",
+    "source": ":::danger\nWrite critical information here.\n:::\n",
+    "expected": {
+      "mmdVersion": 1,
+      "children": [
+        {
+          "type": "block",
+          "block": "danger",
+          "attrs": {},
+          "children": [
+            {
+              "type": "markdown",
+              "content": "Write critical information here."
+            }
+          ],
+          "raw": ":::danger\nWrite critical information here.\n:::"
+        }
+      ]
+    }
+  },
+  {
+    "name": "template:info",
+    "source": ":::info\nWrite general information here.\n:::\n",
+    "expected": {
+      "mmdVersion": 1,
+      "children": [
+        {
+          "type": "block",
+          "block": "info",
+          "attrs": {},
+          "children": [
+            {
+              "type": "markdown",
+              "content": "Write general information here."
+            }
+          ],
+          "raw": ":::info\nWrite general information here.\n:::"
+        }
+      ]
+    }
+  },
+  {
+    "name": "template:success",
+    "source": ":::success\nDescribe the positive outcome here.\n:::\n",
+    "expected": {
+      "mmdVersion": 1,
+      "children": [
+        {
+          "type": "block",
+          "block": "success",
+          "attrs": {},
+          "children": [
+            {
+              "type": "markdown",
+              "content": "Describe the positive outcome here."
+            }
+          ],
+          "raw": ":::success\nDescribe the positive outcome here.\n:::"
+        }
+      ]
+    }
+  },
+  {
+    "name": "template:definition",
+    "source": ":::definition{term=\"Term\"}\nDefinition of the term.\n:::\n",
+    "expected": {
+      "mmdVersion": 1,
+      "children": [
+        {
+          "type": "block",
+          "block": "definition",
+          "attrs": {
+            "term": "Term"
+          },
+          "children": [
+            {
+              "type": "markdown",
+              "content": "Definition of the term."
+            }
+          ],
+          "raw": ":::definition{term=\"Term\"}\nDefinition of the term.\n:::"
+        }
+      ]
+    }
+  },
+  {
+    "name": "template:key-concept",
+    "source": ":::key-concept\nState the key concept here.\n:::\n",
+    "expected": {
+      "mmdVersion": 1,
+      "children": [
+        {
+          "type": "block",
+          "block": "key-concept",
+          "attrs": {},
+          "children": [
+            {
+              "type": "markdown",
+              "content": "State the key concept here."
+            }
+          ],
+          "raw": ":::key-concept\nState the key concept here.\n:::"
+        }
+      ]
+    }
+  },
+  {
+    "name": "template:example",
+    "source": ":::example{title=\"Example\"}\nWalk through the example here.\n:::\n",
+    "expected": {
+      "mmdVersion": 1,
+      "children": [
+        {
+          "type": "block",
+          "block": "example",
+          "attrs": {
+            "title": "Example"
+          },
+          "children": [
+            {
+              "type": "markdown",
+              "content": "Walk through the example here."
+            }
+          ],
+          "raw": ":::example{title=\"Example\"}\nWalk through the example here.\n:::"
+        }
+      ]
+    }
+  },
+  {
+    "name": "template:important",
+    "source": ":::important\nThis is important to remember.\n:::\n",
+    "expected": {
+      "mmdVersion": 1,
+      "children": [
+        {
+          "type": "block",
+          "block": "important",
+          "attrs": {},
+          "children": [
+            {
+              "type": "markdown",
+              "content": "This is important to remember."
+            }
+          ],
+          "raw": ":::important\nThis is important to remember.\n:::"
+        }
+      ]
+    }
+  },
+  {
+    "name": "template:summary",
+    "source": ":::summary\nSummarize the section here.\n:::\n",
+    "expected": {
+      "mmdVersion": 1,
+      "children": [
+        {
+          "type": "block",
+          "block": "summary",
+          "attrs": {},
+          "children": [
+            {
+              "type": "markdown",
+              "content": "Summarize the section here."
+            }
+          ],
+          "raw": ":::summary\nSummarize the section here.\n:::"
+        }
+      ]
+    }
+  },
+  {
+    "name": "template:math",
+    "source": ":::math{formula=\"\\\\rightarrow\"}\n\n:::\n",
+    "expected": {
+      "mmdVersion": 1,
+      "children": [
+        {
+          "type": "block",
+          "block": "math",
+          "attrs": {
+            "formula": "\\rightarrow"
+          },
+          "children": [
+            {
+              "type": "markdown",
+              "content": ""
+            }
+          ],
+          "raw": ":::math{formula=\"\\\\rightarrow\"}\n\n:::"
+        }
+      ]
+    }
+  },
+  {
+    "name": "template:code",
+    "source": ":::code{language=\"typescript\" title=\"Code\"}\nconst answer = 42;\n:::\n",
+    "expected": {
+      "mmdVersion": 1,
+      "children": [
+        {
+          "type": "block",
+          "block": "code",
+          "attrs": {
+            "language": "typescript",
+            "title": "Code"
+          },
+          "children": [
+            {
+              "type": "markdown",
+              "content": "const answer = 42;"
+            }
+          ],
+          "raw": ":::code{language=\"typescript\" title=\"Code\"}\nconst answer = 42;\n:::"
+        }
+      ]
+    }
+  },
+  {
+    "name": "template:section",
+    "source": ":::section{title=\"Section Title\"}\nSection content goes here.\n:::\n",
+    "expected": {
+      "mmdVersion": 1,
+      "children": [
+        {
+          "type": "block",
+          "block": "section",
+          "attrs": {
+            "title": "Section Title"
+          },
+          "children": [
+            {
+              "type": "markdown",
+              "content": "Section content goes here."
+            }
+          ],
+          "raw": ":::section{title=\"Section Title\"}\nSection content goes here.\n:::"
+        }
+      ]
+    }
+  },
+  {
+    "name": "template:card",
+    "source": ":::card{title=\"Card Title\"}\nCard content goes here.\n:::\n",
+    "expected": {
+      "mmdVersion": 1,
+      "children": [
+        {
+          "type": "block",
+          "block": "card",
+          "attrs": {
+            "title": "Card Title"
+          },
+          "children": [
+            {
+              "type": "markdown",
+              "content": "Card content goes here."
+            }
+          ],
+          "raw": ":::card{title=\"Card Title\"}\nCard content goes here.\n:::"
+        }
+      ]
+    }
+  },
+  {
+    "name": "template:columns",
+    "source": ":::columns\n:::column\nLeft content.\n:::\n:::column\nRight content.\n:::\n:::\n",
+    "expected": {
+      "mmdVersion": 1,
+      "children": [
+        {
+          "type": "block",
+          "block": "columns",
+          "attrs": {},
+          "children": [
+            {
+              "type": "block",
+              "block": "column",
+              "attrs": {},
+              "children": [
+                {
+                  "type": "markdown",
+                  "content": "Left content."
+                }
+              ],
+              "raw": ":::column\nLeft content.\n:::"
+            },
+            {
+              "type": "block",
+              "block": "column",
+              "attrs": {},
+              "children": [
+                {
+                  "type": "markdown",
+                  "content": "Right content."
+                }
+              ],
+              "raw": ":::column\nRight content.\n:::"
+            }
+          ],
+          "raw": ":::columns\n:::column\nLeft content.\n:::\n:::column\nRight content.\n:::\n:::"
+        }
+      ]
+    }
+  },
+  {
+    "name": "template:image",
+    "source": ":::image{src=\"https://\" alt=\"Describe the image\"}\n\n:::\n",
+    "expected": {
+      "mmdVersion": 1,
+      "children": [
+        {
+          "type": "block",
+          "block": "image",
+          "attrs": {
+            "src": "https://",
+            "alt": "Describe the image"
+          },
+          "children": [
+            {
+              "type": "markdown",
+              "content": ""
+            }
+          ],
+          "raw": ":::image{src=\"https://\" alt=\"Describe the image\"}\n\n:::"
+        }
+      ]
+    }
+  },
+  {
+    "name": "template:gallery",
+    "source": ":::gallery\n:::image{src=\"https://\" alt=\"Describe the first image\"}\n:::\n:::image{src=\"https://\" alt=\"Describe the second image\"}\n:::\n:::\n",
+    "expected": {
+      "mmdVersion": 1,
+      "children": [
+        {
+          "type": "block",
+          "block": "gallery",
+          "attrs": {},
+          "children": [
+            {
+              "type": "block",
+              "block": "image",
+              "attrs": {
+                "src": "https://",
+                "alt": "Describe the first image"
+              },
+              "children": [],
+              "raw": ":::image{src=\"https://\" alt=\"Describe the first image\"}\n:::"
+            },
+            {
+              "type": "block",
+              "block": "image",
+              "attrs": {
+                "src": "https://",
+                "alt": "Describe the second image"
+              },
+              "children": [],
+              "raw": ":::image{src=\"https://\" alt=\"Describe the second image\"}\n:::"
+            }
+          ],
+          "raw": ":::gallery\n:::image{src=\"https://\" alt=\"Describe the first image\"}\n:::\n:::image{src=\"https://\" alt=\"Describe the second image\"}\n:::\n:::"
+        }
+      ]
+    }
+  },
+  {
+    "name": "template:diagram",
+    "source": ":::diagram{id=\"your-diagram-id\" caption=\"Diagram\"}\n\n:::\n",
+    "expected": {
+      "mmdVersion": 1,
+      "children": [
+        {
+          "type": "block",
+          "block": "diagram",
+          "attrs": {
+            "id": "your-diagram-id",
+            "caption": "Diagram"
+          },
+          "children": [
+            {
+              "type": "markdown",
+              "content": ""
+            }
+          ],
+          "raw": ":::diagram{id=\"your-diagram-id\" caption=\"Diagram\"}\n\n:::"
+        }
+      ]
+    }
+  },
+  {
+    "name": "template:image-request",
+    "source": ":::image-request{purpose=\"Describe what the image should show\" alt=\"Describe the image for screen readers\"}\n\n:::\n",
+    "expected": {
+      "mmdVersion": 1,
+      "children": [
+        {
+          "type": "block",
+          "block": "image-request",
+          "attrs": {
+            "purpose": "Describe what the image should show",
+            "alt": "Describe the image for screen readers"
+          },
+          "children": [
+            {
+              "type": "markdown",
+              "content": ""
+            }
+          ],
+          "raw": ":::image-request{purpose=\"Describe what the image should show\" alt=\"Describe the image for screen readers\"}\n\n:::"
+        }
+      ]
+    }
+  },
+  {
+    "name": "template:svg",
+    "source": ":::svg{alt=\"Describe the visual for screen readers\" caption=\"AI-generated visual\"}\n<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 720 260\" role=\"img\" aria-label=\"Study visual\"><rect x=\"20\" y=\"20\" width=\"680\" height=\"220\" rx=\"18\" fill=\"#fffaf0\" stroke=\"#9b7653\" stroke-width=\"3\"/><circle cx=\"120\" cy=\"130\" r=\"48\" fill=\"#c2764a\"/><path d=\"M100 130l14 14 28-32\" fill=\"none\" stroke=\"white\" stroke-width=\"8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/><text x=\"205\" y=\"140\" font-family=\"Arial,sans-serif\" font-size=\"28\" fill=\"#352b22\">AI-generated SVG visual</text></svg>\n:::\n",
+    "expected": {
+      "mmdVersion": 1,
+      "children": [
+        {
+          "type": "block",
+          "block": "svg",
+          "attrs": {
+            "alt": "Describe the visual for screen readers",
+            "caption": "AI-generated visual"
+          },
+          "children": [
+            {
+              "type": "markdown",
+              "content": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 720 260\" role=\"img\" aria-label=\"Study visual\"><rect x=\"20\" y=\"20\" width=\"680\" height=\"220\" rx=\"18\" fill=\"#fffaf0\" stroke=\"#9b7653\" stroke-width=\"3\"/><circle cx=\"120\" cy=\"130\" r=\"48\" fill=\"#c2764a\"/><path d=\"M100 130l14 14 28-32\" fill=\"none\" stroke=\"white\" stroke-width=\"8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/><text x=\"205\" y=\"140\" font-family=\"Arial,sans-serif\" font-size=\"28\" fill=\"#352b22\">AI-generated SVG visual</text></svg>"
+            }
+          ],
+          "raw": ":::svg{alt=\"Describe the visual for screen readers\" caption=\"AI-generated visual\"}\n<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 720 260\" role=\"img\" aria-label=\"Study visual\"><rect x=\"20\" y=\"20\" width=\"680\" height=\"220\" rx=\"18\" fill=\"#fffaf0\" stroke=\"#9b7653\" stroke-width=\"3\"/><circle cx=\"120\" cy=\"130\" r=\"48\" fill=\"#c2764a\"/><path d=\"M100 130l14 14 28-32\" fill=\"none\" stroke=\"white\" stroke-width=\"8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/><text x=\"205\" y=\"140\" font-family=\"Arial,sans-serif\" font-size=\"28\" fill=\"#352b22\">AI-generated SVG visual</text></svg>\n:::"
+        }
+      ]
+    }
+  },
+  {
+    "name": "template:details",
+    "source": ":::details{title=\"Click to reveal\"}\nHidden content goes here.\n:::\n",
+    "expected": {
+      "mmdVersion": 1,
+      "children": [
+        {
+          "type": "block",
+          "block": "details",
+          "attrs": {
+            "title": "Click to reveal"
+          },
+          "children": [
+            {
+              "type": "markdown",
+              "content": "Hidden content goes here."
+            }
+          ],
+          "raw": ":::details{title=\"Click to reveal\"}\nHidden content goes here.\n:::"
+        }
+      ]
+    }
+  },
+  {
+    "name": "example:code",
+    "source": ":::code{language=\"typescript\" title=\"Example\"}\nconst answer = 42;\nconsole.log(answer);\n:::",
+    "expected": {
+      "mmdVersion": 1,
+      "children": [
+        {
+          "type": "block",
+          "block": "code",
+          "attrs": {
+            "language": "typescript",
+            "title": "Example"
+          },
+          "children": [
+            {
+              "type": "markdown",
+              "content": "const answer = 42;\nconsole.log(answer);"
+            }
+          ],
+          "raw": ":::code{language=\"typescript\" title=\"Example\"}\nconst answer = 42;\nconsole.log(answer);\n:::"
+        }
+      ]
+    }
+  },
+  {
+    "name": "example:note",
+    "source": ":::note\nUseful additional information.\n:::",
+    "expected": {
+      "mmdVersion": 1,
+      "children": [
+        {
+          "type": "block",
+          "block": "note",
+          "attrs": {},
+          "children": [
+            {
+              "type": "markdown",
+              "content": "Useful additional information."
+            }
+          ],
+          "raw": ":::note\nUseful additional information.\n:::"
+        }
+      ]
+    }
+  },
+  {
+    "name": "example:tip",
+    "source": ":::tip\nA helpful shortcut or piece of advice.\n:::",
+    "expected": {
+      "mmdVersion": 1,
+      "children": [
+        {
+          "type": "block",
+          "block": "tip",
+          "attrs": {},
+          "children": [
+            {
+              "type": "markdown",
+              "content": "A helpful shortcut or piece of advice."
+            }
+          ],
+          "raw": ":::tip\nA helpful shortcut or piece of advice.\n:::"
+        }
+      ]
+    }
+  },
+  {
+    "name": "example:warning",
+    "source": ":::warning{title=\"Exam Reminder\"}\nSomething to be careful about.\n:::",
+    "expected": {
+      "mmdVersion": 1,
+      "children": [
+        {
+          "type": "block",
+          "block": "warning",
+          "attrs": {
+            "title": "Exam Reminder"
+          },
+          "children": [
+            {
+              "type": "markdown",
+              "content": "Something to be careful about."
+            }
+          ],
+          "raw": ":::warning{title=\"Exam Reminder\"}\nSomething to be careful about.\n:::"
+        }
+      ]
+    }
+  },
+  {
+    "name": "example:danger",
+    "source": ":::danger\nCritical information.\n:::",
+    "expected": {
+      "mmdVersion": 1,
+      "children": [
+        {
+          "type": "block",
+          "block": "danger",
+          "attrs": {},
+          "children": [
+            {
+              "type": "markdown",
+              "content": "Critical information."
+            }
+          ],
+          "raw": ":::danger\nCritical information.\n:::"
+        }
+      ]
+    }
+  },
+  {
+    "name": "example:info",
+    "source": ":::info\nGeneral supporting information.\n:::",
+    "expected": {
+      "mmdVersion": 1,
+      "children": [
+        {
+          "type": "block",
+          "block": "info",
+          "attrs": {},
+          "children": [
+            {
+              "type": "markdown",
+              "content": "General supporting information."
+            }
+          ],
+          "raw": ":::info\nGeneral supporting information.\n:::"
+        }
+      ]
+    }
+  },
+  {
+    "name": "example:success",
+    "source": ":::success\nA correct result.\n:::",
+    "expected": {
+      "mmdVersion": 1,
+      "children": [
+        {
+          "type": "block",
+          "block": "success",
+          "attrs": {},
+          "children": [
+            {
+              "type": "markdown",
+              "content": "A correct result."
+            }
+          ],
+          "raw": ":::success\nA correct result.\n:::"
+        }
+      ]
+    }
+  },
+  {
+    "name": "example:definition",
+    "source": ":::definition{term=\"Normalization\"}\nThe process of organizing data.\n:::",
+    "expected": {
+      "mmdVersion": 1,
+      "children": [
+        {
+          "type": "block",
+          "block": "definition",
+          "attrs": {
+            "term": "Normalization"
+          },
+          "children": [
+            {
+              "type": "markdown",
+              "content": "The process of organizing data."
+            }
+          ],
+          "raw": ":::definition{term=\"Normalization\"}\nThe process of organizing data.\n:::"
+        }
+      ]
+    }
+  },
+  {
+    "name": "example:key-concept",
+    "source": ":::key-concept\nA central idea.\n:::",
+    "expected": {
+      "mmdVersion": 1,
+      "children": [
+        {
+          "type": "block",
+          "block": "key-concept",
+          "attrs": {},
+          "children": [
+            {
+              "type": "markdown",
+              "content": "A central idea."
+            }
+          ],
+          "raw": ":::key-concept\nA central idea.\n:::"
+        }
+      ]
+    }
+  },
+  {
+    "name": "example:example",
+    "source": ":::example{title=\"Example\"}\nA worked example.\n:::",
+    "expected": {
+      "mmdVersion": 1,
+      "children": [
+        {
+          "type": "block",
+          "block": "example",
+          "attrs": {
+            "title": "Example"
+          },
+          "children": [
+            {
+              "type": "markdown",
+              "content": "A worked example."
+            }
+          ],
+          "raw": ":::example{title=\"Example\"}\nA worked example.\n:::"
+        }
+      ]
+    }
+  },
+  {
+    "name": "example:important",
+    "source": ":::important\nLikely to appear on an exam.\n:::",
+    "expected": {
+      "mmdVersion": 1,
+      "children": [
+        {
+          "type": "block",
+          "block": "important",
+          "attrs": {},
+          "children": [
+            {
+              "type": "markdown",
+              "content": "Likely to appear on an exam."
+            }
+          ],
+          "raw": ":::important\nLikely to appear on an exam.\n:::"
+        }
+      ]
+    }
+  },
+  {
+    "name": "example:summary",
+    "source": ":::summary\nA short recap.\n:::",
+    "expected": {
+      "mmdVersion": 1,
+      "children": [
+        {
+          "type": "block",
+          "block": "summary",
+          "attrs": {},
+          "children": [
+            {
+              "type": "markdown",
+              "content": "A short recap."
+            }
+          ],
+          "raw": ":::summary\nA short recap.\n:::"
+        }
+      ]
+    }
+  },
+  {
+    "name": "example:math",
+    "source": ":::math{formula=\"\\\\rightarrow\"}\n:::",
+    "expected": {
+      "mmdVersion": 1,
+      "children": [
+        {
+          "type": "block",
+          "block": "math",
+          "attrs": {
+            "formula": "\\rightarrow"
+          },
+          "children": [],
+          "raw": ":::math{formula=\"\\\\rightarrow\"}\n:::"
+        }
+      ]
+    }
+  },
+  {
+    "name": "example:section",
+    "source": ":::section{title=\"Network Layer\"}\nSection content.\n:::",
+    "expected": {
+      "mmdVersion": 1,
+      "children": [
+        {
+          "type": "block",
+          "block": "section",
+          "attrs": {
+            "title": "Network Layer"
+          },
+          "children": [
+            {
+              "type": "markdown",
+              "content": "Section content."
+            }
+          ],
+          "raw": ":::section{title=\"Network Layer\"}\nSection content.\n:::"
+        }
+      ]
+    }
+  },
+  {
+    "name": "example:card",
+    "source": ":::card{title=\"OSI Model\"}\nCard content.\n:::",
+    "expected": {
+      "mmdVersion": 1,
+      "children": [
+        {
+          "type": "block",
+          "block": "card",
+          "attrs": {
+            "title": "OSI Model"
+          },
+          "children": [
+            {
+              "type": "markdown",
+              "content": "Card content."
+            }
+          ],
+          "raw": ":::card{title=\"OSI Model\"}\nCard content.\n:::"
+        }
+      ]
+    }
+  },
+  {
+    "name": "example:columns",
+    "source": ":::columns\n:::column\nLeft content.\n:::\n:::column\nRight content.\n:::\n:::",
+    "expected": {
+      "mmdVersion": 1,
+      "children": [
+        {
+          "type": "block",
+          "block": "columns",
+          "attrs": {},
+          "children": [
+            {
+              "type": "block",
+              "block": "column",
+              "attrs": {},
+              "children": [
+                {
+                  "type": "markdown",
+                  "content": "Left content."
+                }
+              ],
+              "raw": ":::column\nLeft content.\n:::"
+            },
+            {
+              "type": "block",
+              "block": "column",
+              "attrs": {},
+              "children": [
+                {
+                  "type": "markdown",
+                  "content": "Right content."
+                }
+              ],
+              "raw": ":::column\nRight content.\n:::"
+            }
+          ],
+          "raw": ":::columns\n:::column\nLeft content.\n:::\n:::column\nRight content.\n:::\n:::"
+        }
+      ]
+    }
+  },
+  {
+    "name": "example:details",
+    "source": ":::details{title=\"Click to reveal\"}\nSupplementary content.\n:::",
+    "expected": {
+      "mmdVersion": 1,
+      "children": [
+        {
+          "type": "block",
+          "block": "details",
+          "attrs": {
+            "title": "Click to reveal"
+          },
+          "children": [
+            {
+              "type": "markdown",
+              "content": "Supplementary content."
+            }
+          ],
+          "raw": ":::details{title=\"Click to reveal\"}\nSupplementary content.\n:::"
+        }
+      ]
+    }
+  },
+  {
+    "name": "example:image",
+    "source": ":::image{src=\"https://...\" alt=\"Describe the image\"}\n:::",
+    "expected": {
+      "mmdVersion": 1,
+      "children": [
+        {
+          "type": "block",
+          "block": "image",
+          "attrs": {
+            "src": "https://...",
+            "alt": "Describe the image"
+          },
+          "children": [],
+          "raw": ":::image{src=\"https://...\" alt=\"Describe the image\"}\n:::"
+        }
+      ]
+    }
+  },
+  {
+    "name": "example:gallery",
+    "source": ":::gallery\n![Router](https://...)\n![Switch](https://...)\n:::",
+    "expected": {
+      "mmdVersion": 1,
+      "children": [
+        {
+          "type": "block",
+          "block": "gallery",
+          "attrs": {},
+          "children": [
+            {
+              "type": "markdown",
+              "content": "![Router](https://...)\n![Switch](https://...)"
+            }
+          ],
+          "raw": ":::gallery\n![Router](https://...)\n![Switch](https://...)\n:::"
+        }
+      ]
+    }
+  },
+  {
+    "name": "example:diagram",
+    "source": ":::diagram{id=\"network-topology\"}\n:::",
+    "expected": {
+      "mmdVersion": 1,
+      "children": [
+        {
+          "type": "block",
+          "block": "diagram",
+          "attrs": {
+            "id": "network-topology"
+          },
+          "children": [],
+          "raw": ":::diagram{id=\"network-topology\"}\n:::"
+        }
+      ]
+    }
+  },
+  {
+    "name": "example:image-request",
+    "source": ":::image-request{purpose=\"Explain OSI layers\" alt=\"Diagram of the seven OSI layers\"}\n:::",
+    "expected": {
+      "mmdVersion": 1,
+      "children": [
+        {
+          "type": "block",
+          "block": "image-request",
+          "attrs": {
+            "purpose": "Explain OSI layers",
+            "alt": "Diagram of the seven OSI layers"
+          },
+          "children": [],
+          "raw": ":::image-request{purpose=\"Explain OSI layers\" alt=\"Diagram of the seven OSI layers\"}\n:::"
+        }
+      ]
+    }
+  },
+  {
+    "name": "example:svg",
+    "source": ":::svg{alt=\"A diagram of the OSI layers\"}\n<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 720 360\"><rect x=\"20\" y=\"20\" width=\"680\" height=\"48\" rx=\"8\" fill=\"#fffaf0\" stroke=\"#9b7653\"/></svg>\n:::",
+    "expected": {
+      "mmdVersion": 1,
+      "children": [
+        {
+          "type": "block",
+          "block": "svg",
+          "attrs": {
+            "alt": "A diagram of the OSI layers"
+          },
+          "children": [
+            {
+              "type": "markdown",
+              "content": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 720 360\"><rect x=\"20\" y=\"20\" width=\"680\" height=\"48\" rx=\"8\" fill=\"#fffaf0\" stroke=\"#9b7653\"/></svg>"
+            }
+          ],
+          "raw": ":::svg{alt=\"A diagram of the OSI layers\"}\n<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 720 360\"><rect x=\"20\" y=\"20\" width=\"680\" height=\"48\" rx=\"8\" fill=\"#fffaf0\" stroke=\"#9b7653\"/></svg>\n:::"
+        }
+      ]
+    }
+  },
+  {
+    "name": "mmd-export-fidelity.mmd",
+    "source": "# Memoria Export Fidelity Test\n\nNormal paragraph with **bold**, *italic*, `inline code`, and [a link](https://example.com).\n\n> This is a blockquote.\n\n- List item\n- Another item\n  - Nested item\n\n1. Ordered\n2. List\n\n---\n\n:::note{title=\"Custom Note\"}\nNote content with **bold text**.\n:::\n\n:::tip\nTip body.\n:::\n\n:::warning\nWarning body.\n:::\n\n:::danger\nDanger body.\n:::\n\n:::info\nInformation.\n:::\n\n:::success\nSuccess.\n:::\n\n:::definition{term=\"Normalization\"}\nDefinition body.\n:::\n\n:::key-concept\nThis concept is important.\n:::\n\n:::example{title=\"Example 1\"}\nExample body.\n:::\n\n:::important\nImportant exam information.\n:::\n\n:::summary\nSummary body.\n:::\n\n:::math{formula=\"A \\\\rightarrow B\"}\n:::\n\n:::section{title=\"Section Title\" subtitle=\"Section subtitle\"}\nSection body.\n:::\n\n:::card{title=\"Card\" subtitle=\"Subtitle\" type=\"default\"}\nDefault card.\n:::\n\n:::card{title=\"Outline Card\" type=\"outline\"}\nOutline.\n:::\n\n:::card{title=\"Highlight Card\" type=\"highlight\"}\nHighlight.\n:::\n\n:::columns\n:::column\n## Column One\nContent one.\n:::\n\n:::column\n## Column Two\nContent two.\n:::\n:::\n\n:::details{title=\"Additional Information\"}\nThis is expanded during export.\n:::\n\n:::image{src=\"/export-fixture.svg\" alt=\"Local fixture image\" caption=\"Image caption\" align=\"center\" size=\"medium\"}\n:::\n\n:::gallery\n:::image{src=\"/export-fixture.svg\" alt=\"Gallery fixture\"}\n:::\n:::\n\n:::diagram{id=\"VALID_TEST_DIAGRAM\" caption=\"Diagram caption\"}\n:::\n\n:::image-request{purpose=\"Show packet flow\" alt=\"Packet flow\"}\n:::\n\n:::svg{alt=\"SVG test\" caption=\"SVG caption\" align=\"center\" size=\"large\"}\n<svg viewBox=\"0 0 240 90\" xmlns=\"http://www.w3.org/2000/svg\">\n  <rect x=\"5\" y=\"5\" width=\"230\" height=\"80\" rx=\"12\" fill=\"#e5eef7\" stroke=\"#3a5c83\" stroke-width=\"4\"/>\n  <path d=\"M35 45h170\" stroke=\"#3a5c83\" stroke-width=\"4\"/>\n  <circle cx=\"35\" cy=\"45\" r=\"12\" fill=\"#3a5c83\"/>\n  <circle cx=\"205\" cy=\"45\" r=\"12\" fill=\"#3a5c83\"/>\n</svg>\n:::\n\n| Column A | Column B |\n|---|---|\n| Value A | Value B |\n\n:::code{language=\"typescript\" title=\"Editable code\"}\nconst memoria = \"export fidelity\";\nconsole.log(memoria);\n:::\n",
+    "expected": {
+      "mmdVersion": 1,
+      "children": [
+        {
+          "type": "markdown",
+          "content": "# Memoria Export Fidelity Test\n\nNormal paragraph with **bold**, *italic*, `inline code`, and [a link](https://example.com).\n\n> This is a blockquote.\n\n- List item\n- Another item\n  - Nested item\n\n1. Ordered\n2. List\n\n---\n"
+        },
+        {
+          "type": "block",
+          "block": "note",
+          "attrs": {
+            "title": "Custom Note"
+          },
+          "children": [
+            {
+              "type": "markdown",
+              "content": "Note content with **bold text**."
+            }
+          ],
+          "raw": ":::note{title=\"Custom Note\"}\nNote content with **bold text**.\n:::"
+        },
+        {
+          "type": "markdown",
+          "content": ""
+        },
+        {
+          "type": "block",
+          "block": "tip",
+          "attrs": {},
+          "children": [
+            {
+              "type": "markdown",
+              "content": "Tip body."
+            }
+          ],
+          "raw": ":::tip\nTip body.\n:::"
+        },
+        {
+          "type": "markdown",
+          "content": ""
+        },
+        {
+          "type": "block",
+          "block": "warning",
+          "attrs": {},
+          "children": [
+            {
+              "type": "markdown",
+              "content": "Warning body."
+            }
+          ],
+          "raw": ":::warning\nWarning body.\n:::"
+        },
+        {
+          "type": "markdown",
+          "content": ""
+        },
+        {
+          "type": "block",
+          "block": "danger",
+          "attrs": {},
+          "children": [
+            {
+              "type": "markdown",
+              "content": "Danger body."
+            }
+          ],
+          "raw": ":::danger\nDanger body.\n:::"
+        },
+        {
+          "type": "markdown",
+          "content": ""
+        },
+        {
+          "type": "block",
+          "block": "info",
+          "attrs": {},
+          "children": [
+            {
+              "type": "markdown",
+              "content": "Information."
+            }
+          ],
+          "raw": ":::info\nInformation.\n:::"
+        },
+        {
+          "type": "markdown",
+          "content": ""
+        },
+        {
+          "type": "block",
+          "block": "success",
+          "attrs": {},
+          "children": [
+            {
+              "type": "markdown",
+              "content": "Success."
+            }
+          ],
+          "raw": ":::success\nSuccess.\n:::"
+        },
+        {
+          "type": "markdown",
+          "content": ""
+        },
+        {
+          "type": "block",
+          "block": "definition",
+          "attrs": {
+            "term": "Normalization"
+          },
+          "children": [
+            {
+              "type": "markdown",
+              "content": "Definition body."
+            }
+          ],
+          "raw": ":::definition{term=\"Normalization\"}\nDefinition body.\n:::"
+        },
+        {
+          "type": "markdown",
+          "content": ""
+        },
+        {
+          "type": "block",
+          "block": "key-concept",
+          "attrs": {},
+          "children": [
+            {
+              "type": "markdown",
+              "content": "This concept is important."
+            }
+          ],
+          "raw": ":::key-concept\nThis concept is important.\n:::"
+        },
+        {
+          "type": "markdown",
+          "content": ""
+        },
+        {
+          "type": "block",
+          "block": "example",
+          "attrs": {
+            "title": "Example 1"
+          },
+          "children": [
+            {
+              "type": "markdown",
+              "content": "Example body."
+            }
+          ],
+          "raw": ":::example{title=\"Example 1\"}\nExample body.\n:::"
+        },
+        {
+          "type": "markdown",
+          "content": ""
+        },
+        {
+          "type": "block",
+          "block": "important",
+          "attrs": {},
+          "children": [
+            {
+              "type": "markdown",
+              "content": "Important exam information."
+            }
+          ],
+          "raw": ":::important\nImportant exam information.\n:::"
+        },
+        {
+          "type": "markdown",
+          "content": ""
+        },
+        {
+          "type": "block",
+          "block": "summary",
+          "attrs": {},
+          "children": [
+            {
+              "type": "markdown",
+              "content": "Summary body."
+            }
+          ],
+          "raw": ":::summary\nSummary body.\n:::"
+        },
+        {
+          "type": "markdown",
+          "content": ""
+        },
+        {
+          "type": "block",
+          "block": "math",
+          "attrs": {
+            "formula": "A \\rightarrow B"
+          },
+          "children": [],
+          "raw": ":::math{formula=\"A \\\\rightarrow B\"}\n:::"
+        },
+        {
+          "type": "markdown",
+          "content": ""
+        },
+        {
+          "type": "block",
+          "block": "section",
+          "attrs": {
+            "title": "Section Title",
+            "subtitle": "Section subtitle"
+          },
+          "children": [
+            {
+              "type": "markdown",
+              "content": "Section body."
+            }
+          ],
+          "raw": ":::section{title=\"Section Title\" subtitle=\"Section subtitle\"}\nSection body.\n:::"
+        },
+        {
+          "type": "markdown",
+          "content": ""
+        },
+        {
+          "type": "block",
+          "block": "card",
+          "attrs": {
+            "title": "Card",
+            "subtitle": "Subtitle",
+            "type": "default"
+          },
+          "children": [
+            {
+              "type": "markdown",
+              "content": "Default card."
+            }
+          ],
+          "raw": ":::card{title=\"Card\" subtitle=\"Subtitle\" type=\"default\"}\nDefault card.\n:::"
+        },
+        {
+          "type": "markdown",
+          "content": ""
+        },
+        {
+          "type": "block",
+          "block": "card",
+          "attrs": {
+            "title": "Outline Card",
+            "type": "outline"
+          },
+          "children": [
+            {
+              "type": "markdown",
+              "content": "Outline."
+            }
+          ],
+          "raw": ":::card{title=\"Outline Card\" type=\"outline\"}\nOutline.\n:::"
+        },
+        {
+          "type": "markdown",
+          "content": ""
+        },
+        {
+          "type": "block",
+          "block": "card",
+          "attrs": {
+            "title": "Highlight Card",
+            "type": "highlight"
+          },
+          "children": [
+            {
+              "type": "markdown",
+              "content": "Highlight."
+            }
+          ],
+          "raw": ":::card{title=\"Highlight Card\" type=\"highlight\"}\nHighlight.\n:::"
+        },
+        {
+          "type": "markdown",
+          "content": ""
+        },
+        {
+          "type": "block",
+          "block": "columns",
+          "attrs": {},
+          "children": [
+            {
+              "type": "block",
+              "block": "column",
+              "attrs": {},
+              "children": [
+                {
+                  "type": "markdown",
+                  "content": "## Column One\nContent one."
+                }
+              ],
+              "raw": ":::column\n## Column One\nContent one.\n:::"
+            },
+            {
+              "type": "markdown",
+              "content": ""
+            },
+            {
+              "type": "block",
+              "block": "column",
+              "attrs": {},
+              "children": [
+                {
+                  "type": "markdown",
+                  "content": "## Column Two\nContent two."
+                }
+              ],
+              "raw": ":::column\n## Column Two\nContent two.\n:::"
+            }
+          ],
+          "raw": ":::columns\n:::column\n## Column One\nContent one.\n:::\n\n:::column\n## Column Two\nContent two.\n:::\n:::"
+        },
+        {
+          "type": "markdown",
+          "content": ""
+        },
+        {
+          "type": "block",
+          "block": "details",
+          "attrs": {
+            "title": "Additional Information"
+          },
+          "children": [
+            {
+              "type": "markdown",
+              "content": "This is expanded during export."
+            }
+          ],
+          "raw": ":::details{title=\"Additional Information\"}\nThis is expanded during export.\n:::"
+        },
+        {
+          "type": "markdown",
+          "content": ""
+        },
+        {
+          "type": "block",
+          "block": "image",
+          "attrs": {
+            "src": "/export-fixture.svg",
+            "alt": "Local fixture image",
+            "caption": "Image caption",
+            "align": "center",
+            "size": "medium"
+          },
+          "children": [],
+          "raw": ":::image{src=\"/export-fixture.svg\" alt=\"Local fixture image\" caption=\"Image caption\" align=\"center\" size=\"medium\"}\n:::"
+        },
+        {
+          "type": "markdown",
+          "content": ""
+        },
+        {
+          "type": "block",
+          "block": "gallery",
+          "attrs": {},
+          "children": [
+            {
+              "type": "block",
+              "block": "image",
+              "attrs": {
+                "src": "/export-fixture.svg",
+                "alt": "Gallery fixture"
+              },
+              "children": [],
+              "raw": ":::image{src=\"/export-fixture.svg\" alt=\"Gallery fixture\"}\n:::"
+            }
+          ],
+          "raw": ":::gallery\n:::image{src=\"/export-fixture.svg\" alt=\"Gallery fixture\"}\n:::\n:::"
+        },
+        {
+          "type": "markdown",
+          "content": ""
+        },
+        {
+          "type": "block",
+          "block": "diagram",
+          "attrs": {
+            "id": "VALID_TEST_DIAGRAM",
+            "caption": "Diagram caption"
+          },
+          "children": [],
+          "raw": ":::diagram{id=\"VALID_TEST_DIAGRAM\" caption=\"Diagram caption\"}\n:::"
+        },
+        {
+          "type": "markdown",
+          "content": ""
+        },
+        {
+          "type": "block",
+          "block": "image-request",
+          "attrs": {
+            "purpose": "Show packet flow",
+            "alt": "Packet flow"
+          },
+          "children": [],
+          "raw": ":::image-request{purpose=\"Show packet flow\" alt=\"Packet flow\"}\n:::"
+        },
+        {
+          "type": "markdown",
+          "content": ""
+        },
+        {
+          "type": "block",
+          "block": "svg",
+          "attrs": {
+            "alt": "SVG test",
+            "caption": "SVG caption",
+            "align": "center",
+            "size": "large"
+          },
+          "children": [
+            {
+              "type": "markdown",
+              "content": "<svg viewBox=\"0 0 240 90\" xmlns=\"http://www.w3.org/2000/svg\">\n  <rect x=\"5\" y=\"5\" width=\"230\" height=\"80\" rx=\"12\" fill=\"#e5eef7\" stroke=\"#3a5c83\" stroke-width=\"4\"/>\n  <path d=\"M35 45h170\" stroke=\"#3a5c83\" stroke-width=\"4\"/>\n  <circle cx=\"35\" cy=\"45\" r=\"12\" fill=\"#3a5c83\"/>\n  <circle cx=\"205\" cy=\"45\" r=\"12\" fill=\"#3a5c83\"/>\n</svg>"
+            }
+          ],
+          "raw": ":::svg{alt=\"SVG test\" caption=\"SVG caption\" align=\"center\" size=\"large\"}\n<svg viewBox=\"0 0 240 90\" xmlns=\"http://www.w3.org/2000/svg\">\n  <rect x=\"5\" y=\"5\" width=\"230\" height=\"80\" rx=\"12\" fill=\"#e5eef7\" stroke=\"#3a5c83\" stroke-width=\"4\"/>\n  <path d=\"M35 45h170\" stroke=\"#3a5c83\" stroke-width=\"4\"/>\n  <circle cx=\"35\" cy=\"45\" r=\"12\" fill=\"#3a5c83\"/>\n  <circle cx=\"205\" cy=\"45\" r=\"12\" fill=\"#3a5c83\"/>\n</svg>\n:::"
+        },
+        {
+          "type": "markdown",
+          "content": "\n| Column A | Column B |\n|---|---|\n| Value A | Value B |\n"
+        },
+        {
+          "type": "block",
+          "block": "code",
+          "attrs": {
+            "language": "typescript",
+            "title": "Editable code"
+          },
+          "children": [
+            {
+              "type": "markdown",
+              "content": "const memoria = \"export fidelity\";\nconsole.log(memoria);"
+            }
+          ],
+          "raw": ":::code{language=\"typescript\" title=\"Editable code\"}\nconst memoria = \"export fidelity\";\nconsole.log(memoria);\n:::"
+        }
+      ]
+    }
+  }
+]

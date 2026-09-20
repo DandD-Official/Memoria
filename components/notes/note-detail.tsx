@@ -1,5 +1,6 @@
 "use client";
 
+import { savedMmdMessage } from "@/lib/mmd/diagnostics";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -43,6 +44,7 @@ export function NoteDetail({ note, canEdit, isOwner, autoSave, systemAvailable, 
   const [content, setContent] = useState(note.content);
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [saveMessage, setSaveMessage] = useState("");
   const [saved, setSaved] = useState(false);
   const lastSaved = useRef(`${note.title}\u0000${note.content}`);
   const savedValues = useRef({ title: note.title, content: note.content });
@@ -55,7 +57,7 @@ export function NoteDetail({ note, canEdit, isOwner, autoSave, systemAvailable, 
       setSaving(true);
       const response = await fetch(`/api/notes/${note.id}`, { method: "PATCH", headers: { "Content-Type": "application/json", "X-Memora-Autosave": "1" }, body: JSON.stringify({ title, content }) });
       setSaving(false);
-      if (response.ok) { lastSaved.current = signature; savedValues.current = { title, content }; setSaved(true); window.setTimeout(() => setSaved(false), 1500); }
+      if (response.ok) { setSaveMessage(savedMmdMessage(content)); lastSaved.current = signature; savedValues.current = { title, content }; setSaved(true); window.setTimeout(() => setSaved(false), 1500); }
     }, 1200);
     return () => window.clearTimeout(timer);
   }, [autoSave, canEdit, content, isEditing, note.id, title]);
@@ -69,6 +71,7 @@ export function NoteDetail({ note, canEdit, isOwner, autoSave, systemAvailable, 
     });
     setSaving(false);
     if (res.ok) {
+      setSaveMessage(savedMmdMessage(content));
       lastSaved.current = `${title}\u0000${content}`;
       savedValues.current = { title, content };
       setSaved(true);
@@ -103,6 +106,7 @@ export function NoteDetail({ note, canEdit, isOwner, autoSave, systemAvailable, 
         <ArrowLeft className="h-4 w-4" /> Back to notes
       </Link>
 
+      {saveMessage && <p role="status" className="mb-3 text-sm text-ink-soft">{saveMessage}</p>}
       <div className="document-heading">
         <div className="flex flex-col gap-6">
           <div className="min-w-0">

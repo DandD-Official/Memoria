@@ -19,6 +19,11 @@ kept in sync.
   placeholder — they never delete content or throw.
 
 ## 2. Block syntax
+
+Fences accept leading spaces or tabs. `INDENT_UNIT = 2`. Bodies remove the fence indentation, then one extra two-space/tab level only when all nonblank body lines have it. `code` and `svg` remove only the fence indentation. Nested blocks use their own indent. Uniformly indented legacy bodies now render as Markdown; use backtick fences or `:::code` for intentional code. Backtick/tilde code regions suppress MMD recognition.
+
+`grammar.ts` supplies lexical tokens and original-string offsets to the parser, diagnostics and editor. Block/error nodes add optional `position` (openLine, closeLine, startOffset, endOffset, indent, attribute spans). `raw` retains exact bytes including CRLF. Replacements use `indentReplacement`. Rendering remains LIFO; diagnostic culprit selection can identify a missing inner closer by indentation. Malformed opener lines render fail-safe errors. Optional invalid attributes remain warnings; saving is never blocked.
+
 ```
 :::blockname{attr="value" attr2="value2"}
 content (Markdown + nested MMD allowed unless noted otherwise)

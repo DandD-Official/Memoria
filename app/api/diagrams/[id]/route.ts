@@ -1,3 +1,4 @@
+import { resolveDiagramImages } from "@/lib/diagrams/images";
 import { NextResponse } from "next/server";
 import { requireUserOrNull } from "@/lib/auth/session";
 import { updateDiagramSchema } from "@/lib/validation/diagram";
@@ -16,7 +17,8 @@ export const GET = withApiErrorHandling(async (_request: Request, context: Route
   const diagram = await findDiagramById(params.id);
   if (!diagram) return NextResponse.json({ error: "Diagram not found." }, { status: 404 });
 
-  return NextResponse.json({ diagram });
+  const images = await resolveDiagramImages(diagram.data, diagram.ownerId);
+  return NextResponse.json({ diagram, images });
 });
 
 export const PATCH = withApiErrorHandling(async (request: Request, context: RouteContext<{ id: string }>) => {
@@ -33,6 +35,7 @@ export const PATCH = withApiErrorHandling(async (request: Request, context: Rout
     return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Invalid update." }, { status: 400 });
   }
 
+  if (parsed.data.data) { const original = await findDiagramById(params.id); if (!original || original.loadError) return NextResponse.json({ error: "This diagram could not be loaded safely." }, { status: 409 }); await resolveDiagramImages(parsed.data.data, original.ownerId); }
   const diagram = await updateDiagram(params.id, parsed.data);
   return NextResponse.json({ diagram });
 });

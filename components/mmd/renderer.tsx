@@ -17,12 +17,14 @@ import type { MmdAssetRegistry } from "@/lib/export/asset-registry";
  */
 export function MmdRenderer({
   content,
+  onSourceLine,
   onReplaceBlock,
   mode = "screen",
   assetRegistry,
   resolvedAssets,
 }: {
   content: string;
+  onSourceLine?: (line: number) => void;
   onReplaceBlock?: (raw: string, replacement: string) => void;
   mode?: MmdRenderMode;
   assetRegistry?: MmdAssetRegistry;
@@ -32,7 +34,7 @@ export function MmdRenderer({
     // Skip MMD parsing, while sharing code, table, and inline rendering
     // with Markdown inside custom blocks.
     return (
-      <MmdRenderProvider mode={mode} assetRegistry={assetRegistry} resolvedAssets={resolvedAssets}>
+      <MmdRenderProvider onSourceLine={onSourceLine} mode={mode} assetRegistry={assetRegistry} resolvedAssets={resolvedAssets}>
         <div className="memora-markdown">
           <InlineMarkdown content={content} />
         </div>
@@ -42,7 +44,7 @@ export function MmdRenderer({
 
   const doc = parseMmd(content);
   return (
-    <MmdRenderProvider mode={mode} assetRegistry={assetRegistry} resolvedAssets={resolvedAssets}>
+    <MmdRenderProvider onSourceLine={onSourceLine} mode={mode} assetRegistry={assetRegistry} resolvedAssets={resolvedAssets}>
       <div className="memora-markdown">
         <MmdReplacementProvider onReplace={onReplaceBlock}>
           <MmdNodeList nodes={doc.children} />

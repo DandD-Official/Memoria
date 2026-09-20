@@ -1,3 +1,4 @@
+import { resolveDiagramImages } from "@/lib/diagrams/images";
 import { collectionBookDocument, type BookDocument } from "@/lib/books/document";
 import type { PublicCollection } from "@/lib/share-collections-repo";
 import { parseMmd } from "@/lib/mmd/parser";
@@ -26,7 +27,7 @@ export async function resolveBookDocument(collection: PublicCollection, ownerId:
     assets[ref] = null;
     if (ref.startsWith("diagram://")) {
       const diagram = await findDiagramById(ref.slice(10));
-      if (diagram?.ownerId === ownerId) assets[ref] = `data:image/svg+xml;base64,${Buffer.from(diagramToSvg(diagram.data)).toString("base64")}`;
+      if (diagram?.ownerId === ownerId) assets[ref] = `data:image/svg+xml;base64,${Buffer.from(diagramToSvg(diagram.data, await resolveDiagramImages(diagram.data, diagram.ownerId))).toString("base64")}`;
     } else {
       const media = await findMedia(ref.slice(8), ownerId);
       if (media) assets[ref] = `data:${media.mimeType};base64,${media.data.toString("base64")}`;

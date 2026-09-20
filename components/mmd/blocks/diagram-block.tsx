@@ -46,7 +46,7 @@ export function DiagramPlaceholder({ node }: { node: MmdBlockNode }) {
       .then((body) => {
         const parsed = diagramDataSchema.safeParse(body?.diagram?.data);
         if (body?.diagram && parsed.success) {
-          setImageUrl(`data:image/svg+xml;charset=utf-8,${encodeURIComponent(diagramToSvg(parsed.data))}`);
+          setImageUrl(`data:image/svg+xml;charset=utf-8,${encodeURIComponent(diagramToSvg(parsed.data, body.images ?? {}))}`);
           setTitle(body.diagram.title as string);
           setState("found");
         } else {

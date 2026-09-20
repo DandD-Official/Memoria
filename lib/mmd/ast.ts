@@ -1,3 +1,4 @@
+import type { SourcePosition } from "@/lib/mmd/grammar";
 /**
  * Memoria Markdown (MMD) — Abstract Syntax Tree types.
  *
@@ -14,12 +15,14 @@ export const MMD_VERSION = 1 as const;
  * any ":::name" the parser recognized has already been extracted into a
  * sibling MmdBlockNode. */
 export interface MmdTextNode {
+  position?: SourcePosition;
   type: "markdown";
   content: string;
 }
 
 /** A recognized, valid, fully-attribute-checked MMD block. */
 export interface MmdBlockNode {
+  position?: SourcePosition;
   type: "block";
   /** Block name, e.g. "note", "definition", "columns". Matches a key in
    * BLOCK_DEFS (lib/mmd/spec-blocks.ts). */
@@ -43,6 +46,7 @@ export interface MmdBlockNode {
  * NEVER causes a parse failure for the rest of the document — content is
  * never dropped, only flagged. */
 export interface MmdErrorNode {
+  position?: SourcePosition;
   type: "mmd-error";
   reason: string;
   /** Original source text of the offending block/line span, preserved so

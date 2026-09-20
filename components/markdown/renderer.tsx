@@ -8,6 +8,6 @@ import { MmdRenderer } from "@/components/mmd/renderer";
 // working unchanged. The actual rendering — plain Markdown AND Memoria
 // Markdown (MMD) — now lives in components/mmd/renderer.tsx. See
 // .context/mmd-spec.md and .context/project-architecture.md.
-export function MarkdownRenderer({ content, onReplaceBlock }: { content: string; onReplaceBlock?: (raw: string, replacement: string) => void }) {
-  return <MmdRenderer content={content} onReplaceBlock={onReplaceBlock} />;
+export function MarkdownRenderer({ content, onReplaceBlock, onSourceLine }: { content: string; onSourceLine?: (line: number) => void; onReplaceBlock?: (raw: string, replacement: string) => void }) {
+  return <MmdRenderer content={content} onSourceLine={onSourceLine} onReplaceBlock={onReplaceBlock} />;
 }

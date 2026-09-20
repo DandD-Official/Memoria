@@ -1,17 +1,20 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
+import dynamic from "next/dynamic";
+import type { CodeEditorHandle } from "@/components/mmd/editor/code-editor";
+import { indentReplacement } from "@/lib/mmd/grammar";
 import { Bold, Eye, HelpCircle, Heading1, Heading2, Italic, List, ListOrdered, Pencil, Quote, Table2 } from "lucide-react";
 import { MarkdownRenderer } from "@/components/markdown/renderer";
 import { MmdInsertMenu } from "@/components/mmd/editor/insert-menu";
 import { MmdDiagramPicker } from "@/components/mmd/editor/diagram-picker";
 import { MmdStyleMenu } from "@/components/mmd/editor/style-menu";
 import { MmdReferenceGuide } from "@/components/mmd/editor/reference-guide";
-import { MmdBlockMap } from "@/components/mmd/editor/block-map";
-import { MmdValidationNotice } from "@/components/mmd/validation-notice";
 import { Tooltip } from "@/components/ui/tooltip";
 import { INSERT_TEMPLATES } from "@/lib/mmd/editor-templates";
 import { cn } from "@/lib/utils";
+
+const CodeEditor = dynamic(() => import("@/components/mmd/editor/code-editor"), { ssr: false, loading: () => <div className="h-full bg-surface-muted p-4 text-sm text-ink-faint" role="status">Loading editor?</div> });
 
 interface MarkdownEditorProps {
   value: string;
@@ -25,32 +28,12 @@ type EditorMode = "edit" | "split" | "preview";
 const TABLE_TEMPLATE = `\n| Header 1 | Header 2 | Header 3 |\n|----------|----------|----------|\n| Cell     | Cell     | Cell     |\n| Cell     | Cell     | Cell     |\n`;
 
 export function MarkdownEditor({ value, onChange, minRows = 16, className }: MarkdownEditorProps) {
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const editorRef = useRef<CodeEditorHandle | null>(null);
   const [mode, setMode] = useState<EditorMode>("edit");
   const [showGuide, setShowGuide] = useState(false);
   const [showFullMmdReference, setShowFullMmdReference] = useState(false);
-  const [debouncedValue, setDebouncedValue] = useState(value);
-
-  useEffect(() => {
-    const timeout = setTimeout(() => setDebouncedValue(value), 400);
-    return () => clearTimeout(timeout);
-  }, [value]);
-
   function applyEdit(transform: (selected: string) => string, options?: { block?: boolean }) {
-    const textarea = textareaRef.current;
-    if (!textarea) return;
-    const { selectionStart, selectionEnd } = textarea;
-    const before = value.slice(0, selectionStart);
-    const selected = value.slice(selectionStart, selectionEnd);
-    const after = value.slice(selectionEnd);
-    const insertion = transform(selected);
-    const prefix = options?.block && before.length > 0 && !before.endsWith("\n") ? `${before}\n` : before;
-    onChange(prefix + insertion + after);
-    requestAnimationFrame(() => {
-      textarea.focus();
-      const cursor = prefix.length + insertion.length;
-      textarea.setSelectionRange(cursor, cursor);
-    });
+    editorRef.current?.edit(transform, options?.block);
   }
 
   function insertMmdBlock(blockName: string) {
@@ -68,14 +51,8 @@ export function MarkdownEditor({ value, onChange, minRows = 16, className }: Mar
   }
 
   function jumpToLine(line: number) {
-    const textarea = textareaRef.current;
-    if (!textarea) return;
-    const lines = value.replace(/\r\n/g, "\n").split("\n");
-    const offset = lines.slice(0, Math.max(0, line - 1)).reduce((total, current) => total + current.length + 1, 0);
-    textarea.focus();
-    textarea.setSelectionRange(offset, offset + (lines[line - 1]?.length ?? 0));
-    const lineHeight = Number.parseFloat(window.getComputedStyle(textarea).lineHeight) || 20;
-    textarea.scrollTop = Math.max(0, (line - 3) * lineHeight);
+    if (mode === "preview") setMode("split");
+    requestAnimationFrame(() => editorRef.current?.jump(line));
   }
 
   const textTools = [
@@ -106,18 +83,7 @@ export function MarkdownEditor({ value, onChange, minRows = 16, className }: Mar
         </div>
         <span className="font-mono text-[0.6875rem] text-ink-faint">{value.length.toLocaleString()} chars</span>
       </div>
-      <textarea
-        ref={textareaRef}
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        rows={minRows}
-        spellCheck={false}
-        aria-label="Markdown source editor"
-        className="min-h-80 w-full resize-y bg-surface p-4 font-mono text-sm leading-relaxed text-ink outline-none placeholder:text-ink-faint"
-        placeholder="# Untitled\n\nStart writing in Markdown…"
-      />
-      <MmdBlockMap content={debouncedValue} onSelectLine={jumpToLine} />
-      <MmdValidationNotice content={debouncedValue} className="mx-4 mb-4" />
+      <div style={{ minHeight: minRows * 24 }}><CodeEditor value={value} onChange={onChange} minRows={minRows} editorRef={editorRef} /></div>
     </section>
   );
 
@@ -127,8 +93,8 @@ export function MarkdownEditor({ value, onChange, minRows = 16, className }: Mar
         <p className="text-xs font-semibold uppercase tracking-[0.14em] text-ink-faint">Preview</p>
         <p className="mt-0.5 text-[0.6875rem] text-ink-faint">What your reader will see</p>
       </div>
-      <div className="min-h-80 max-h-[42rem] overflow-y-auto p-4 sm:p-6">
-        {value.trim() ? <MarkdownRenderer content={value} onReplaceBlock={(raw, replacement) => onChange(value.replace(raw, replacement))} /> : <p className="text-sm text-ink-faint">Nothing to preview yet.</p>}
+      <div className="min-h-110 max-h-[42rem] overflow-y-auto p-4 sm:p-6">
+        {value.trim() ? <MarkdownRenderer content={value} onSourceLine={jumpToLine} onReplaceBlock={(raw, replacement) => onChange(value.replace(raw, indentReplacement(raw, replacement)))} /> : <p className="text-sm text-ink-faint">Nothing to preview yet.</p>}
       </div>
     </section>
   );
@@ -139,11 +105,12 @@ export function MarkdownEditor({ value, onChange, minRows = 16, className }: Mar
         <div className="flex min-w-0 flex-wrap items-center gap-2">
           <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1" aria-label="Editor tools">
             <span className="px-1 text-[0.625rem] font-semibold uppercase tracking-[0.15em] text-ink-faint">Text</span>
-            {textTools.map(({ icon: Icon, label, action }) => <Tooltip key={label} content={label}><button type="button" aria-label={label} onClick={action} disabled={mode === "preview"} className="inline-flex h-9 w-9 items-center justify-center rounded-control text-ink-soft hover:bg-ink/5 hover:text-ink disabled:opacity-40"><Icon className="h-4 w-4" aria-hidden="true" /></button></Tooltip>)}
+            {textTools.map(({ icon: Icon, label, action }) => <Tooltip key={label} content={label}><button type="button" aria-label={label} onClick={action} disabled={mode === "preview"} className="inline-flex h-11 w-11 items-center justify-center rounded-control text-ink-soft hover:bg-ink/5 hover:text-ink disabled:opacity-40"><Icon className="h-4 w-4" aria-hidden="true" /></button></Tooltip>)}
             <span className="mx-1 h-5 w-px bg-line" aria-hidden="true" />
             <span className="px-1 text-[0.625rem] font-semibold uppercase tracking-[0.15em] text-ink-faint">Structure</span>
             {structureTools.map(({ icon: Icon, label, action }) => <Tooltip key={label} content={label}><button type="button" aria-label={label} onClick={action} disabled={mode === "preview"} className="inline-flex h-9 w-9 items-center justify-center rounded-control text-ink-soft hover:bg-ink/5 hover:text-ink disabled:opacity-40"><Icon className="h-4 w-4" aria-hidden="true" /></button></Tooltip>)}
             <span className="mx-1 h-5 w-px bg-line" aria-hidden="true" />
+            {(["indent", "outdent", "undo", "redo"] as const).map(command => <button key={command} type="button" disabled={mode === "preview"} onClick={() => editorRef.current?.command(command)} className="min-h-11 rounded-control px-2 text-xs capitalize text-ink-soft hover:bg-ink/5 disabled:opacity-40">{command}</button>)}
             <MmdInsertMenu onInsert={insertMmdBlock} disabled={mode === "preview"} />
             <MmdDiagramPicker onInsert={appendDiagram} disabled={mode === "preview"} />
             <MmdStyleMenu onInsert={insertStyledCard} disabled={mode === "preview"} />
@@ -164,9 +131,7 @@ export function MarkdownEditor({ value, onChange, minRows = 16, className }: Mar
         </div>
       )}
 
-      {mode === "edit" && sourcePane}
-      {mode === "preview" && previewPane}
-      {mode === "split" && <div className="grid min-w-0 lg:grid-cols-2">{sourcePane}{previewPane}</div>}
+      <div className={cn("grid min-w-0", mode === "split" && "lg:grid-cols-2")}><div className={cn("min-w-0", mode === "preview" && "hidden")}>{sourcePane}</div>{mode !== "edit" && previewPane}</div>
     </div>
   );
 }

@@ -72,6 +72,7 @@ Do not use raw HTML anywhere except inside a :::svg block. A :::svg body must co
 
 Do not invent block types that are not listed below.
 
+Keep generated MMD opening and closing fences flush-left.
 MMD block syntax: ":::blockname{attr=\"value\"}" on its own line, then content, then ":::" alone on its own line to close. Attribute values are always double-quoted.
 
 SUPPORTED BLOCKS:

@@ -1,3 +1,4 @@
+import { resolveDiagramImages } from "@/lib/diagrams/images";
 import { NextResponse } from "next/server";
 import { requireUserOrNull } from "@/lib/auth/session";
 import { createDiagramSchema } from "@/lib/validation/diagram";
@@ -22,6 +23,7 @@ export const POST = withApiErrorHandling(async (request: Request) => {
     return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Invalid diagram." }, { status: 400 });
   }
 
+  if (parsed.data.data) await resolveDiagramImages(parsed.data.data, user.id);
   const diagram = await createDiagram({ ownerId: user.id, title: parsed.data.title, data: parsed.data.data });
   return NextResponse.json({ diagram }, { status: 201 });
 });

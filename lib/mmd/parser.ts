@@ -1,3 +1,4 @@
+import { scanMmd, readFence, dedentBody, type SourcePosition } from "@/lib/mmd/grammar";
 import { MMD_VERSION, type MmdDocument, type MmdNode, type MmdErrorNode } from "@/lib/mmd/ast";
 import { BLOCK_DEFS, type BlockDefinition } from "@/lib/mmd/spec-blocks";
 
@@ -28,87 +29,54 @@ import { BLOCK_DEFS, type BlockDefinition } from "@/lib/mmd/spec-blocks";
  * plain-Markdown notes/reviewers).
  */
 
-const OPEN_FENCE_RE = /^:::([a-z][a-z0-9-]*)\s*(\{.*\})?\s*$/;
-const CLOSE_FENCE_RE = /^:::\s*$/;
-const ATTR_PAIR_RE = /([a-zA-Z][\w-]*)\s*=\s*"((?:[^"\\]|\\.)*)"/g;
-
-// ---------------------------------------------------------------------
-// Phase 1 — raw tokenizer
-// ---------------------------------------------------------------------
-
 type RawNode = RawTextNode | RawBlockNode;
+interface RawTextNode { kind: "text"; content: string }
+interface RawBlockNode { kind: "block"; name: string; attrsRaw: string; bodyLines: string[]; children: RawNode[]; closed: boolean; raw: string; position: SourcePosition; malformed?: boolean }
 
-interface RawTextNode {
-  kind: "text";
-  content: string;
-}
-
-interface RawBlockNode {
-  kind: "block";
-  name: string;
-  attrsRaw: string; // the "{...}" portion, braces included, or "" if none
-  bodyLines: string[];
-  children: RawNode[];
-  closed: boolean;
-  raw: string;
-}
-
-interface Cursor {
-  i: number;
-}
-
-function tokenize(lines: string[], cursor: Cursor, isRoot: boolean): RawNode[] {
-  const nodes: RawNode[] = [];
-  let textLines: string[] = [];
-
-  const flushText = () => {
-    if (textLines.length > 0) {
-      nodes.push({ kind: "text", content: textLines.join("\n") });
-      textLines = [];
-    }
-  };
-
-  while (cursor.i < lines.length) {
-    const line = lines[cursor.i];
-    const openMatch = OPEN_FENCE_RE.exec(line);
-
-    if (openMatch) {
-      flushText();
-      const name = openMatch[1];
-      const attrsRaw = openMatch[2] ?? "";
-      const openLineIndex = cursor.i;
-      cursor.i += 1;
-      const bodyStart = cursor.i;
-      const children = tokenize(lines, cursor, false);
-
-      let closed = false;
-      let closeLineIndex = -1;
-      if (cursor.i < lines.length && CLOSE_FENCE_RE.test(lines[cursor.i])) {
-        closed = true;
-        closeLineIndex = cursor.i;
-        cursor.i += 1;
-      }
-
-      const bodyEnd = closed ? closeLineIndex : cursor.i;
-      const bodyLines = lines.slice(bodyStart, bodyEnd);
-      const rawEnd = closed ? closeLineIndex + 1 : cursor.i;
-      const raw = lines.slice(openLineIndex, rawEnd).join("\n");
-
-      nodes.push({ kind: "block", name, attrsRaw, bodyLines, children, closed, raw });
-      continue;
-    }
-
-    if (!isRoot && CLOSE_FENCE_RE.test(line)) {
-      // Belongs to the enclosing block's frame — stop without consuming.
-      break;
-    }
-
-    textLines.push(line);
-    cursor.i += 1;
+/** Iterative matching avoids overflowing the JS stack on hostile nesting. */
+function tokenize(source: string): RawNode[] {
+  const lines = scanMmd(source);
+  const root: RawNode[] = [];
+  const stack: { node: RawBlockNode; start: number; text: string[] }[] = [];
+  let rootText: string[] = [];
+  function flush() {
+    const frame = stack[stack.length - 1];
+    const text = frame ? frame.text : rootText;
+    if (text.length) (frame ? frame.node.children : root).push({ kind: "text", content: text.join("\n") });
+    if (frame) frame.text = []; else rootText = [];
   }
-
-  flushText();
-  return nodes;
+  function finish(frame: typeof stack[number], end: number, closed: boolean) {
+    const node = frame.node;
+    node.closed = closed;
+    node.position.closeLine = closed ? lines[end].line : null;
+    node.position.endOffset = lines[end]?.to ?? source.length;
+    node.raw = source.slice(node.position.startOffset, node.position.endOffset);
+    const body = lines.slice(frame.start + 1, closed ? end : end + 1).map(line => line.text);
+    node.bodyLines = dedentBody(body, node.position.indent, node.name === "code" || node.name === "svg");
+    // Dedent direct text only; child fences retain their own absolute indentation.
+    const stripped = dedentBody(body, node.position.indent, true);
+    const extra = node.name !== "code" && node.name !== "svg" && stripped.some(line => line.trim()) && stripped.every(line => !line.trim() || /^( {2}|\t)/.test(line));
+    for (const child of node.children) if (child.kind === "text") {
+      child.content = dedentBody(child.content.split("\n"), node.position.indent, true).map(line => extra ? line.replace(/^( {2}|\t)/, "") : line).join("\n");
+    }
+  }
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (line.kind === "open" || line.kind === "malformed") {
+      flush();
+      const node: RawBlockNode = { kind: "block", name: line.name, attrsRaw: line.attrsRaw, bodyLines: [], children: [], closed: false, raw: line.text, malformed: line.kind === "malformed", position: { openLine: line.line, closeLine: null, startOffset: line.from, endOffset: line.to, indent: line.indent, attributes: line.attributes } };
+      (stack.length ? stack[stack.length - 1].node.children : root).push(node);
+      if (node.malformed) { node.closed = true; continue; }
+      stack.push({ node, start: i, text: [] });
+    } else if (line.kind === "close" && stack.length) {
+      flush(); finish(stack.pop()!, i, true);
+    } else {
+      (stack.length ? stack[stack.length - 1].text : rootText).push(line.text);
+    }
+  }
+  flush();
+  while (stack.length) finish(stack.pop()!, lines.length - 1, false);
+  return root;
 }
 
 // ---------------------------------------------------------------------
@@ -116,15 +84,7 @@ function tokenize(lines: string[], cursor: Cursor, isRoot: boolean): RawNode[] {
 // ---------------------------------------------------------------------
 
 function parseAttrsRaw(attrsRaw: string): Record<string, string> {
-  const inner = attrsRaw.replace(/^\{/, "").replace(/\}$/, "");
-  const out: Record<string, string> = {};
-  let match: RegExpExecArray | null;
-  ATTR_PAIR_RE.lastIndex = 0;
-  while ((match = ATTR_PAIR_RE.exec(inner)) !== null) {
-    const [, key, rawValue] = match;
-    out[key] = rawValue.replace(/\\(.)/g, "$1");
-  }
-  return out;
+  return Object.fromEntries(readFence(":::note" + attrsRaw).attributes.map(attr => [attr.name, attr.value]));
 }
 
 function validateAttrs(
@@ -164,10 +124,18 @@ function joinNonEmpty(lines: string[]): string {
 }
 
 function postprocess(node: RawNode, depth: number): MmdNode {
+  const result = processNode(node, depth);
+  if (node.kind === "block") result.position = node.position;
+  return result;
+}
+
+function processNode(node: RawNode, depth: number): MmdNode {
   if (node.kind === "text") {
     return { type: "markdown", content: node.content };
   }
 
+  if (node.malformed) return errorNode("Malformed fence: use :::name{key=\"value\"}", node.raw);
+  if (depth > 8) return errorNode("Maximum nesting depth exceeded", node.raw);
   if (!node.closed) {
     return errorNode(`Missing closing marker for :::${node.name}`, node.raw);
   }
@@ -264,14 +232,7 @@ function postprocess(node: RawNode, depth: number): MmdNode {
 // ---------------------------------------------------------------------
 
 export function parseMmd(source: string): MmdDocument {
-  const normalized = source.replace(/\r\n/g, "\n");
-  // `split("\n")` would turn a single trailing line break into an extra
-  // empty text line. The old Markdown path treated that final terminator as
-  // framing rather than document content, so discard it before tokenizing
-  // to preserve the parser's backward-compatible output shape.
-  const lines = (normalized.endsWith("\n") ? normalized.slice(0, -1) : normalized).split("\n");
-  const cursor: Cursor = { i: 0 };
-  const rawNodes = tokenize(lines, cursor, true);
+  const rawNodes = tokenize(source);
   const children = rawNodes.map((node) => postprocess(node, 0));
   return { mmdVersion: MMD_VERSION, children };
 }
@@ -294,5 +255,5 @@ export function collectMmdErrors(doc: MmdDocument): MmdErrorNode[] {
  * (and will parse as) plain Markdown. Useful for call sites that want to
  * skip the MMD renderer entirely for the common case. */
 export function isPlainMarkdown(source: string): boolean {
-  return !/^:::[a-z][a-z0-9-]*\s*(\{.*\})?\s*$/m.test(source);
+  return !scanMmd(source).some(line => line.kind === "open" || line.kind === "malformed");
 }

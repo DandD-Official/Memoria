@@ -1,5 +1,6 @@
 "use client";
 
+import { savedMmdMessage } from "@/lib/mmd/diagnostics";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -42,6 +43,7 @@ export function ReviewerDetail({ reviewer, isOwner, canEdit, autoSave, related }
   const [title, setTitle] = useState(reviewer.title);
   const [content, setContent] = useState(reviewer.content);
   const [saving, setSaving] = useState(false);
+  const [saveMessage, setSaveMessage] = useState("");
   const lastSaved = useRef(`${reviewer.title}\u0000${reviewer.content}`);
 
   useEffect(() => {
@@ -52,7 +54,7 @@ export function ReviewerDetail({ reviewer, isOwner, canEdit, autoSave, related }
       setSaving(true);
       const response = await fetch(`/api/reviewers/${reviewer.id}`, { method: "PATCH", headers: { "Content-Type": "application/json", "X-Memora-Autosave": "1" }, body: JSON.stringify({ title, content }) });
       setSaving(false);
-      if (response.ok) lastSaved.current = signature;
+      if (response.ok) { lastSaved.current = signature; setSaveMessage(savedMmdMessage(content)); }
     }, 1200);
     return () => window.clearTimeout(timer);
   }, [autoSave, content, editing, canEdit, reviewer.id, title]);
@@ -66,6 +68,7 @@ export function ReviewerDetail({ reviewer, isOwner, canEdit, autoSave, related }
     });
     setSaving(false);
     if (res.ok) {
+      setSaveMessage(savedMmdMessage(content));
       lastSaved.current = `${title}\u0000${content}`;
       setEditing(false);
     }
@@ -83,6 +86,7 @@ export function ReviewerDetail({ reviewer, isOwner, canEdit, autoSave, related }
         <ArrowLeft className="h-4 w-4" /> Back to reviewers
       </Link>
 
+      {saveMessage && <p role="status" className="mb-3 text-sm text-ink-soft">{saveMessage}</p>}
       <div className="document-heading">
         <div className="flex flex-col gap-6">
           <div className="min-w-0">

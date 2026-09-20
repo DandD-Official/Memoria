@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/db";
 import type { Diagram as DbDiagram, Prisma } from "@prisma/client";
-import { diagramDataSchema, emptyDiagramData, type DiagramData } from "@/lib/diagrams/schema";
+import { diagramDataSchema, upgradeDiagram, emptyDiagramV2, type DiagramDataV2, type PersistedDiagramData } from "@/lib/diagrams/schema";
 
 /**
  * The Diagram shape the rest of the app works with — identical to
@@ -13,7 +13,7 @@ import { diagramDataSchema, emptyDiagramData, type DiagramData } from "@/lib/dia
  * rule as lib/notes-repo.ts for `prisma.note`, so there's exactly one
  * place that knows `data` needs validating on the way in and out.
  */
-export type Diagram = Omit<DbDiagram, "data" | "previewImage"> & { data: DiagramData };
+export type Diagram = Omit<DbDiagram, "data" | "previewImage"> & { data: DiagramDataV2; loadError?: boolean };
 export type DiagramSummary = Pick<DbDiagram, "id" | "ownerId" | "title" | "createdAt" | "updatedAt">;
 
 function hydrate(diagram: DbDiagram): Diagram {
@@ -25,15 +25,16 @@ function hydrate(diagram: DbDiagram): Diagram {
   // (mmd-spec.md §7). The raw bytes in the DB are untouched either way;
   // this only affects what this read returns.
   const { previewImage: _previewImage, ...rest } = diagram;
-  return { ...rest, data: parsed.success ? parsed.data : emptyDiagramData() };
+  return { ...rest, data: parsed.success ? upgradeDiagram(parsed.data) : emptyDiagramV2(), loadError: !parsed.success };
 }
 
-export async function createDiagram(params: { ownerId: string; title: string; data?: DiagramData }): Promise<Diagram> {
+export async function createDiagram(params: { ownerId: string; title: string; data?: PersistedDiagramData }): Promise<Diagram> {
   const created = await prisma.diagram.create({
     data: {
       ownerId: params.ownerId,
       title: params.title,
-      data: params.data ?? emptyDiagramData(),
+      data: params.data ? upgradeDiagram(params.data) : emptyDiagramV2(),
+      schemaVersion: 2,
     },
   });
   return hydrate(created);
@@ -42,7 +43,7 @@ export async function createDiagram(params: { ownerId: string; title: string; da
 export async function updateDiagram(id: string, data: { title?: string; data?: DiagramData }): Promise<Diagram> {
   const updated = await prisma.diagram.update({
     where: { id },
-    data: { title: data.title, data: data.data },
+    data: { title: data.title, data: data.data ? upgradeDiagram(data.data) : undefined, schemaVersion: data.data ? 2 : undefined },
   });
   return hydrate(updated);
 }
@@ -78,6 +79,7 @@ export async function duplicateDiagram(id: string, ownerId: string): Promise<Dia
       ownerId,
       title: `${original.title} (copy)`,
       data: original.data as Prisma.InputJsonValue,
+      schemaVersion: original.schemaVersion,
     },
   });
   return hydrate(copy);
