@@ -147,7 +147,7 @@ export function ShareDialog({ resourceType, resourceId }: { resourceType: "NOTE"
                 <div className="flex items-start gap-3"><Link2 className="mt-0.5 h-4 w-4 text-accent-dark" /><div className="min-w-0 flex-1"><p className="text-sm font-medium text-ink">Anyone with the link</p><p className="mt-0.5 text-xs text-ink-soft">People can read this note without signing in. They cannot edit it.</p></div></div>
                 {publicUrl ? (
                   <div className="mt-3">
-                    <div className="flex gap-2"><Input readOnly value={publicUrl} aria-label="Public view link" /><Button size="sm" onClick={copyPublicLink}>{copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />} {copied ? "Copied" : "Copy"}</Button></div>
+                    <div className="flex gap-2"><Input readOnly value={publicUrl} aria-label="Public view link" /><Button size="sm" onClick={copyPublicLink}>{copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />} {copied ? "Copied" : "Copy"}</Button><a href={publicUrl} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center rounded-control border border-line px-3 text-sm">Preview</a></div>
                     <button onClick={removePublicLink} disabled={loading} className="mt-2 text-xs text-danger hover:underline">Disable public link</button>
                   </div>
                 ) : <Button size="sm" className="mt-3 w-full" loading={loading} onClick={createPublicLink}>Create view-only link</Button>}

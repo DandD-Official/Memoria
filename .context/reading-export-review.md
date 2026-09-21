@@ -50,3 +50,36 @@ The current paginator is `lib/export/geometric-pages.ts`, with the DOM-free nume
 `text-lines.ts` merges baseline fragments within their paragraph/cell into styled runs, selects Office-safe fonts, clamps character scaling to 92-108%, bounds width slack to the cell and detects/resolves ordinary overlaps. `editable-pages.ts` creates one native Word text box per line with exact measured line spacing. External and Book internal links remain runs. Background rasterization remains 2x. jsPDF fallback uses the merged lines, with its existing standard-font substitution and non-Latin limitations.
 
 Automated gate: lint, 353 tests / 42 files, full Prisma + Next build passed. No browser was available: stress-fixture fill, blank pages, clipping and overlap counts were not measured. Word COM failed in the sandbox and stalled outside it; no PDF was produced, and the test process was cleaned up. LibreOffice was not found. The earlier verification totals above are historical. See implementation-review.md for the complete inventory, decisions, known limitations and reproducible manual checks.
+
+## Export regression correction — September 21, 2026
+
+The user reported broken text and extra pages containing text without its design. The previous line-box change passed XML-content tests but introduced a structural Word pagination defect: `docx.Textbox` creates a body paragraph around every floating shape, and those outer paragraphs were assigned the full measured text-line height. Dense pages could therefore overflow Word's body, moving some shapes onto additional pages while their background remained anchored to the original page.
+
+`word-line.ts` now creates floating shape **runs**. Each canonical page has one small anchor paragraph containing the background, bookmark and all editable line runs. Only the paragraphs **inside** the text boxes have measured exact spacing. The regression test verifies that 200 line boxes across two dense pages create two artwork/text anchors, plus the explicit section boundary, with no per-line body paragraphs. Line boxes permit height growth to avoid hard clipping during editing. They remain native editable Word text, including styled runs and links.
+
+The production exporter no longer calls the overlap resolver to move text after measuring artwork. Baseline clustering now handles small inline font changes without changing reading order. Missing natural-width measurements leave text at 100% scale rather than stretching it using approximate character widths. Font-stack order, sans-serif fallback and whitespace normalization are corrected. Word line-box placement compensates for line leading; PDF fallback restores each run's measured x/width so substituted fonts cannot accumulate drift across a sentence.
+
+`page-fragments.ts` snapshots measured container geometry. Surviving children retain their absolute positions inside their styled parent when off-page branches are pruned; the previous placeholder strategy could change margin collapse, grid sizing and paragraph wrapping. Inline text, tables and lists retain their internal DOM. This also keeps continuing card backgrounds/borders present with the text. Large leaf tables/lists are copied intact for correctness; container branches outside the page are pruned.
+
+Pagination uses a 92% preferred fill threshold, trims carried-over top margins to an 8px inset and suppresses trailing padding-only pages. It does not stretch a short final page or shrink text. Export prose uses 1.5 line height, 8px paragraph spacing, 4px list-item spacing and 16–20px section/heading separation. If staggered columns have no simultaneous safe cut, export stacks those columns; only an impossible heading-with-next preference is relaxed afterwards. Rows and glyph lines remain protected.
+
+| Severity | Location | Before | After | Why |
+| --- | --- | --- | --- | --- |
+| High | `editable-pages.ts`, `word-line.ts` | Full-height body paragraph per floating line | One anchor paragraph per designed page | Text and artwork cannot be split by hidden paragraph accumulation |
+| High | `text-lines.ts`, `editable-pages.ts` | Estimated baselines split/reordered inline runs; overlap repair moved ink | Cluster by baseline, preserve run order and measured coordinates | Maintain sentence readability and text/artwork alignment |
+| High | `page-fragments.ts` | Pruning could change surrounding flow | Snapshot placement and retain styled ancestors | Preserve design on continuation pages |
+| Medium | `page-planner.ts`, `mmd-export.css` | 75% fallback threshold and generous screen paragraph leading | Prefer fuller pages with role-based gaps | Use space while separating topics |
+
+Validation: 362 tests across 43 files, lint and TypeScript passed. Tests cover dense Word anchor structure, editable/link text, PDF extraction, mixed font order, coordinate preservation, fill preference, margin trimming and continuation geometry. Full build result is recorded in the implementation review. Browser rendered-page metrics and Office rendering are **not verified**. Browser selection returned no available browser; its discovery retry was then rejected by automatic approval review because the tool usage limit was reached. No alternate browser control was used to bypass that rejection.
+
+Manual check: run `npm.cmd run dev`, export the user's affected note and `tests/fixtures/mmd-export-stress.mmd` as DOCX/PDF, then compare the page count, continuation-card borders, table headers, mixed-format sentences and footer positions. Confirm text remains editable in Word and compare the Book reader/TOC. Automated source coverage is approved; this is not visual approval.
+
+## 2026-09-21 Books and Notebooks follow-up
+
+Implemented named Notebook subjects using ordered, validated collection metadata and per-item subject IDs. The additive migration was applied; legacy Book IDs and share links remain valid. Subjects can be added, renamed, moved, and removed without deleting memories. Notebook documents preserve subject order and labels in native reading and export.
+
+The native reader now has responsive one/two-page spreads, chapter/heading navigation, per-reader bookmarks, and chapter-relative resume state. Anonymous bookmarks stay in this browser. Signed-in bookmark writes validate book access and chapter membership. Attached quizzes offer session-local review and exam modes; existing private quiz attempt APIs are not exposed. Guest preview suppresses owner/member privileges on reading and export and prevents posting discussion as the signed-in owner.
+
+Creation wizards now occupy their own page workspace and offer search over bounded source lists. Diagram canvas and header spacing have been reduced. The landing quiz marks Retrieval correct and the two distractors incorrect.
+
+Validation: 372 tests across 45 files passed; TypeScript and lint passed. Next production build passed against the generated Prisma client (the earlier Prisma generate encountered a locked Windows engine DLL). Database migration deployed successfully. Live browser/Word visual checks remain unverified: the browser tool was previously rejected by automatic approval review due to its usage limit; no alternate browser was used. No claim of visual parity is made.

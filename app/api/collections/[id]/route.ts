@@ -1,3 +1,4 @@
+import { subjectsSchema } from "@/lib/books/notebooks";
 import { NextResponse } from "next/server";
 import { requireUserOrNull } from "@/lib/auth/session";
 import { withApiErrorHandling, type RouteContext } from "@/lib/api/handler";
@@ -10,6 +11,7 @@ const updateSchema = z.object({
   subtitle: z.string().max(240).nullable().optional(),
   description: z.string().max(2000).optional(),
   tocTitle: z.string().min(1).max(80).optional(),
+  subjects: subjectsSchema.optional(),
   isPublished: z.boolean().optional(),
   linkPermission: z.enum(["VIEW", "EDIT"]).optional(),
   allowExport: z.boolean().optional(),

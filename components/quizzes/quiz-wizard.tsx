@@ -34,6 +34,7 @@ interface Source {
 
 export function QuizWizard({ notes, reviewers, defaultNoteId, defaultReviewerId, defaults, initiallyOpen = false, initialMode = "existing", systemAvailable = false }: { notes: Source[]; reviewers: Source[]; defaultNoteId?: string; defaultReviewerId?: string; defaults: { questionCount: number; difficulty: "EASY" | "NORMAL" | "HARD" | "MIXED"; mode: (typeof MODES)[number]["value"] }; initiallyOpen?: boolean; initialMode?: "existing" | "import"; systemAvailable?: boolean }) {
   const router = useRouter();
+  const [sourceSearch, setSourceSearch] = useState("");
   const [open, setOpen] = useState(Boolean(defaultNoteId || defaultReviewerId) || initiallyOpen);
   const [step, setStep] = useState(initialMode === "import" ? 4 : 1);
   const [directImport, setDirectImport] = useState(initialMode === "import");
@@ -204,7 +205,7 @@ export function QuizWizard({ notes, reviewers, defaultNoteId, defaultReviewerId,
     <div className="card p-6">
       <div className="mb-5 flex items-center justify-between">
         <h2 className="font-display text-lg text-ink">New quiz</h2>
-        <button onClick={() => setOpen(false)} className="text-ink-faint hover:text-ink">
+        <button onClick={() => { setOpen(false); router.push("/quizzes"); }} className="text-ink-faint hover:text-ink">
           <X className="h-4 w-4" />
         </button>
       </div>
@@ -219,12 +220,12 @@ export function QuizWizard({ notes, reviewers, defaultNoteId, defaultReviewerId,
 
       {step === 1 && (
         <div>
-          <p className="mb-4 text-sm text-ink-soft">Choose existing notes or reviewers from your library. You do not need to upload the same material again.</p>
+          <p className="mb-4 text-sm text-ink-soft">Choose existing notes or reviewers from your library. You do not need to upload the same material again.</p><Input aria-label="Search source material" placeholder="Search your library?" value={sourceSearch} onChange={event => setSourceSearch(event.target.value)} className="mb-4" />
           {reviewers.length > 0 && (
             <>
               <Label>Reviewers</Label>
-              <div className="mb-4 space-y-1.5">
-                {reviewers.map((r) => (
+              <div className="mb-4 max-h-64 space-y-1.5 overflow-y-auto">
+                {reviewers.filter(reviewer => reviewer.title.toLowerCase().includes(sourceSearch.toLowerCase())).map((r) => (
                   <label key={r.id} className="flex cursor-pointer items-center gap-2 rounded-lg border border-line p-2.5 hover:bg-ink/5">
                     <input
                       type="checkbox"
@@ -242,7 +243,7 @@ export function QuizWizard({ notes, reviewers, defaultNoteId, defaultReviewerId,
             <p className="text-sm text-ink-soft">No notes yet.</p>
           ) : (
             <div className="max-h-48 space-y-1.5 overflow-y-auto">
-              {notes.map((n) => (
+              {notes.filter(note => note.title.toLowerCase().includes(sourceSearch.toLowerCase())).map((n) => (
                 <label key={n.id} className="flex cursor-pointer items-center gap-2 rounded-lg border border-line p-2.5 hover:bg-ink/5">
                   <input
                     type="checkbox"

@@ -1,3 +1,4 @@
+import { readSubjects, type NotebookSubject } from "@/lib/books/notebooks";
 import { prisma } from "@/lib/db";
 import { decompressText } from "@/lib/compression";
 import { randomBytes } from "crypto";
@@ -7,7 +8,7 @@ function generateSlug(): string {
   return randomBytes(6).toString("base64url");
 }
 
-export async function createCollection(params: { ownerId: string; title: string; description?: string }) {
+export async function createCollection(params: { ownerId: string; title: string; description?: string; kind?: "BOOK" | "NOTEBOOK" }) {
   let slug = generateSlug();
   // Extremely unlikely, but guard against a slug collision anyway.
   for (let i = 0; i < 3; i++) {
@@ -16,7 +17,7 @@ export async function createCollection(params: { ownerId: string; title: string;
     slug = generateSlug();
   }
   return prisma.shareCollection.create({
-    data: { ownerId: params.ownerId, title: params.title, description: params.description, slug },
+    data: { ownerId: params.ownerId, title: params.title, description: params.description, kind: params.kind ?? "BOOK", slug },
   });
 }
 
@@ -115,11 +116,15 @@ export async function getCollectionEditorData(userId: string, id: string) {
 export async function updateCollection(
   userId: string,
   id: string,
-  data: { title?: string; subtitle?: string | null; description?: string; tocTitle?: string; isPublished?: boolean; linkPermission?: "VIEW" | "EDIT"; allowExport?: boolean; isFavorite?: boolean; passwordHash?: Buffer | null; expiresAt?: Date | null }
+  data: { title?: string; subtitle?: string | null; description?: string; tocTitle?: string; subjects?: NotebookSubject[]; isPublished?: boolean; linkPermission?: "VIEW" | "EDIT"; allowExport?: boolean; isFavorite?: boolean; passwordHash?: Buffer | null; expiresAt?: Date | null }
 ) {
   const existing = await findCollectionForEditor(userId, id);
   if (!existing) throw new Error("Book not found.");
-  return prisma.shareCollection.update({ where: { id }, data });
+  if (data.subjects && existing.kind !== "NOTEBOOK") throw new Error("Only notebooks have subjects.");
+  return prisma.$transaction(async tx => {
+    if (data.subjects) await tx.shareCollectionItem.updateMany({ where: { collectionId: id, subjectId: { notIn: data.subjects.map(subject => subject.id) } }, data: { subjectId: null } });
+    return tx.shareCollection.update({ where: { id }, data });
+  });
 }
 
 export async function deleteCollection(ownerId: string, id: string) {
@@ -131,7 +136,7 @@ export async function deleteCollection(ownerId: string, id: string) {
 export async function addCollectionItem(
   userId: string,
   collectionId: string,
-  item: { resourceType: ResourceType; resourceId: string }
+  item: { resourceType: ResourceType; resourceId: string; subjectId?: string | null }
 ) {
   const collection = await findCollectionForEditor(userId, collectionId);
   if (!collection) throw new Error("Book not found.");
@@ -141,6 +146,7 @@ export async function addCollectionItem(
   const owns = await resourceBelongsTo(userId, item.resourceType, item.resourceId);
   if (!owns) throw new Error("You can only add your own notes, reviewers, or quizzes.");
 
+  if (item.subjectId && (collection.kind !== "NOTEBOOK" || !readSubjects(collection.subjects).some(subject => subject.id === item.subjectId))) throw new Error("Subject not found in this notebook.");
   const position = collection.items.length;
   return prisma.shareCollectionItem.upsert({
     where: {
@@ -151,7 +157,7 @@ export async function addCollectionItem(
       },
     },
     update: {},
-    create: { collectionId, resourceType: item.resourceType, resourceId: item.resourceId, position },
+    create: { collectionId, resourceType: item.resourceType, resourceId: item.resourceId, subjectId: item.subjectId, position },
   });
 }
 
@@ -203,7 +209,9 @@ export interface PublicCollection {
   description: string | null;
   tocTitle: string;
   ownerName: string;
-  items: Array<{ id: string; resourceType: ResourceType; resourceId: string }>;
+  kind?: "BOOK" | "NOTEBOOK";
+  subjects?: NotebookSubject[];
+  items: Array<{ id: string; resourceType: ResourceType; resourceId: string; subjectId?: string | null }>;
   notes: PublicCollectionNote[];
   reviewers: PublicCollectionReviewer[];
   quizzes: PublicCollectionQuiz[];
@@ -213,6 +221,13 @@ export interface PublicCollection {
   lastReadItemId: string | null;
   isPrivateAccess: boolean;
   canExport: boolean;
+}
+
+export async function assignNotebookSubject(userId: string, collectionId: string, itemId: string, subjectId: string | null) {
+  const collection = await findCollectionForEditor(userId, collectionId);
+  if (!collection || collection.kind !== "NOTEBOOK" || !collection.items.some(item => item.id === itemId)) throw new Error("Notebook item not found.");
+  if (subjectId && !readSubjects(collection.subjects).some(subject => subject.id === subjectId)) throw new Error("Subject not found in this notebook.");
+  return prisma.shareCollectionItem.update({ where: { id: itemId }, data: { subjectId } });
 }
 
 /**
@@ -276,8 +291,10 @@ export async function getPublicCollectionBySlug(slug: string, allowProtected = f
     subtitle: collection.subtitle,
     description: collection.description,
     tocTitle: collection.tocTitle,
+    kind: collection.kind === "NOTEBOOK" ? "NOTEBOOK" : "BOOK",
+    subjects: readSubjects(collection.subjects),
     ownerName: collection.owner.name ?? "A Memoria user",
-    items: collection.items.map(({ id, resourceType, resourceId }) => ({ id, resourceType, resourceId })),
+    items: collection.items.map(({ id, resourceType, resourceId, subjectId }) => ({ id, resourceType, resourceId, subjectId })),
     notes: byOrder(rawNotes.map((n) => ({ ...n, content: decompressText(n.content) }))),
     reviewers: byOrder(rawReviewers.map((r) => ({ ...r, content: decompressText(r.content) }))),
     quizzes: byOrder(rawQuizzes),

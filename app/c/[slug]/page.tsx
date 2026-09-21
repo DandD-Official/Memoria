@@ -22,9 +22,11 @@ export async function generateMetadata(props: { params: Promise<{ slug: string }
 // Public, unauthenticated page — no (app) layout, no session required.
 // Everything rendered here comes only from items the owner explicitly
 // added to this collection (see lib/share-collections-repo.ts).
-export default async function PublicCollectionPage(props: { params: Promise<{ slug: string }> }) {
+export default async function PublicCollectionPage(props: { params: Promise<{ slug: string }>; searchParams: Promise<{ view?: string }> }) {
   const params = await props.params;
-  const user = await requireUserOrNull();
+  const sessionUser = await requireUserOrNull();
+  const guestPreview = (await props.searchParams).view === "guest";
+  const user = guestPreview ? null : sessionUser;
   const gate = await prisma.shareCollection.findUnique({ where: { slug: params.slug }, select: { id: true, ownerId: true, title: true, passwordHash: true, isPublished: true, expiresAt: true, members: user ? { where: { userId: user.id }, select: { id: true } } : false } });
   const privateAccess = Boolean(user && gate && (gate.ownerId === user.id || ("members" in gate && Array.isArray(gate.members) && gate.members.length > 0)));
   if (!gate || (!gate.isPublished && !privateAccess) || (gate.expiresAt && gate.expiresAt <= new Date())) notFound();
@@ -34,5 +36,5 @@ export default async function PublicCollectionPage(props: { params: Promise<{ sl
   const collection = await getPublicCollectionBySlug(params.slug, true, user?.id);
   if (!collection) notFound();
 
-  return <PublicCollectionView collection={collection} book={await resolveBookDocument(collection, gate.ownerId)} />;
+  return <PublicCollectionView guestPreview={guestPreview} collection={collection} book={await resolveBookDocument(collection, gate.ownerId)} />;
 }

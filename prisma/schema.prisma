@@ -603,6 +603,8 @@ model ShareCollection {
   subtitle     String?
   description  String?
   tocTitle     String    @default("Contents")
+  kind         String    @default("BOOK")
+  subjects     Json      @default("[]")
   isPublished  Boolean   @default(false)
   linkPermission Permission @default(VIEW)
   allowExport  Boolean   @default(true)
@@ -643,6 +645,7 @@ model ShareCollectionProgress {
   userId         String
   user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   lastItemId     String?
+  bookmarks      Json            @default("[]")
   lastAccessedAt DateTime        @default(now())
   updatedAt      DateTime        @updatedAt
 
@@ -660,6 +663,7 @@ model ShareCollectionItem {
   collection   ShareCollection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
   resourceType ResourceType
   resourceId   String
+  subjectId    String?
   position     Int             @default(0)
   createdAt    DateTime        @default(now())
 

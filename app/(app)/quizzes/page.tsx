@@ -2,6 +2,7 @@ import { ListChecks } from "lucide-react";
 import { prisma } from "@/lib/db";
 import { requireUser } from "@/lib/auth/session";
 import { EmptyState } from "@/components/ui/empty-state";
+import Link from "next/link";
 import { QuizWizardLauncher } from "@/components/quizzes/quiz-wizard-launcher";
 import { formatRelativeTime } from "@/lib/utils";
 import { LibraryNavigation } from "@/components/library/library-navigation";
@@ -21,6 +22,8 @@ export default async function QuizzesPage(props: { searchParams: Promise<{ creat
     prisma.userSettings.upsert({ where: { userId: user.id }, create: { userId: user.id }, update: {}, select: { defaultQuestionCount: true, defaultDifficulty: true, defaultQuizMode: true } }),
   ]);
 
+  if (searchParams.create === "1" || searchParams.fromNote || searchParams.source || searchParams.fromReviewer) return <PageShell className="max-w-4xl"><Link href="/quizzes" className="mb-4 inline-block text-sm text-ink-soft hover:underline">? Back to quizzes</Link><h1 className="mb-6 font-display text-3xl">Create a quiz or exam</h1><QuizWizardLauncher key={`${searchParams.create}-${searchParams.source}-${searchParams.fromNote}-${searchParams.fromReviewer}`} notes={notes} reviewers={reviewers} defaultNoteId={searchParams.fromNote} defaultReviewerId={searchParams.fromReviewer} initiallyOpen={searchParams.create === "1" || !!searchParams.source} initialMode={searchParams.source === "import" ? "import" : "existing"} defaults={{ questionCount: settings.defaultQuestionCount, difficulty: settings.defaultDifficulty, mode: settings.defaultQuizMode }} systemAvailable={hasSystemAiConnection()} /></PageShell>;
+
   return (
     <PageShell className="max-w-5xl">
       <PageHeader>
@@ -29,7 +32,7 @@ export default async function QuizzesPage(props: { searchParams: Promise<{ creat
           <PageDescription>Practice recall with questions built from your own material.</PageDescription>
         </PageHeaderContent>
         <PageActions>
-          <QuizWizardLauncher key={`${searchParams.create}-${searchParams.source}-${searchParams.fromNote}-${searchParams.fromReviewer}`} notes={notes} reviewers={reviewers} defaultNoteId={searchParams.fromNote} defaultReviewerId={searchParams.fromReviewer} initiallyOpen={searchParams.create === "1"} initialMode={searchParams.source === "import" ? "import" : "existing"} defaults={{ questionCount: settings.defaultQuestionCount, difficulty: settings.defaultDifficulty, mode: settings.defaultQuizMode }} systemAvailable={hasSystemAiConnection()} />
+          <QuizWizardLauncher key={`${searchParams.create}-${searchParams.source}-${searchParams.fromNote}-${searchParams.fromReviewer}`} notes={notes} reviewers={reviewers} defaultNoteId={searchParams.fromNote} defaultReviewerId={searchParams.fromReviewer} initiallyOpen={searchParams.create === "1" || !!searchParams.source} initialMode={searchParams.source === "import" ? "import" : "existing"} defaults={{ questionCount: settings.defaultQuestionCount, difficulty: settings.defaultDifficulty, mode: settings.defaultQuizMode }} systemAvailable={hasSystemAiConnection()} />
         </PageActions>
       </PageHeader>
 

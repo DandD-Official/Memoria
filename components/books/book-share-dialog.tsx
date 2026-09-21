@@ -18,6 +18,7 @@ export interface BookMember {
 }
 
 interface BookShareDialogProps {
+  objectLabel?: string;
   bookId: string;
   publicPath: string;
   open: boolean;
@@ -123,7 +124,7 @@ export function BookShareDialog(props: BookShareDialogProps) {
   }
 
   return (
-    <Dialog open={props.open} onOpenChange={props.onOpenChange} title="Share this Book" description="Choose how people enter the Book and what they can change." className="max-w-xl">
+    <Dialog open={props.open} onOpenChange={props.onOpenChange} title={`Share this ${props.objectLabel ?? "Book"}`} description="Choose how people enter the Book and what they can change." className="max-w-xl">
       <div className="grid grid-cols-2 gap-2 rounded-card bg-surface-muted p-1" role="tablist" aria-label="Sharing method">
         <MethodButton active={method === "link"} onClick={() => setMethod("link")} icon={Link2} label="Anyone with link" />
         <MethodButton active={method === "people"} onClick={() => setMethod("people")} icon={Users} label="Add people" />
@@ -143,9 +144,10 @@ export function BookShareDialog(props: BookShareDialogProps) {
 
           <label className="flex min-h-10 items-center gap-2 text-sm text-ink"><input type="checkbox" checked={props.linkAllowExport} disabled={busy === "link"} onChange={(event) => void setLinkAllowExport(event.target.checked)} className="h-4 w-4 accent-accent" />Allow people with this link to export the Book</label>
 
-          <div className={cn("flex min-w-0 items-center gap-2 rounded-card border border-line bg-paper p-2", !props.linkEnabled && "opacity-55")}>
+          <div className={cn("flex min-w-0 flex-wrap items-center gap-2 rounded-card border border-line bg-paper p-2", !props.linkEnabled && "opacity-55")}>
             <span className="min-w-0 flex-1 truncate pl-2 text-sm text-ink-soft">{props.publicPath}</span>
             <Button size="sm" variant="outline" disabled={!props.linkEnabled} onClick={() => void copyLink()}>{copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}{copied ? "Copied" : "Copy link"}</Button>
+              {props.linkEnabled && <a href={props.publicPath} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center rounded-control border border-line px-3 text-sm font-medium">Preview</a>}
           </div>
 
           {props.passwordProtected && <div className="flex items-center justify-between gap-3 rounded-card border border-warning/30 bg-warning/5 p-3"><p className="flex items-center gap-2 text-xs text-ink-soft"><LockKeyhole className="h-4 w-4 text-warning" />This legacy link still requires a password.</p><Button size="sm" variant="ghost" onClick={() => void clearPassword()}>Remove password</Button></div>}

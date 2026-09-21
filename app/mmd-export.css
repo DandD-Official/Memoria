@@ -290,3 +290,16 @@
   --font-mono: Consolas, "Courier New", monospace;
 }
 .mmd-export-surface.book-paper :is(.book-cover h1, .book-section-heading h2, .book-chapter-title h2) { line-height: 1.25; }
+
+/* Use the page comfortably: compact within a topic, clear gaps between topics.
+   The higher specificity keeps screen paragraph/utility leading out of exports. */
+.mmd-export-surface .memora-markdown :is(p, li, td, th) { line-height: 1.5; }
+.mmd-export-surface .memora-markdown p { margin-block: 8px; }
+.mmd-export-surface .memora-markdown :is(ul, ol) { margin-block: 8px; }
+.mmd-export-surface .memora-markdown li { margin-block: 4px; }
+.mmd-export-surface .memora-markdown :is(h1, h2, h3) { margin-block: 20px 8px; }
+.mmd-export-surface .memora-markdown :is(h4, h5, h6) { margin-block: 16px 6px; }
+.mmd-export-surface .memora-markdown :is(section, article, blockquote, details, [data-export-block="columns"]) { margin-block: 16px; }
+.mmd-export-surface .memora-markdown :is(article, [data-export-block="column"], details) :is(h2, h3, h4):first-child { margin-top: 0; }
+.mmd-export-surface .mmd-export-brand-header { padding-bottom: 12px; }
+.mmd-export-surface .mmd-export-document-title { margin-block: 20px 12px; }

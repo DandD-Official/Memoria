@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -29,10 +29,11 @@ export function QuizWizardLauncher({
   defaults: { questionCount: number; difficulty: "EASY" | "NORMAL" | "HARD" | "MIXED"; mode: "QUIZ" | "PRACTICE_EXAM" | "MOCK_EXAM" | "TIMED_EXAM" | "MASTERY_TEST" };
   systemAvailable?: boolean;
 }) {
-  const [requested, setRequested] = useState(Boolean(defaultNoteId || defaultReviewerId) || initiallyOpen);
+  const router = useRouter();
+  const requested = Boolean(defaultNoteId || defaultReviewerId) || initiallyOpen;
 
   if (!requested) {
-    return <Button onClick={() => setRequested(true)}><Plus className="h-4 w-4" /> Create quiz</Button>;
+    return <Button onClick={() => router.push("/quizzes?create=1")}><Plus className="h-4 w-4" /> Create quiz</Button>;
   }
   return <QuizWizard notes={notes} reviewers={reviewers} defaultNoteId={defaultNoteId} defaultReviewerId={defaultReviewerId} defaults={defaults} initiallyOpen initialMode={initialMode} systemAvailable={systemAvailable} />;
 }

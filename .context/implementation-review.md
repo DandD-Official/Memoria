@@ -84,3 +84,13 @@ Start-Process (Join-Path $env:MEMORIA_EXPORT_ARTIFACTS 'mixed-lines.docx')
 
    Inspect the first line in Word: mixed bold/italic/underlined source link and internal chapter link must share a line without touching. Export to PDF from Word and inspect it. This synthetic file tests text boxes, not full-document artwork fidelity. If LibreOffice is installed, run `soffice --headless --convert-to pdf --outdir "$env:MEMORIA_EXPORT_ARTIFACTS" "$env:MEMORIA_EXPORT_ARTIFACTS\mixed-lines.docx"`.
 4. Use the Part 1 and Part 2 manual steps above at 320px and 200% zoom, with keyboard/touch and light/dark themes. Test sharing/owner permissions with two accounts against the configured database.
+
+## Follow-up: export regression correction
+
+The September 21 follow-up supersedes the earlier production overlap-resolution and Word-box implementation notes. The user reported broken text and text-only extra pages. Word now uses one body anchor paragraph per canonical page, with all floating editable line shapes and the background attached to it. This removes full-height per-line body paragraphs that could create extra pages without artwork. Browser-measured text is no longer nudged independently of the artwork; baseline grouping and PDF run positioning were corrected.
+
+New files: `lib/export/word-line.ts`, `lib/export/page-fragments.ts`, `tests/export-page-fragments.test.ts`. Modified: `editable-pages.ts`, `text-lines.ts`, `geometric-pages.ts`, `page-planner.ts`, export CSS, and editable-page/layout tests. Geometry snapshots preserve styled container fragments when pruning. The page planner prefers 92% fill, removes carried-over top-margin waste and drops padding-only tail pages; spacing remains distinct between paragraphs, lists and sections. Short final pages are not artificially stretched.
+
+Decisions: retain native positioned Word text and 2x artwork; use a single anchor rather than special-case outer-paragraph heights; allow text-box height growth when edited; preserve measured coordinates instead of post-layout overlap movement; stack columns only when their lines cannot share a safe page cut; retain entire leaf tables/lists to avoid reflow when pruning. The full source/typography review is in `reading-export-review.md`.
+
+Checks: lint, TypeScript and 362 tests / 43 files passed. Full production build passed, including Prisma generation. No rendered fill/clipping/overlap metrics or Office visual validation. The browser discovery retry was blocked by automatic approval review due to the tool usage limit; no alternate browser was used to bypass it.

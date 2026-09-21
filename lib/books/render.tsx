@@ -1,3 +1,4 @@
+import type { BookOutlineEntry } from "./reader-state";
 import { createRoot } from "react-dom/client";
 import { flushSync } from "react-dom";
 import { BookSurface } from "@/components/books/book-surface";
@@ -8,7 +9,7 @@ import { paginateMmdSurface } from "@/lib/export/pagination";
 import { EXPORT_PAGE } from "@/lib/export/constants";
 import type { CanonicalPage } from "@/lib/export/types";
 
-export interface RenderedBook { pages: CanonicalPage[]; chapterPages: Record<string, number>; cleanup: () => void }
+export interface RenderedBook { pages: CanonicalPage[]; outline: BookOutlineEntry[]; chapterPages: Record<string, number>; cleanup: () => void }
 
 /** The reader and downloads use these exact DOM pages, including resolved MMD assets. */
 export async function renderBook(book: BookDocument): Promise<RenderedBook> {
@@ -36,7 +37,7 @@ export async function renderBook(book: BookDocument): Promise<RenderedBook> {
     const pages: CanonicalPage[] = [];
     const makePage = () => {
       const element = document.createElement("div");
-      element.className = "mmd-export-surface mmd-export-page book-paper book-page";
+      element.className = `mmd-export-surface mmd-export-page book-paper book-page ${book.kind === "NOTEBOOK" ? "notebook-paper" : ""}`;
       element.style.height = `${EXPORT_PAGE.cssHeight}px`;
       return { element, width: EXPORT_PAGE.cssWidth, height: EXPORT_PAGE.cssHeight };
     };
@@ -69,6 +70,7 @@ export async function renderBook(book: BookDocument): Promise<RenderedBook> {
       const chapterResult = paginateMmdSurface(chapter, book.title);
       for (const page of chapterResult) {
         page.element.classList.add("book-paper", "book-page");
+        if (book.kind === "NOTEBOOK") page.element.classList.add("notebook-paper");
         page.element.querySelector(".mmd-export-footer")?.remove();
         pages.push(page);
       }
@@ -84,6 +86,18 @@ export async function renderBook(book: BookDocument): Promise<RenderedBook> {
       }
       host.append(page.element);
     });
-    return { pages, chapterPages, cleanup };
+    const outline: BookOutlineEntry[] = [];
+    pages.forEach((page, pageIndex) => {
+      const pageRect = page.element.getBoundingClientRect();
+      for (const heading of page.element.querySelectorAll<HTMLElement>("h1,h2,h3,h4,h5,h6")) {
+        const rect = heading.getBoundingClientRect();
+        const clip = heading.closest(".mmd-page-window")?.getBoundingClientRect() ?? pageRect;
+        if (!rect.height || rect.bottom <= clip.top || rect.top >= clip.bottom) continue;
+        const id = `book-heading-${outline.length}`;
+        heading.dataset.bookHeading = id;
+        outline.push({ id, title: heading.textContent?.trim() || "Heading", level: Number(heading.tagName.slice(1)), page: pageIndex });
+      }
+    });
+    return { pages, chapterPages, outline, cleanup };
   } catch (error) { cleanup(); throw error; }
 }

@@ -71,3 +71,10 @@
 .book-thumbnail-footer { display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #bac3ab; padding-top: 12px; margin-top: auto; font-size: 11px; color: #515f53; }
 .book-thumbnail-title { margin-bottom: 24px; }
 @media (prefers-reduced-motion: reduce) { .book-thumbnail { transition: none; } }
+
+.reading-spread { display:flex; justify-content:center; align-items:flex-start; gap:20px; padding-bottom:16px; }
+.reading-leaf { flex-shrink:0; overflow:hidden; box-shadow:0 4px 18px rgb(25 40 28 / .12); background:#f7f7ef; }
+.reading-leaf .book-paper { max-width:none; }
+.notebook-cover { border-left:16px solid #516948; background-image:repeating-linear-gradient(0deg,transparent,transparent 27px,#dde0d2 28px); }
+.notebook-paper .book-chapter-kicker { border-left:3px solid #9d655b; padding-left:12px; }
+.notebook-paper .book-chapter-title { border-left:3px solid #9d655b; padding-left:16px; }

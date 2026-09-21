@@ -12,6 +12,7 @@ const createOptions = [
   { href: "/diagrams", label: "Map an idea", description: "Connect concepts on a diagram canvas", icon: Workflow },
   { href: "/quizzes?create=1", label: "Make a practice set", description: "Create a quiz or configure an exam", icon: ListChecks },
   { href: "/books?create=1", label: "Curate a study space", description: "Collect material to read and share together", icon: BookOpen },
+  { href: "/notebooks?create=1", label: "Start a notebook", description: "Organize memories into subjects", icon: Layers3 },
   { href: "/settings#connections", label: "Connect your sources", description: "Bring in Google Drive or Notion", icon: Link2 },
 ];
 

@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import JSZip from "jszip";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { createEditablePagesWord, createEditablePagesPdf, type EditablePage } from "@/lib/export/editable-pages";
+import { createEditablePagesWord, createEditablePagesPdf, editableLines, type EditablePage } from "@/lib/export/editable-pages";
 
 const background = `data:image/png;base64,${readFileSync("public/brand/memoria/logo.png").toString("base64")}`;
 const pages: EditablePage[] = [0, 1].map(index => ({ width: 794, height: 1123, background,
@@ -35,13 +35,45 @@ describe("editable page exports", () => {
     expect(box).toContain('<w:i/>');
     expect(box).toContain('<w:u');
     expect(xml).not.toContain('w:line="1"');
-    expect(xml).toContain('mso-fit-shape-to-text:f');
+    expect(xml).toContain('mso-fit-shape-to-text:t');
     const rels = await zip.file("word/_rels/document.xml.rels")!.async("string");
     expect(rels).toContain('Target="https://example.com/source"');
     if (process.env.MEMORIA_EXPORT_ARTIFACTS) {
       mkdirSync(process.env.MEMORIA_EXPORT_ARTIFACTS, { recursive: true });
       writeFileSync(join(process.env.MEMORIA_EXPORT_ARTIFACTS, "mixed-lines.docx"), Buffer.from(await blob.arrayBuffer()));
     }
+  });
+
+  it("anchors dense editable text and artwork together without adding body lines", async () => {
+    const dense = [0, 1].map(page => ({ ...pages[0], text: Array.from({ length: 100 }, (_, index) => ({
+      ...pages[0].text[1], text: `Page ${page + 1} cell ${index + 1}`,
+      group: `cell-${index}`, x: 48 + (index % 2) * 340, y: 48 + Math.floor(index / 2) * 20,
+      height: 18, lineHeight: 20, width: 220,
+    })) }));
+    const zip = await JSZip.loadAsync(await (await createEditablePagesWord("Dense pages", dense)).arrayBuffer());
+    const xml = await zip.file("word/document.xml")!.async("string");
+    const body = xml.replace(/<w:txbxContent>[\s\S]*?<\/w:txbxContent>/g, "");
+    const paragraphs = [...body.matchAll(/<w:p>[\s\S]*?<\/w:p>/g)].map(match => match[0]);
+    const anchors = paragraphs.filter(paragraph => paragraph.includes("<wp:anchor"));
+    expect(anchors).toHaveLength(2);
+    for (const anchor of anchors) {
+      expect(anchor.match(/<w:pict>/g)).toHaveLength(100);
+      expect(anchor).toContain('w:line="15"');
+      expect(anchor).toContain('behindDoc="1"');
+    }
+    // The only extra body paragraph is the explicit section/page boundary.
+    expect(paragraphs.filter(paragraph => !paragraph.includes("<wp:anchor")).every(paragraph => paragraph.includes("<w:sectPr>"))).toBe(true);
+    expect(xml.match(/<w:txbxContent>/g)).toHaveLength(200);
+    expect(xml).toContain("Page 2 cell 100");
+  });
+
+  it("keeps measured text on its original artwork instead of nudging it", () => {
+    const text = [
+      { ...pages[0].text[1], group: "cell-a", x: 48, y: 90, width: 100, height: 24 },
+      { ...pages[0].text[1], group: "cell-b", x: 147, y: 90, width: 100, height: 24 },
+      { ...pages[0].text[1], group: "next-line", x: 48, y: 113, width: 100, height: 24 },
+    ];
+    expect(editableLines({ ...pages[0], text }).map(line => [line.x, line.y])).toEqual(text.map(run => [run.x, run.y]));
   });
 
   it("stores editable Unicode text, formatting, hyperlinks, and the original page dimensions in Word", async () => {

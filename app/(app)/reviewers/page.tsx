@@ -2,6 +2,7 @@ import { Layers } from "lucide-react";
 import { prisma } from "@/lib/db";
 import { requireUser } from "@/lib/auth/session";
 import { EmptyState } from "@/components/ui/empty-state";
+import Link from "next/link";
 import { ReviewerWizardLauncher } from "@/components/reviewers/reviewer-wizard-launcher";
 import { formatRelativeTime } from "@/lib/utils";
 import { LibraryNavigation } from "@/components/library/library-navigation";
@@ -18,6 +19,8 @@ export default async function ReviewersPage(props: { searchParams: Promise<{ cre
     prisma.reviewer.findMany({ where: { ownerId: user.id, archivedAt: null }, orderBy: { updatedAt: "desc" }, skip: (page - 1) * 24, take: 24, select: { id: true, title: true, description: true, style: true, updatedAt: true, isFavorite: true, tags: { select: { tag: { select: { id: true, name: true, color: true } } } } } }),
     prisma.note.findMany({ where: { ownerId: user.id, archivedAt: null }, orderBy: { updatedAt: "desc" }, select: { id: true, title: true } }),
   ]);
+
+  if (searchParams.create === "1" || searchParams.fromNote || searchParams.source) return <PageShell className="max-w-4xl"><Link href="/reviewers" className="mb-4 inline-block text-sm text-ink-soft hover:underline">? Back to study guides</Link><h1 className="mb-6 font-display text-3xl">Create a study guide</h1><ReviewerWizardLauncher key={`${searchParams.create}-${searchParams.source}-${searchParams.fromNote}`} notes={notes} defaultNoteId={searchParams.fromNote} initiallyOpen={searchParams.create === "1"} initialPath={searchParams.source === "import" ? "import" : searchParams.source === "notes" ? "notes" : undefined} systemAvailable={hasSystemAiConnection()} /></PageShell>;
 
   return (
     <PageShell className="max-w-5xl">

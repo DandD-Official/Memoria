@@ -7,6 +7,7 @@ import { z } from "zod";
 const createSchema = z.object({
   title: z.string().min(1, "Title is required.").max(200),
   description: z.string().max(2000).optional(),
+  kind: z.enum(["BOOK", "NOTEBOOK"]).default("BOOK"),
 });
 
 export const GET = withApiErrorHandling(async () => {

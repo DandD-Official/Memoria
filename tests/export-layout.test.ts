@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { parseMmd } from "@/lib/mmd/parser";
 import { planPageBreaks } from "@/lib/export/page-planner";
 import { planTableLayout,planTableRows } from "@/lib/export/table-fit";
-import { mergeTextLines,compensateWidth,resolveTextOverlaps,detectTextOverlaps,wordSafeFont,lineBoxWidth,type TextFragment } from "@/lib/export/text-lines";
+import { mergeTextLines,compensateWidth,resolveTextOverlaps,detectTextOverlaps,wordSafeFont,lineBoxWidth,lineBoxTop,type TextFragment } from "@/lib/export/text-lines";
 const fragment=(patch:Partial<TextFragment>={}):TextFragment=>({text:"Hello ",x:48,y:90,width:45,height:20,font:"Arial",size:14,color:"22312b",bold:false,italic:false,underline:false,...patch});
 it("keeps the stress fixture parseable with Unicode and all nested export cases",()=>{
   const source=readFileSync("tests/fixtures/mmd-export-stress.mmd","utf8");
@@ -14,6 +14,17 @@ it("keeps the stress fixture parseable with Unicode and all nested export cases"
   expect(source).toContain("Column 12");expect(source).toContain("Row 60");expect(source).toContain("<br>");
 });
 describe("page planner",()=>{
+  it("uses a safe line near the page bottom instead of stopping at 80%",()=>{
+    const pages=planPageBreaks([{y:800,kind:"block"},{y:960,kind:"line",avoid:true},{y:1300,kind:"line"}],1000);
+    expect(pages[0].to).toBe(960);
+  });
+  it("trims carried-over top margins and does not add a padding-only page",()=>{
+    const pages=planPageBreaks([{y:980,kind:"line"},{y:1100,kind:"block"},{y:1500,kind:"line"},{y:1550,kind:"block"}],1000,{
+      occupied:[{from:0,to:980},{from:1100,to:1500}],totalHeight:1550,
+    });
+    expect(pages[1].from).toBe(1092);
+    expect(planPageBreaks([{y:980,kind:"line"},{y:1060,kind:"block"}],1000,{occupied:[{from:0,to:980}],totalHeight:1060})).toHaveLength(1);
+  });
   it("fills every nonfinal page above 92% at safe line boundaries",()=>{const candidates=Array.from({length:500},(_,i)=>({y:(i+1)*24,kind:"line" as const}));const result=planPageBreaks(candidates,1003);expect(result.slice(0,-1).every(page=>page.fill>=.92)).toBe(true);expect(result.every(page=>page.to>page.from&&!page.oversized)).toBe(true);expect(result.at(-1)?.to).toBe(12000);});
   it("keeps headings and two following lines together",()=>{const result=planPageBreaks([{y:840,kind:"block"},{y:920,kind:"heading"},{y:944,kind:"line"},{y:968,kind:"line"},{y:1100,kind:"block"}],950,{indivisible:[{from:900,to:968,kind:"heading"}]});expect(result[0].to).toBe(840);});
   it("keeps indivisible visuals intact and signals an oversized visual",()=>{const pages=planPageBreaks([{y:600,kind:"block"},{y:1600,kind:"block"},{y:2000,kind:"block"}],900,{indivisible:[{from:600,to:1600,kind:"visual"}]});expect(pages[0].to).toBe(600);expect(pages[1].oversized).toBe(true);expect(pages[1].to).toBe(1600);});
@@ -28,6 +39,21 @@ describe("table planning",()=>{
   it("splits at rows and marks repeated headers and oversize rows",()=>{const result=planTableRows([100,100,100,600,50],40,400);expect(result[0].rows).toEqual([0,1,2]);expect(result[1]).toEqual({rows:[3],repeatHeader:true,oversized:true});expect(result[2].rows).toEqual([4]);});
 });
 describe("editable text lines",()=>{
+  it("clusters differently sized inline runs without reversing their reading order",()=>{
+    const lines=mergeTextLines([
+      fragment({text:"Before ",x:48,y:90,width:50,baseline:106,lineHeight:24}),
+      fragment({text:"code",x:98,y:93,width:30,height:16,size:12,font:"Consolas",baseline:107,lineHeight:18}),
+      fragment({text:" after",x:128,y:90,width:45,baseline:106,lineHeight:24}),
+    ]);
+    expect(lines).toHaveLength(1);
+    expect(lines[0].runs.map(run=>run.text).join("")).toBe("Before code after");
+    expect(lineBoxTop(lines[0])).toBe(88);
+    expect(lines[0].scale).toBe(100);
+  });
+  it("honors font-stack order and does not misread sans-serif as serif",()=>{
+    expect(wordSafeFont("Cambria, Georgia, serif")).toBe("Cambria");
+    expect(wordSafeFont("system-ui, sans-serif")).toBe("Arial");
+  });
   it("merges mixed runs on one baseline while retaining formatting and links",()=>{const lines=mergeTextLines([fragment(),fragment({x:93,text:"bold",width:30,bold:true}),fragment({x:123,text:" link",width:32,href:"https://example.com",underline:true,targetPage:2})]);expect(lines).toHaveLength(1);expect(lines[0].runs.map(r=>r.text).join("")).toBe("Hello bold link");expect(lines[0].runs[1].bold).toBe(true);expect(lines[0].runs[2].targetPage).toBe(2);});
   it("does not merge neighbouring table cells or separate columns",()=>expect(mergeTextLines([fragment({group:"cell-a"}),fragment({x:93,group:"cell-b"})])).toHaveLength(2));
   it("clamps compensation and maps unsupported fonts to the safe stack",()=>{expect(compensateWidth(200,100)).toBe(108);expect(compensateWidth(50,100)).toBe(92);expect(wordSafeFont("Segoe UI")).toBe("Arial");expect(wordSafeFont("Cascadia Code")).toBe("Consolas");});

@@ -1,31 +1,69 @@
 export interface TextFragment {
   text:string;x:number;y:number;width:number;height:number;font:string;size:number;color:string;bold:boolean;italic:boolean;underline:boolean;href?:string;targetPage?:number;
   /** Fragment grouping must not cross a table cell or separate column. */
-  group?:string; baseline?:number; lineHeight?:number; naturalWidth?:number; maxRight?:number;
+  group?:string; baseline?:number; lineHeight?:number; naturalWidth?:number; maxRight?:number; letterSpacing?:number;
 }
 export interface TextLine { x:number;y:number;width:number;height:number;baseline:number;runs:TextFragment[];scale:number;maxRight?:number }
 export const WORD_FONTS=["Arial","Calibri","Georgia","Cambria","Consolas","Courier New"] as const;
-export function wordSafeFont(font:string):string { return WORD_FONTS.find(name=>font.toLowerCase().includes(name.toLowerCase()))??(/mono|courier|cascadia/i.test(font)?"Consolas":/serif|iowan|palatino|antiqua/i.test(font)?"Georgia":"Arial"); }
-export const compensateWidth=(measured:number,natural:number)=>natural>0?Math.max(92,Math.min(108,measured/natural*100)):100;
-/** Conservative metric fallback when no canvas/font is available (Arial-like advance classes). */
-export function metricWidth(text:string,size:number,font:string):number {return [...text].reduce((sum,char)=>sum+(char.codePointAt(0)!>255?1:/mono|consolas|courier/i.test(font)?.6:/[ilI.,'!| ]/.test(char)?.28:/[MW@%]/.test(char)?.85:.55),0)*size;}
-export function mergeTextLines(fragments:TextFragment[]):TextLine[]{
-  const groups=new Map<string,TextFragment[]>();
-  for(const fragment of fragments){if(!fragment.text||fragment.width<=0||fragment.height<=0)continue;const key=fragment.group??"default";groups.set(key,[...(groups.get(key)??[]),fragment]);}
-  const output:TextLine[]=[];
-  for(const entries of groups.values()){
-    const sorted=[...entries].sort((a,b)=>(a.baseline??a.y+a.height*.8)-(b.baseline??b.y+b.height*.8)||a.x-b.x);
-    let line:TextLine|undefined;
-    for(const fragment of sorted){const baseline=fragment.baseline??fragment.y+fragment.height*.8;
-      if(!line||Math.abs(line.baseline-baseline)>2||fragment.x-(line.x+line.width)>Math.max(16,fragment.size*1.5)){
-        line={x:fragment.x,y:fragment.y,width:fragment.width,height:fragment.lineHeight??fragment.height,baseline,runs:[],scale:100,maxRight:fragment.maxRight};output.push(line);
-      }
-      line.runs.push({...fragment,font:wordSafeFont(fragment.font)});line.y=Math.min(line.y,fragment.y);line.height=Math.max(line.height,fragment.lineHeight??fragment.height);line.width=Math.max(line.width,fragment.x+fragment.width-line.x);if(fragment.maxRight!==undefined)line.maxRight=Math.min(line.maxRight??Infinity,fragment.maxRight);
-    }
+export function wordSafeFont(font: string): string {
+  for (const candidate of font.split(",")) {
+    const known = WORD_FONTS.find(name => candidate.replace(/["']/g, "").trim().toLowerCase() === name.toLowerCase());
+    if (known) return known;
   }
-  for(const line of output){line.runs.sort((a,b)=>a.x-b.x);const natural=line.runs.reduce((sum,run)=>sum+(run.naturalWidth??metricWidth(run.text,run.size,run.font)),0);line.scale=compensateWidth(line.width,natural);}
-  return output.sort((a,b)=>a.y-b.y||a.x-b.x);
+  return /mono|courier|cascadia/i.test(font) ? "Consolas" : /sans/i.test(font) ? "Arial" : /serif|iowan|palatino|antiqua/i.test(font) ? "Georgia" : "Arial";
 }
+export const compensateWidth = (measured: number, natural: number) => natural > 0 ? Math.max(92, Math.min(108, measured / natural * 100)) : 100;
+/** Conservative metric fallback; never use it to stretch unmeasured text. */
+export function metricWidth(text: string, size: number, font: string): number {
+  return [...text].reduce((sum, char) => sum + (char.codePointAt(0)! > 255 ? 1 : /mono|consolas|courier/i.test(font) ? .6 : /[ilI.,'!| ]/.test(char) ? .28 : /[MW@%]/.test(char) ? .85 : .55), 0) * size;
+}
+export function mergeTextLines(fragments: TextFragment[]): TextLine[] {
+  const groups = new Map<string, TextFragment[]>();
+  for (const fragment of fragments) {
+    if (!fragment.text || fragment.width <= 0 || fragment.height <= 0) continue;
+    const key = fragment.group ?? "default";
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key)!.push(fragment);
+  }
+  const output: TextLine[] = [];
+  for (const entries of groups.values()) {
+    const rows: TextLine[] = [];
+    // Sort by reading position, then assign to a baseline cluster. A small inline
+    // code/font change must not split a sentence or reorder its runs.
+    for (const fragment of [...entries].sort((a, b) => a.y - b.y || a.x - b.x)) {
+      const baseline = fragment.baseline ?? fragment.y + fragment.height * .8;
+      let line = rows.find(row => Math.abs(row.baseline - baseline) <= 2.5);
+      if (!line) {
+        line = { x: fragment.x, y: fragment.y, width: fragment.width, height: Math.max(fragment.height, fragment.lineHeight ?? 0), baseline, runs: [], scale: 100, maxRight: fragment.maxRight };
+        rows.push(line);
+      }
+      const right = Math.max(line.x + line.width, fragment.x + fragment.width);
+      line.x = Math.min(line.x, fragment.x);
+      line.y = Math.min(line.y, fragment.y);
+      line.width = right - line.x;
+      line.height = Math.max(line.height, fragment.height, fragment.lineHeight ?? 0);
+      if (fragment.maxRight !== undefined) line.maxRight = Math.min(line.maxRight ?? Infinity, fragment.maxRight);
+      if (!line.runs.length || fragment.size > Math.max(...line.runs.map(run => run.size))) line.baseline = baseline;
+      line.runs.push({ ...fragment, font: wordSafeFont(fragment.font) });
+    }
+    for (const line of rows) {
+      line.runs.sort((a, b) => a.x - b.x);
+      if (line.runs.every(run => run.naturalWidth !== undefined)) {
+        const natural = line.runs.reduce((sum, run) => sum + run.naturalWidth! + (run.letterSpacing ?? 0) * [...run.text].length, 0);
+        line.scale = compensateWidth(line.width, natural);
+      }
+    }
+    output.push(...rows);
+  }
+  return output.sort((a, b) => a.y - b.y || a.x - b.x);
+}
+/** Word centers glyphs in an exact-height line. Position the line box, not its ink. */
+export function lineBoxTop(line: TextLine): number {
+  const glyphHeight = Math.max(...line.runs.map(run => run.height));
+  return line.y - Math.max(0, line.height - glyphHeight) / 2;
+}
+
+/** Diagnostics only. Do not move measured text independently of its page artwork. */
 export interface TextOverlap { a:number;b:number;gap:number;axis:"horizontal"|"vertical" }
 export function detectTextOverlaps(lines:TextLine[],gap=1.5):TextOverlap[]{
   const overlaps:TextOverlap[]=[];

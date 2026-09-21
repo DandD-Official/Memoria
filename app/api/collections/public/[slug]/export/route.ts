@@ -9,7 +9,8 @@ import { getPublicCollectionBySlug } from "@/lib/share-collections-repo";
 import { collectionMarkdown, safeBookExportName } from "@/lib/book-export";
 
 export const GET = withApiErrorHandling(async (request: Request, context: RouteContext<{ slug: string }>) => {
-  const [{ slug }, user] = await Promise.all([context.params, requireUserOrNull()]);
+  const [{ slug }, sessionUser] = await Promise.all([context.params, requireUserOrNull()]);
+  const user = new URL(request.url).searchParams.get("view") === "guest" ? null : sessionUser;
   const gate = await prisma.shareCollection.findUnique({
     where: { slug },
     select: {
@@ -37,7 +38,7 @@ export const GET = withApiErrorHandling(async (request: Request, context: RouteC
   if (!collection || !collection.canExport) return NextResponse.json({ error: "Book not found." }, { status: 404 });
   const markdown = collectionMarkdown(collection);
   if (new URL(request.url).searchParams.get("format") === "json") {
-    const body = JSON.stringify({ format: "memoria-collection-export", version: "1", title: collection.title, subtitle: collection.subtitle, tocTitle: collection.tocTitle, items: collection.items, description: collection.description, notes: collection.notes, reviewers: collection.reviewers, quizzes: collection.quizzes });
+    const body = JSON.stringify({ format: "memoria-collection-export", version: "1", kind: collection.kind, subjects: collection.subjects, title: collection.title, subtitle: collection.subtitle, tocTitle: collection.tocTitle, items: collection.items, description: collection.description, notes: collection.notes, reviewers: collection.reviewers, quizzes: collection.quizzes });
     return new NextResponse(body, { headers: { "Content-Type": "application/json", "Content-Disposition": `attachment; filename="memoria-book-${safeBookExportName(collection.title)}.json"` } });
   }
   return NextResponse.json({ book: await resolveBookDocument(collection, gate.ownerId), title: collection.title, subtitle: collection.subtitle, description: collection.description, tocTitle: collection.tocTitle, ownerName: collection.ownerName, markdown });

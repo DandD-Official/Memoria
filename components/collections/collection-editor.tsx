@@ -10,14 +10,16 @@ import { ExportMenu } from "@/components/exports/export-menu";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { FullscreenView } from "@/components/ui/fullscreen-view";
+import { NotebookSubjects } from "@/components/books/notebook-subjects";
+import { subjectOrder, type NotebookSubject } from "@/lib/books/notebooks";
 import { Input, Label, Textarea } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import type { ExportProgressHandler } from "@/lib/export/types";
 
 type ResourceType = "NOTE" | "REVIEWER" | "QUIZ";
-interface CollectionItem { id: string; resourceType: ResourceType; resourceId: string }
+interface CollectionItem { id: string; resourceType: ResourceType; resourceId: string; subjectId?: string | null }
 interface Collection {
+  kind?: "BOOK" | "NOTEBOOK"; subjects?: NotebookSubject[];
   id: string; title: string; subtitle: string | null; description: string | null; tocTitle: string;
   slug: string; isPublished: boolean; linkPermission: BookSharePermission; allowExport: boolean; expiresAt: string | null;
   passwordProtected: boolean; items: CollectionItem[]; members: BookMember[];
@@ -35,7 +37,7 @@ export function CollectionEditor({ initialCollection, access, canExport, rows }:
   const [collection, setCollection] = useState(initialCollection);
   const [tab, setTab] = useState<ResourceType>("NOTE");
   const [shareOpen, setShareOpen] = useState(false);
-  const [view, setView] = useState<"book" | "chapters" | "details">("book");
+  const [view, setView] = useState<"book" | "chapters" | "details">(initialCollection.items.length ? "book" : "chapters");
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [title, setTitle] = useState(initialCollection.title);
@@ -43,7 +45,13 @@ export function CollectionEditor({ initialCollection, access, canExport, rows }:
   const [description, setDescription] = useState(initialCollection.description ?? "");
   const [tocTitle, setTocTitle] = useState(initialCollection.tocTitle);
   const [saving, setSaving] = useState(false);
+  const notebook = collection.kind === "NOTEBOOK";
+  const label = notebook ? "Notebook" : "Book";
+  const base = notebook ? "/notebooks" : "/books";
+  const [subjectId, setSubjectId] = useState("");
+  const [search, setSearch] = useState("");
   const isOwner = access === "OWNER";
+  const orderedItems = notebook ? subjectOrder(collection.items, collection.subjects ?? []) : collection.items;
   const publicPath = `/c/${collection.slug}`;
 
   function rowFor(item: CollectionItem) { return rows[item.resourceType].find((row) => row.id === item.resourceId); }
@@ -61,20 +69,39 @@ export function CollectionEditor({ initialCollection, access, canExport, rows }:
     try {
       const data = existing
         ? await request(`/api/collections/${collection.id}/items?itemId=${existing.id}`, { method: "DELETE" })
-        : await request(`/api/collections/${collection.id}/items`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ resourceType, resourceId }) });
+        : await request(`/api/collections/${collection.id}/items`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ resourceType, resourceId, subjectId: subjectId || null }) });
       setCollection((current) => ({ ...current, items: existing ? current.items.filter((item) => item.id !== existing.id) : [...current.items, data.item] }));
     } catch (caught) { setError(caught instanceof Error ? caught.message : "Couldn't update this Book."); }
     finally { setBusyId(null); }
   }
 
+  async function saveSubjects(subjects: NotebookSubject[]) {
+    setSaving(true); setError(null);
+    try {
+      await request(`/api/collections/${collection.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ subjects }) });
+      setCollection(current => ({ ...current, subjects, items: current.items.map(item => ({ ...item, subjectId: subjects.some(subject => subject.id === item.subjectId) ? item.subjectId : null })) }));
+      if (!subjects.some(subject => subject.id === subjectId)) setSubjectId("");
+      return true;
+    } catch (caught) { setError(caught instanceof Error ? caught.message : "Couldn't save subjects."); return false; }
+    finally { setSaving(false); }
+  }
+  async function assignSubject(itemId: string, next: string) {
+    setBusyId(itemId); setError(null);
+    try {
+      await request(`/api/collections/${collection.id}/items`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ itemId, subjectId: next || null }) });
+      setCollection(current => ({ ...current, items: current.items.map(item => item.id === itemId ? { ...item, subjectId: next || null } : item) }));
+    } catch (caught) { setError(caught instanceof Error ? caught.message : "Couldn't move this memory."); }
+    finally { setBusyId(null); }
+  }
+
   async function moveItem(itemId: string, direction: -1 | 1) {
-    const index = collection.items.findIndex((item) => item.id === itemId);
+    const index = orderedItems.findIndex((item) => item.id === itemId);
     const target = index + direction;
     if (index < 0 || target < 0 || target >= collection.items.length) return;
     if (busyId) return;
     setBusyId(itemId); setError(null);
     const previous = collection.items;
-    const next = [...previous];
+    const next = [...orderedItems];
     [next[index], next[target]] = [next[target], next[index]];
     setCollection((current) => ({ ...current, items: next }));
     try { await request(`/api/collections/${collection.id}/items`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ itemIds: next.map((item) => item.id) }) }); }
@@ -101,49 +128,51 @@ export function CollectionEditor({ initialCollection, access, canExport, rows }:
   }
 
   async function deleteBook() {
-    try { await request(`/api/collections/${collection.id}`, { method: "DELETE" }); router.replace("/books"); }
+    try { await request(`/api/collections/${collection.id}`, { method: "DELETE" }); router.replace(base); }
     catch (caught) { setError(caught instanceof Error ? caught.message : "Couldn't delete this Book."); }
   }
 
   return (
-    <div className="mx-auto max-w-6xl pb-10">
+    <div className="mx-auto max-w-[1500px] px-3 py-6 sm:px-6 pb-10">
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-        <Link href="/books" className="inline-flex min-h-10 items-center gap-2 text-sm font-medium text-ink-soft hover:text-ink"><ArrowLeft className="h-4 w-4" />All Books</Link>
+        <Link href={base} className="inline-flex min-h-10 items-center gap-2 text-sm font-medium text-ink-soft hover:text-ink"><ArrowLeft className="h-4 w-4" />All {label}s</Link>
         <div className="flex items-center gap-2">
           {canExport && <ExportMenu options={[{ value: "pdf", label: "PDF document" }, { value: "docx", label: "Word - editable text" }, { value: "json", label: "Memoria JSON" }]} onExport={exportBook} />}
-          {isOwner && <Button size="sm" onClick={() => setShareOpen(true)}><Share2 className="h-4 w-4" />Share</Button>}
+          {isOwner && <Link href={`${publicPath}?view=guest`} className="inline-flex min-h-11 items-center rounded-control border border-line px-3 text-sm">View as Guest</Link>}{isOwner && <Button size="sm" onClick={() => setShareOpen(true)}><Share2 className="h-4 w-4" />Share</Button>}
         </div>
       </div>
 
       <header className="mb-5 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-        <div><p className="text-xs font-semibold uppercase tracking-[0.18em] text-accent-dark">Book studio</p><h1 className="mt-1 font-display text-3xl text-ink">{collection.title}</h1>{collection.subtitle && <p className="mt-1 text-sm text-ink-soft">{collection.subtitle}</p>}</div>
+        <div><p className="text-xs font-semibold uppercase tracking-[0.18em] text-accent-dark">{label} studio</p><h1 className="mt-1 font-display text-3xl text-ink">{collection.title}</h1>{collection.subtitle && <p className="mt-1 text-sm text-ink-soft">{collection.subtitle}</p>}</div>
         <Badge tone={isOwner ? "accent" : "neutral"}>{isOwner ? "Owner" : "Editor"}</Badge>
       </header>
       {error && <p className="mb-4 rounded-control border border-danger/25 bg-danger/5 px-4 py-3 text-sm text-danger" role="alert">{error}</p>}
 
       <nav aria-label="Book studio sections" className="mb-5 flex w-full gap-1 overflow-x-auto rounded-card border border-line bg-surface-muted p-1 sm:w-fit">
         {[
-          { key: "book" as const, label: "Book", icon: BookMarked },
-          { key: "chapters" as const, label: "Chapters", icon: GripVertical },
+          { key: "book" as const, label, icon: BookMarked },
+          { key: "chapters" as const, label: notebook ? "Subjects & memories" : "Chapters", icon: GripVertical },
           { key: "details" as const, label: "Details", icon: Settings2 },
         ].map((item) => <button key={item.key} type="button" aria-current={view === item.key ? "page" : undefined} onClick={() => setView(item.key)} className={cn("inline-flex min-h-10 shrink-0 items-center gap-2 rounded-control px-4 text-sm font-medium transition-colors", view === item.key ? "bg-surface text-ink shadow-sm" : "text-ink-soft hover:text-ink")}><item.icon className="h-4 w-4" />{item.label}</button>)}
       </nav>
 
-      {view === "book" && <FullscreenView title={collection.title} description="Full-screen Book preview"><BookPreview id={collection.id} revision={JSON.stringify([collection.title, collection.subtitle, collection.description, collection.tocTitle, collection.items])} /></FullscreenView>}
+      {view === "book" && <BookPreview id={collection.id} revision={JSON.stringify([collection.title, collection.subtitle, collection.description, collection.tocTitle, collection.subjects, collection.items])} />}
 
       {view === "chapters" && <section className="rounded-card border border-line bg-surface p-5 shadow-sm">
-          <div className="flex items-start gap-3"><span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-control bg-accent-soft text-accent-dark"><GripVertical className="h-4 w-4" /></span><div><h2 className="font-display text-xl text-ink">Build the chapters</h2><p className="mt-1 text-sm text-ink-soft">{isOwner ? "Choose material and arrange it in reading order." : "Reorder or remove the chapters already in this Book."}</p></div></div>
-          {collection.items.length > 0 && <ol className="mt-5 divide-y divide-line rounded-control border border-line">{collection.items.map((item, index) => <li key={item.id} className="flex items-center gap-3 px-3 py-2"><span className="font-display text-lg text-accent-dark">{String(index + 1).padStart(2, "0")}</span><span className="min-w-0 flex-1 text-sm">{rowFor(item)?.title ?? "Unavailable chapter"}</span><Button variant="ghost" size="sm" aria-label={`Move chapter ${index + 1} up`} disabled={index === 0 || busyId !== null} onClick={() => void moveItem(item.id, -1)}><ChevronUp className="h-4 w-4" /></Button><Button variant="ghost" size="sm" aria-label={`Move chapter ${index + 1} down`} disabled={index === collection.items.length - 1 || busyId !== null} onClick={() => void moveItem(item.id, 1)}><ChevronDown className="h-4 w-4" /></Button></li>)}</ol>}
+          {notebook && <NotebookSubjects subjects={collection.subjects ?? []} busy={saving || busyId !== null} save={saveSubjects} />}
+          <div className="flex items-start gap-3"><span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-control bg-accent-soft text-accent-dark"><GripVertical className="h-4 w-4" /></span><div><h2 className="font-display text-xl text-ink">{notebook ? "Choose memories for each subject" : "Build the chapters"}</h2><p className="mt-1 text-sm text-ink-soft">{isOwner ? "Choose material and arrange it in reading order." : "Reorder or remove the chapters already in this Book."}</p></div></div>
+          {collection.items.length > 0 && <ol className="mt-5 divide-y divide-line rounded-control border border-line">{orderedItems.map((item, index) => <li key={item.id} className="flex flex-wrap items-center gap-2 px-3 py-2"><span className="font-display text-lg text-accent-dark">{String(index + 1).padStart(2, "0")}</span><span className="min-w-0 flex-1 text-sm">{rowFor(item)?.title ?? "Unavailable chapter"}</span>{notebook && <select aria-label={`Subject for ${rowFor(item)?.title ?? "memory"}`} disabled={busyId !== null || saving} value={item.subjectId ?? ""} onChange={event => void assignSubject(item.id, event.target.value)} className="h-11 max-w-40 rounded-control border border-line bg-surface px-2 text-sm"><option value="">Unfiled</option>{collection.subjects?.map(subject => <option key={subject.id} value={subject.id}>{subject.title}</option>)}</select>}<Button variant="ghost" size="sm" aria-label={`Move chapter ${index + 1} up`} disabled={index === 0 || busyId !== null || saving || (notebook && orderedItems[index - 1]?.subjectId !== item.subjectId)} onClick={() => void moveItem(item.id, -1)}><ChevronUp className="h-4 w-4" /></Button><Button variant="ghost" size="sm" aria-label={`Move chapter ${index + 1} down`} disabled={index === orderedItems.length - 1 || busyId !== null || saving || (notebook && orderedItems[index + 1]?.subjectId !== item.subjectId)} onClick={() => void moveItem(item.id, 1)}><ChevronDown className="h-4 w-4" /></Button></li>)}</ol>}
+          <div className="mt-5 flex flex-wrap gap-3"><Input aria-label="Find memories" placeholder="Find a memory?" value={search} onChange={event => setSearch(event.target.value)} />{notebook && <label className="flex items-center gap-2 text-sm">Add new memories to<select value={subjectId} onChange={event => setSubjectId(event.target.value)} className="h-11 rounded-control border border-line bg-surface px-3"><option value="">Unfiled</option>{collection.subjects?.map(subject => <option key={subject.id} value={subject.id}>{subject.title}</option>)}</select></label>}</div>
           <div className="mt-5 flex max-w-full gap-1 overflow-x-auto rounded-control bg-surface-muted p-1">{TABS.map((item) => <button key={item.type} type="button" onClick={() => setTab(item.type)} className={cn("inline-flex min-h-10 shrink-0 items-center gap-2 rounded-control px-3 text-sm font-medium", tab === item.type ? "bg-surface text-ink shadow-sm" : "text-ink-soft hover:text-ink")}><item.icon className="h-4 w-4" />{item.label}</button>)}</div>
-          <div className="mt-3 divide-y divide-line rounded-card border border-line">{rows[tab].length === 0 ? <p className="p-6 text-center text-sm text-ink-faint">No {TABS.find((item) => item.type === tab)!.label.toLowerCase()} available.</p> : rows[tab].map((row) => { const included = collection.items.some((item) => item.resourceType === tab && item.resourceId === row.id); return <label key={row.id} className="flex min-h-12 cursor-pointer items-center gap-3 px-3 py-2 hover:bg-surface-muted"><span className={cn("flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold", included ? "bg-action text-action-foreground" : "bg-ink/5 text-ink-faint")}>{included ? collection.items.findIndex((item) => item.resourceType === tab && item.resourceId === row.id) + 1 : "+"}</span><span className="min-w-0 flex-1 truncate text-sm font-medium text-ink">{row.title}</span><input type="checkbox" checked={included} disabled={busyId !== null} onChange={() => void toggleItem(tab, row.id)} className="h-4 w-4 shrink-0 accent-accent" /></label>; })}</div>
+          <div className="mt-3 divide-y divide-line rounded-card border border-line">{rows[tab].length === 0 ? <p className="p-6 text-center text-sm text-ink-faint">No {TABS.find((item) => item.type === tab)!.label.toLowerCase()} available.</p> : rows[tab].filter(row => row.title.toLowerCase().includes(search.toLowerCase())).map((row) => { const included = collection.items.some((item) => item.resourceType === tab && item.resourceId === row.id); return <label key={row.id} className="flex min-h-12 cursor-pointer items-center gap-3 px-3 py-2 hover:bg-surface-muted"><span className={cn("flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold", included ? "bg-action text-action-foreground" : "bg-ink/5 text-ink-faint")}>{included ? collection.items.findIndex((item) => item.resourceType === tab && item.resourceId === row.id) + 1 : "+"}</span><span className="min-w-0 flex-1 truncate text-sm font-medium text-ink">{row.title}</span><input type="checkbox" checked={included} disabled={busyId !== null} onChange={() => void toggleItem(tab, row.id)} className="h-4 w-4 shrink-0 accent-accent" /></label>; })}</div>
       </section>}
 
       {view === "details" && <section className="mx-auto max-w-2xl rounded-card border border-line bg-surface p-5 shadow-sm sm:p-6">
-        <h2 className="font-display text-xl text-ink">Book details</h2><p className="mt-1 text-sm text-ink-soft">These words appear on the cover and opening pages.</p>
+        <h2 className="font-display text-xl text-ink">{label} details</h2><p className="mt-1 text-sm text-ink-soft">These words appear on the cover and opening pages.</p>
         <div className="mt-5 space-y-4"><div><Label htmlFor="book-title">Title</Label><Input id="book-title" value={title} onChange={(event) => setTitle(event.target.value)} /></div><div><Label htmlFor="book-subtitle">Subtitle (optional)</Label><Input id="book-subtitle" value={subtitle} onChange={(event) => setSubtitle(event.target.value)} placeholder="A short line beneath the title" /></div><div><Label htmlFor="book-toc-title">Contents heading</Label><Input id="book-toc-title" value={tocTitle} onChange={(event) => setTocTitle(event.target.value)} /></div><div><Label htmlFor="book-description">Description</Label><Textarea id="book-description" rows={5} value={description} onChange={(event) => setDescription(event.target.value)} /></div><Button className="w-full" loading={saving} disabled={!title.trim() || !tocTitle.trim()} onClick={() => void saveDetails()}>Save details</Button></div>
         {isOwner && <div className="mt-8 border-t border-line pt-5"><p className="text-sm font-medium text-ink">Danger zone</p><p className="mt-1 text-sm text-ink-soft">Deleting a Book cannot be undone.</p><ConfirmDialog trigger={<Button variant="ghost" className="mt-3 text-danger hover:bg-danger/10"><Trash2 className="h-4 w-4" />Delete Book</Button>} title="Delete this Book?" description={`“${collection.title}” and its reading order will be removed. This cannot be undone.`} confirmLabel="Delete Book" destructive onConfirm={deleteBook} /></div>}
       </section>}
-      {isOwner && <BookShareDialog bookId={collection.id} publicPath={publicPath} open={shareOpen} onOpenChange={setShareOpen} linkEnabled={collection.isPublished} linkPermission={collection.linkPermission} linkAllowExport={collection.allowExport} passwordProtected={collection.passwordProtected} members={collection.members} onChanged={(changes) => setCollection((current) => ({ ...current, ...(changes.linkEnabled === undefined ? {} : { isPublished: changes.linkEnabled }), ...(changes.linkPermission === undefined ? {} : { linkPermission: changes.linkPermission }), ...(changes.linkAllowExport === undefined ? {} : { allowExport: changes.linkAllowExport }), ...(changes.passwordProtected === undefined ? {} : { passwordProtected: changes.passwordProtected }), ...(changes.members === undefined ? {} : { members: changes.members }) }))} />}
+      {isOwner && <BookShareDialog objectLabel={label} bookId={collection.id} publicPath={publicPath} open={shareOpen} onOpenChange={setShareOpen} linkEnabled={collection.isPublished} linkPermission={collection.linkPermission} linkAllowExport={collection.allowExport} passwordProtected={collection.passwordProtected} members={collection.members} onChanged={(changes) => setCollection((current) => ({ ...current, ...(changes.linkEnabled === undefined ? {} : { isPublished: changes.linkEnabled }), ...(changes.linkPermission === undefined ? {} : { linkPermission: changes.linkPermission }), ...(changes.linkAllowExport === undefined ? {} : { allowExport: changes.linkAllowExport }), ...(changes.passwordProtected === undefined ? {} : { passwordProtected: changes.passwordProtected }), ...(changes.members === undefined ? {} : { members: changes.members }) }))} />}
     </div>
   );
 }

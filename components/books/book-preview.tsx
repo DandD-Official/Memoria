@@ -17,5 +17,5 @@ export function BookPreview({ id, revision }: { id: string; revision: string }) 
     return () => controller.abort();
   }, [id, revision, retry]);
   if (error) return <div className="card p-6"><p role="alert" className="text-sm text-danger">{error}</p><Button variant="outline" onClick={() => setRetry(value => value + 1)} className="mt-4">Try again</Button></div>;
-  return book ? <BookReader book={book} /> : <p role="status" className="p-10 text-center text-sm text-ink-soft">Opening your book…</p>;
+  return book ? <BookReader book={book} storageKey={id} canPersist /> : <p role="status" className="p-10 text-center text-sm text-ink-soft">Opening your book…</p>;
 }

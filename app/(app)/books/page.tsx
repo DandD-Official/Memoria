@@ -5,5 +5,5 @@ import { listCollectionsForOwner } from "@/lib/share-collections-repo";
 export default async function BooksPage({ searchParams }: { searchParams: Promise<{ create?: string }> }) {
   const [user, query] = await Promise.all([requireUser(), searchParams]);
   const collections = await listCollectionsForOwner(user.id);
-  return <CollectionsList initiallyCreating={query.create === "1"} initialCollections={collections.map((collection) => ({ ...collection, updatedAt: collection.updatedAt.toISOString() }))} />;
+  return <CollectionsList initiallyCreating={query.create === "1"} initialCollections={collections.filter(collection => collection.kind !== "NOTEBOOK").map((collection) => ({ ...collection, updatedAt: collection.updatedAt.toISOString() }))} />;
 }

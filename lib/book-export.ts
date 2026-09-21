@@ -1,3 +1,4 @@
+import { subjectOrder } from "@/lib/books/notebooks";
 import { formatCorrectAnswer } from "@/lib/quiz-grading";
 import type { PublicCollection } from "@/lib/share-collections-repo";
 import type { QuizQuestion } from "@/lib/validation/quiz";
@@ -8,8 +9,13 @@ export function collectionMarkdown(collection: PublicCollection) {
     : item.resourceType === "REVIEWER"
       ? collection.reviewers.find((entry) => entry.id === item.resourceId)?.title
       : collection.quizzes.find((entry) => entry.id === item.resourceId)?.title;
-  const rows = [`# ${collection.tocTitle}`, ...collection.items.map((item, index) => `${index + 1}. ${chapterTitle(item) ?? "Unavailable chapter"}`)];
-  for (const item of collection.items) {
+  const items = subjectOrder(collection.items, collection.subjects ?? []);
+  const rows = [`# ${collection.tocTitle}`, ...items.map((item, index) => `${index + 1}. ${chapterTitle(item) ?? "Unavailable chapter"}`)];
+  let previousSubject: string | undefined;
+  for (const item of items) {
+    const subject = collection.subjects?.find(row => row.id === item.subjectId)?.title ?? (collection.kind === "NOTEBOOK" ? "Unfiled" : undefined);
+    if (subject && subject !== previousSubject) rows.push("# " + subject);
+    previousSubject = subject;
     if (item.resourceType === "NOTE") {
       const note = collection.notes.find((entry) => entry.id === item.resourceId);
       if (note) rows.push(`\n# ${note.title}\n`, note.description ?? "", note.content);

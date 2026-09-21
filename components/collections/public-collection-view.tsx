@@ -6,14 +6,12 @@ import { BookMarked, MessageSquare, ChevronLeft, ChevronRight, RefreshCw, ArrowL
 import { BookReader } from "@/components/books/book-reader";
 import type { BookDocument } from "@/lib/books/document";
 import { MmdRenderer as MarkdownRenderer } from "@/components/mmd/renderer";
-import { QuestionInput } from "@/components/quizzes/question-input";
+import { BookQuiz } from "@/components/books/book-quiz";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { FullscreenView } from "@/components/ui/fullscreen-view";
 import { Dialog } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Textarea, Input, Label } from "@/components/ui/input";
-import { gradeQuiz } from "@/lib/quiz-grading";
 import { extractFlashcardsFromMarkdown } from "@/lib/flashcards";
 import { cn, formatRelativeTime } from "@/lib/utils";
 import type { QuizQuestion } from "@/lib/validation/quiz";
@@ -22,11 +20,10 @@ import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { ExportMenu } from "@/components/exports/export-menu";
 import type { ExportProgressHandler } from "@/lib/export/types";
 
-export function PublicCollectionView({ collection, book }: { collection: PublicCollection; book: BookDocument }) {
+export function PublicCollectionView({ collection, book, guestPreview = false }: { collection: PublicCollection; book: BookDocument; guestPreview?: boolean }) {
   const firstItemId = collection.lastReadItemId && collection.items.some((item) => item.id === collection.lastReadItemId) ? collection.lastReadItemId : collection.items[0]?.id ?? null;
   const [activeItemId, setActiveItemId] = useState<string | null>(firstItemId);
   const [readerView, setReaderView] = useState<"book" | "practice" | "feedback">("book");
-  const [mobilePage, setMobilePage] = useState<"contents" | "chapter">("contents");
   const [feedback, setFeedback] = useState(collection.feedback);
   const activeIndex = Math.max(0, collection.items.findIndex((item) => item.id === activeItemId));
   const activeItem = collection.items[activeIndex];
@@ -40,12 +37,12 @@ export function PublicCollectionView({ collection, book }: { collection: PublicC
 
   const openChapter = useCallback((itemId: string) => {
     setActiveItemId(itemId);
-    if (collection.viewerUserId) void fetch(`/api/collections/${collection.id}/progress`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ lastItemId: itemId }) }).catch(() => {});
-  }, [collection.id, collection.viewerUserId]);
+
+  }, []);
 
   async function exportBook(format: string, onProgress?: ExportProgressHandler) {
-    if (format === "json") { window.location.href = `/api/collections/public/${collection.slug}/export?format=json`; return; }
-    const response = await fetch(`/api/collections/public/${collection.slug}/export`);
+    if (format === "json") { window.location.href = `/api/collections/public/${collection.slug}/export?format=json${guestPreview ? "&view=guest" : ""}`; return; }
+    const response = await fetch(`/api/collections/public/${collection.slug}/export${guestPreview ? "?view=guest" : ""}`);
     const data = await response.json().catch(() => null);
     if (!response.ok) throw new Error(data?.error ?? "Couldn't export this Book.");
     if (format === "pdf" || format === "docx") { const { downloadBook } = await import("@/lib/books/download"); await downloadBook(data.book, format, onProgress); }
@@ -69,80 +66,18 @@ export function PublicCollectionView({ collection, book }: { collection: PublicC
         </div>
       </header>
 
-      <main className="mx-auto max-w-7xl px-3 py-6 sm:px-6 sm:py-10">
+      <main className="mx-auto max-w-[1500px] px-3 py-6 sm:px-6">{guestPreview && <p className="mb-4 rounded-control border border-line bg-surface p-3 text-sm">Viewing as a guest. <Link className="underline" href={collection.kind === "NOTEBOOK" ? `/notebooks/${collection.id}` : `/books/${collection.id}`}>Return to editing</Link></p>}{collection.viewerPermission === "OWNER" && <Link className="mb-4 inline-block text-sm underline" href={`/c/${collection.slug}?view=guest`}>View as Guest</Link>}
         <nav aria-label="Book sections" className="mb-5 flex w-full gap-1 rounded-card border border-line bg-surface-muted p-1 sm:w-fit">
-          <button type="button" aria-current={readerView === "book" ? "page" : undefined} onClick={() => setReaderView("book")} className={cn("inline-flex min-h-10 flex-1 items-center justify-center gap-2 rounded-control px-4 text-sm font-medium transition-colors sm:flex-none", readerView === "book" ? "bg-surface text-ink shadow-sm" : "text-ink-soft hover:text-ink")}><BookMarked className="h-4 w-4" />Read Book</button>
+          <button type="button" aria-current={readerView === "book" ? "page" : undefined} onClick={() => setReaderView("book")} className={cn("inline-flex min-h-10 flex-1 items-center justify-center gap-2 rounded-control px-4 text-sm font-medium transition-colors sm:flex-none", readerView === "book" ? "bg-surface text-ink shadow-sm" : "text-ink-soft hover:text-ink")}><BookMarked className="h-4 w-4" />{collection.kind === "NOTEBOOK" ? "Read Notebook" : "Read Book"}</button>
           <button type="button" aria-current={readerView === "practice" ? "page" : undefined} onClick={() => setReaderView("practice")} className={cn("min-h-10 rounded-control px-4 text-sm font-medium", readerView === "practice" ? "bg-surface text-ink shadow-sm" : "text-ink-soft")}>Practice</button>
           <button type="button" aria-current={readerView === "feedback" ? "page" : undefined} onClick={() => setReaderView("feedback")} className={cn("inline-flex min-h-10 flex-1 items-center justify-center gap-2 rounded-control px-4 text-sm font-medium transition-colors sm:flex-none", readerView === "feedback" ? "bg-surface text-ink shadow-sm" : "text-ink-soft hover:text-ink")}><MessageSquare className="h-4 w-4" />Discussion</button>
         </nav>
 
-        {readerView === "book" && <FullscreenView title={collection.title} description="Full-screen Book reader"><h1 className="sr-only">{collection.title}</h1><BookReader book={book} resumeChapter={collection.lastReadItemId} onChapterChange={openChapter} /></FullscreenView>}
-        {readerView === "practice" && <section className="mx-auto max-w-3xl space-y-6 rounded-card border border-line bg-surface p-5 sm:p-8"><div><h1 className="font-display text-3xl">Practice & recall</h1><p className="mt-2 text-sm text-ink-soft">Read your notes, flip review cards, and try a quiz.</p></div><label className="block text-sm font-medium">Chapter<select className="mt-2 h-11 w-full rounded-control border border-line bg-surface px-3" value={activeItemId ?? ""} onChange={event => openChapter(event.target.value)}>{collection.items.map(item => <option key={item.id} value={item.id}>{chapterTitle(item)}</option>)}</select></label>{activeItem && activeResource ? activeItem.resourceType === "QUIZ" ? <PublicQuiz key={activeItem.id} title={activeResource.title} description={activeResource.description} questions={(activeResource as PublicCollection["quizzes"][number]).questions as QuizQuestion[]} /> : <><MarkdownRenderer content={(activeResource as PublicCollection["notes"][number]).content} resolvedAssets={book.assets} />{activeItem.resourceType === "REVIEWER" && extractFlashcardsFromMarkdown((activeResource as PublicCollection["reviewers"][number]).content).length > 0 && <PublicFlashcardDeck key={activeItem.id} cards={extractFlashcardsFromMarkdown((activeResource as PublicCollection["reviewers"][number]).content)} />}</> : <p className="text-sm text-ink-soft">Add a chapter to start practicing.</p>}</section>}
+        {readerView === "book" && <><h1 className="sr-only">{collection.title}</h1><BookReader book={book} storageKey={collection.id} canPersist={!!collection.viewerUserId && !guestPreview} resumeChapter={collection.lastReadItemId} onChapterChange={openChapter} /></>}
+        {readerView === "practice" && <section className="mx-auto max-w-3xl space-y-6 rounded-card border border-line bg-surface p-5 sm:p-8"><div><h1 className="font-display text-3xl">Practice & recall</h1><p className="mt-2 text-sm text-ink-soft">Read your notes, flip review cards, and try a quiz.</p></div><label className="block text-sm font-medium">Chapter<select className="mt-2 h-11 w-full rounded-control border border-line bg-surface px-3" value={activeItemId ?? ""} onChange={event => openChapter(event.target.value)}>{collection.items.map(item => <option key={item.id} value={item.id}>{chapterTitle(item)}</option>)}</select></label>{activeItem && activeResource ? activeItem.resourceType === "QUIZ" ? <BookQuiz key={activeItem.id} title={activeResource.title} questions={(activeResource as PublicCollection["quizzes"][number]).questions as QuizQuestion[]} /> : <><MarkdownRenderer content={(activeResource as PublicCollection["notes"][number]).content} resolvedAssets={book.assets} />{activeItem.resourceType === "REVIEWER" && extractFlashcardsFromMarkdown((activeResource as PublicCollection["reviewers"][number]).content).length > 0 && <PublicFlashcardDeck key={activeItem.id} cards={extractFlashcardsFromMarkdown((activeResource as PublicCollection["reviewers"][number]).content)} />}</> : <p className="text-sm text-ink-soft">Add a chapter to start practicing.</p>}</section>}
 
-        {readerView === "feedback" && <FeedbackSection slug={collection.slug} viewerUserId={collection.viewerUserId} feedback={feedback} onSubmitted={(f) => setFeedback((prev) => [...prev, f])} onChanged={setFeedback} />}
+        {readerView === "feedback" && <FeedbackSection preview={guestPreview} slug={collection.slug} viewerUserId={collection.viewerUserId} feedback={feedback} onSubmitted={(f) => setFeedback((prev) => [...prev, f])} onChanged={setFeedback} />}
       </main>
-    </div>
-  );
-}
-
-function PublicQuiz({ title, description, questions }: { title: string; description: string | null; questions: QuizQuestion[] }) {
-  const [taking, setTaking] = useState(false);
-  const [answers, setAnswers] = useState<Record<string, unknown>>({});
-  const [result, setResult] = useState<{ score: number; total: number } | null>(null);
-
-  return (
-    <div className="card p-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="font-display text-lg text-ink">{title}</h2>
-          {description && <p className="mt-1 text-sm text-ink-soft">{description}</p>}
-          <p className="mt-1 text-xs text-ink-faint">{questions.length} questions · answers aren&apos;t saved anywhere</p>
-        </div>
-        {!taking && (
-          <Button
-            onClick={() => {
-              setTaking(true);
-              setResult(null);
-              setAnswers({});
-            }}
-          >
-            Try it
-          </Button>
-        )}
-      </div>
-
-      {taking && !result && (
-        <div className="mt-5 space-y-6">
-          {questions.map((q, i) => (
-            <div key={q.id}>
-              <p className="mb-2 text-sm font-medium text-ink">
-                {i + 1}. {q.question}
-              </p>
-              <QuestionInput question={q} value={answers[q.id]} onChange={(v) => setAnswers((prev) => ({ ...prev, [q.id]: v }))} />
-            </div>
-          ))}
-          <div className="flex justify-end gap-2">
-            <Button variant="ghost" onClick={() => setTaking(false)}>
-              Cancel
-            </Button>
-            <Button onClick={() => setResult({ score: gradeQuiz(questions, answers).score, total: questions.length })}>
-              Submit
-            </Button>
-          </div>
-        </div>
-      )}
-
-      {result && (
-        <div className="mt-5 rounded-lg border border-line bg-ink/[0.02] p-5 text-center">
-          <p className="font-display text-2xl text-ink">
-            {result.score} / {result.total}
-          </p>
-          <p className="mt-1 text-sm text-ink-soft">Nice work — this attempt isn&apos;t saved anywhere.</p>
-          <Button variant="outline" className="mt-3" onClick={() => setTaking(false)}>
-            Done
-          </Button>
-        </div>
-      )}
     </div>
   );
 }
@@ -204,12 +139,14 @@ function PublicFlashcardDeck({ cards }: { cards: { front: string; back: string }
 }
 
 function FeedbackSection({
+  preview = false,
   slug,
   viewerUserId,
   feedback,
   onSubmitted,
   onChanged,
 }: {
+  preview?: boolean;
   slug: string;
   viewerUserId: string | null;
   feedback: PublicCollection["feedback"];
@@ -230,6 +167,7 @@ function FeedbackSection({
 
   async function submit(content: string, parentId?: string) {
     const target = parentId ?? "root";
+    if (preview) { setError({ target, message: "Leave guest preview to post feedback." }); return; }
     if (!content.trim()) return;
     setSending(target);
     setError(null);
@@ -341,7 +279,7 @@ function FeedbackSection({
                 >
                   Reply
                 </button>
-                {viewerUserId === f.authorUserId ? <><button type="button" disabled={editingId === f.id} onClick={() => void editComment(f.id, f.message)} className="text-ink-soft hover:underline">Edit</button><ConfirmDialog trigger={<button type="button" className="text-danger hover:underline">Delete</button>} title="Delete this comment?" description="This comment and its replies will be removed from the discussion." confirmLabel="Delete comment" destructive onConfirm={() => deleteComment(f.id)} /></> : viewerUserId && <button type="button" onClick={() => void reportComment(f.id)} className="text-ink-faint hover:text-danger">Report</button>}
+                {viewerUserId && viewerUserId === f.authorUserId ? <><button type="button" disabled={editingId === f.id} onClick={() => void editComment(f.id, f.message)} className="text-ink-soft hover:underline">Edit</button><ConfirmDialog trigger={<button type="button" className="text-danger hover:underline">Delete</button>} title="Delete this comment?" description="This comment and its replies will be removed from the discussion." confirmLabel="Delete comment" destructive onConfirm={() => deleteComment(f.id)} /></> : viewerUserId && <button type="button" onClick={() => void reportComment(f.id)} className="text-ink-faint hover:text-danger">Report</button>}
               </div>
               {replyTo === f.id && (
                 <div id={`reply-form-${f.id}`} className="mt-3 rounded-lg border border-accent/30 bg-accent-soft/15 p-3">

@@ -1,9 +1,15 @@
 import type { PublicCollection } from "@/lib/share-collections-repo";
 import { formatCorrectAnswer } from "@/lib/quiz-grading";
 import type { QuizQuestion } from "@/lib/validation/quiz";
+import { subjectOrder } from "./notebooks";
 
-export interface BookChapter { id: string; title: string; description?: string | null; kind: "NOTE" | "REVIEWER" | "QUIZ"; content: string }
-export interface BookDocument { title: string; subtitle?: string | null; description?: string | null; author: string; tocTitle: string; chapters: BookChapter[]; assets?: Record<string, string | null> }
+export interface BookChapter { id: string; title: string; description?: string | null; kind: "NOTE" | "REVIEWER" | "QUIZ"; content: string; subjectTitle?: string; quiz?: QuizQuestion[] }
+export interface BookDocument { title: string; kind?: "BOOK" | "NOTEBOOK"; subtitle?: string | null; description?: string | null; author: string; tocTitle: string; chapters: BookChapter[]; assets?: Record<string, string | null> }
+
+export function chapterBody(content: string, title: string): string {
+  const match = content.match(/^\s*#{1,2}\s+([^\n]+)\r?\n/);
+  return match && match[1].trim().toLocaleLowerCase() === title.trim().toLocaleLowerCase() ? content.slice(match[0].length).trimStart() : content;
+}
 
 export function quizChapterMarkdown(questions: QuizQuestion[]): string {
   const questionsText = questions.map((question, index) => {
@@ -19,14 +25,16 @@ export function quizChapterMarkdown(questions: QuizQuestion[]): string {
 
 export function collectionBookDocument(collection: PublicCollection): BookDocument {
   return {
-    title: collection.title, subtitle: collection.subtitle, description: collection.description,
+    title: collection.title, kind: collection.kind ?? "BOOK", subtitle: collection.subtitle, description: collection.description,
     author: collection.ownerName, tocTitle: collection.tocTitle,
-    chapters: collection.items.filter(item => item.resourceType !== "DIAGRAM").map(item => {
+    chapters: subjectOrder(collection.items.filter(item => item.resourceType !== "DIAGRAM"), collection.subjects ?? []).map(item => {
       const resource = item.resourceType === "NOTE" ? collection.notes.find(row => row.id === item.resourceId)
         : item.resourceType === "REVIEWER" ? collection.reviewers.find(row => row.id === item.resourceId)
         : collection.quizzes.find(row => row.id === item.resourceId);
       return { id: item.id, title: resource?.title ?? "Unavailable chapter", description: resource?.description, kind: item.resourceType as BookChapter["kind"],
-        content: resource ? "content" in resource ? resource.content : quizChapterMarkdown(resource.questions as QuizQuestion[]) : "This chapter is no longer available." };
+        subjectTitle: collection.subjects?.find(subject => subject.id === item.subjectId)?.title ?? (collection.kind === "NOTEBOOK" ? "Unfiled" : undefined),
+        quiz: resource && "questions" in resource ? resource.questions as QuizQuestion[] : undefined,
+        content: resource ? "content" in resource ? chapterBody(resource.content, resource.title) : quizChapterMarkdown(resource.questions as QuizQuestion[]) : "This chapter is no longer available." };
     }),
   };
 }
