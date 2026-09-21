@@ -1,8 +1,10 @@
 "use client";
+import { MemoryMark } from "@/components/layout/brand";
+
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { BookMarked, Check, Cloud, KeyRound, Palette, User } from "lucide-react";
+import { Check, Cloud, KeyRound, Palette, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/input";
 import { useTheme, type Appearance } from "@/components/layout/theme-provider";
@@ -120,7 +122,7 @@ export function OnboardingFlow({ initialName, email, configuredProviders }: Onbo
     <main className="flex min-h-screen items-center justify-center bg-paper p-4">
       <div className="w-full max-w-2xl">
         <div className="mb-5 flex items-center justify-center gap-2 font-display text-xl text-ink">
-          <BookMarked className="h-5 w-5 text-accent-dark" /> Memoria
+          <MemoryMark className="h-5 w-5 text-accent-dark" /> Memoria
         </div>
         <div className="card overflow-hidden">
           <div className="border-b border-line bg-ink/[0.02] p-5">

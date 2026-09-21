@@ -15,3 +15,7 @@ coverage/
 *.tsbuildinfo
 .DS_Store
 npm-debug.log*
+
+# Isolated production verification
+.next-check/
+.next-check-tsconfig.json

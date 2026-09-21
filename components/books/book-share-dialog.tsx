@@ -147,7 +147,7 @@ export function BookShareDialog(props: BookShareDialogProps) {
           <div className={cn("flex min-w-0 flex-wrap items-center gap-2 rounded-card border border-line bg-paper p-2", !props.linkEnabled && "opacity-55")}>
             <span className="min-w-0 flex-1 truncate pl-2 text-sm text-ink-soft">{props.publicPath}</span>
             <Button size="sm" variant="outline" disabled={!props.linkEnabled} onClick={() => void copyLink()}>{copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}{copied ? "Copied" : "Copy link"}</Button>
-              {props.linkEnabled && <a href={props.publicPath} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center rounded-control border border-line px-3 text-sm font-medium">Preview</a>}
+              {props.linkEnabled && <a href={props.publicPath + "?view=guest"} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center rounded-control border border-line px-3 text-sm font-medium">Preview</a>}
           </div>
 
           {props.passwordProtected && <div className="flex items-center justify-between gap-3 rounded-card border border-warning/30 bg-warning/5 p-3"><p className="flex items-center gap-2 text-xs text-ink-soft"><LockKeyhole className="h-4 w-4 text-warning" />This legacy link still requires a password.</p><Button size="sm" variant="ghost" onClick={() => void clearPassword()}>Remove password</Button></div>}

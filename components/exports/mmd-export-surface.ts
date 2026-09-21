@@ -1,6 +1,7 @@
 "use client";
 
 import { createElement, forwardRef } from "react";
+import { MemoryMark } from "@/components/layout/brand";
 import { MmdRenderer } from "@/components/mmd/renderer";
 import { CodeThemeProvider } from "@/components/mmd/code-theme-context";
 import type { MmdAssetRegistry } from "@/lib/export/asset-registry";
@@ -14,17 +15,7 @@ export interface MmdExportSurfaceProps {
   className?: string;
 }
 
-const BRAND_LOGO_SVG = createElement(
-  "svg",
-  { viewBox: "0 0 64 64", "aria-hidden": true, focusable: false },
-  createElement(
-    "g",
-    { fill: "none", stroke: "currentColor", strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: "4" },
-    createElement("path", { d: "M22 14h27v38H23a8 8 0 0 1-8-8V22a8 8 0 0 1 7-7.94" }),
-    createElement("path", { d: "M15 44a8 8 0 0 1 8-8h26" }),
-    createElement("path", { d: "M29 14v15l6-5 6 5V14" })
-  )
-);
+const BRAND_LOGO_SVG = createElement(MemoryMark);
 
 /**
  * The canonical visual root for document exports.

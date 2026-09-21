@@ -1,16 +1,17 @@
-import { subjectOrder } from "@/lib/books/notebooks";
+import { bookContents } from "@/lib/books/contents";
+import { collectionBookDocument } from "@/lib/books/document";
 import { formatCorrectAnswer } from "@/lib/quiz-grading";
 import type { PublicCollection } from "@/lib/share-collections-repo";
 import type { QuizQuestion } from "@/lib/validation/quiz";
 
 export function collectionMarkdown(collection: PublicCollection) {
-  const chapterTitle = (item: PublicCollection["items"][number]) => item.resourceType === "NOTE"
-    ? collection.notes.find((entry) => entry.id === item.resourceId)?.title
-    : item.resourceType === "REVIEWER"
-      ? collection.reviewers.find((entry) => entry.id === item.resourceId)?.title
-      : collection.quizzes.find((entry) => entry.id === item.resourceId)?.title;
-  const items = subjectOrder(collection.items, collection.subjects ?? []);
-  const rows = [`# ${collection.tocTitle}`, ...items.map((item, index) => `${index + 1}. ${chapterTitle(item) ?? "Unavailable chapter"}`)];
+  const entries = bookContents(collectionBookDocument(collection));
+  const items = entries.map(entry => collection.items.find(item => item.id === entry.chapter.id)!);
+  const rows = ["# " + collection.tocTitle];
+  for (const entry of entries) {
+    if (entry.groupStart) rows.push("## " + entry.groupIndex + ". " + entry.groupTitle);
+    rows.push(entry.number + " " + entry.chapter.title);
+  }
   let previousSubject: string | undefined;
   for (const item of items) {
     const subject = collection.subjects?.find(row => row.id === item.subjectId)?.title ?? (collection.kind === "NOTEBOOK" ? "Unfiled" : undefined);

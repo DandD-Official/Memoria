@@ -8,7 +8,7 @@ export const metadata: Metadata = {
   description:
     "Import your notes, organize them into reviewers, and test yourself with customizable quizzes and exams.",
   icons: {
-    icon: "/icon.svg",
+    icon: "/icon.svg?v=memoria-mark-2",
   },
 };
 

@@ -249,29 +249,7 @@ export async function createBookWordBlob(title: string, markdown: string, metada
 
 export async function downloadBlob(blob: Blob, filename: string, extension: "docx" | "pdf") {
   const safeFilename = `${sanitize(filename)}.${extension}`;
-  const mimeType = extension === "docx"
-    ? "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-    : "application/pdf";
-
-  // Mobile browsers often ignore a blob link unless it is shared as a file.
-  // Keep a normal download fallback for desktop browsers and older mobile OSes.
-  if (
-    typeof File !== "undefined" &&
-    typeof navigator !== "undefined" &&
-    typeof navigator.share === "function" &&
-    typeof navigator.canShare === "function"
-  ) {
-    try {
-      const file = new File([blob], safeFilename, { type: blob.type || mimeType });
-      if (navigator.canShare({ files: [file] })) {
-        await navigator.share({ files: [file], title: safeFilename });
-        return;
-      }
-    } catch (error) {
-      if (error instanceof DOMException && error.name === "AbortError") return;
-    }
-  }
-
+  // Use the browser download manager; sharing is a separate user action.
   const url = URL.createObjectURL(blob);
   const anchor = window.document.createElement("a");
   anchor.href = url;

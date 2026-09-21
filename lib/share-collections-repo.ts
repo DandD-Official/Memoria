@@ -120,7 +120,7 @@ export async function updateCollection(
 ) {
   const existing = await findCollectionForEditor(userId, id);
   if (!existing) throw new Error("Book not found.");
-  if (data.subjects && existing.kind !== "NOTEBOOK") throw new Error("Only notebooks have subjects.");
+  if (data.subjects && existing.kind !== "NOTEBOOK") throw new Error("Only notebooks have grouped titles.");
   return prisma.$transaction(async tx => {
     if (data.subjects) await tx.shareCollectionItem.updateMany({ where: { collectionId: id, subjectId: { notIn: data.subjects.map(subject => subject.id) } }, data: { subjectId: null } });
     return tx.shareCollection.update({ where: { id }, data });
@@ -146,7 +146,7 @@ export async function addCollectionItem(
   const owns = await resourceBelongsTo(userId, item.resourceType, item.resourceId);
   if (!owns) throw new Error("You can only add your own notes, reviewers, or quizzes.");
 
-  if (item.subjectId && (collection.kind !== "NOTEBOOK" || !readSubjects(collection.subjects).some(subject => subject.id === item.subjectId))) throw new Error("Subject not found in this notebook.");
+  if (item.subjectId && (collection.kind !== "NOTEBOOK" || !readSubjects(collection.subjects).some(subject => subject.id === item.subjectId))) throw new Error("Title not found in this notebook.");
   const position = collection.items.length;
   return prisma.shareCollectionItem.upsert({
     where: {
@@ -226,7 +226,7 @@ export interface PublicCollection {
 export async function assignNotebookSubject(userId: string, collectionId: string, itemId: string, subjectId: string | null) {
   const collection = await findCollectionForEditor(userId, collectionId);
   if (!collection || collection.kind !== "NOTEBOOK" || !collection.items.some(item => item.id === itemId)) throw new Error("Notebook item not found.");
-  if (subjectId && !readSubjects(collection.subjects).some(subject => subject.id === subjectId)) throw new Error("Subject not found in this notebook.");
+  if (subjectId && !readSubjects(collection.subjects).some(subject => subject.id === subjectId)) throw new Error("Title not found in this notebook.");
   return prisma.shareCollectionItem.update({ where: { id: itemId }, data: { subjectId } });
 }
 

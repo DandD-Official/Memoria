@@ -83,3 +83,11 @@ The native reader now has responsive one/two-page spreads, chapter/heading navig
 Creation wizards now occupy their own page workspace and offer search over bounded source lists. Diagram canvas and header spacing have been reduced. The landing quiz marks Retrieval correct and the two distractors incorrect.
 
 Validation: 372 tests across 45 files passed; TypeScript and lint passed. Next production build passed against the generated Prisma client (the earlier Prisma generate encountered a locked Windows engine DLL). Database migration deployed successfully. Live browser/Word visual checks remain unverified: the browser tool was previously rejected by automatic approval review due to its usage limit; no alternate browser was used. No claim of visual parity is made.
+
+## 2026-09-21 Notebook titles, contents, downloads, and branding
+
+Renamed user-facing notebook subjects to titles while retaining persisted subject IDs for compatibility. Contents now group memories under separate numbered title headings, with local hierarchical entry indices (1.1, 1.2, 2.1). Stable IDs keep identically named titles separate. Headings stay with the first entry; continuation contents pages repeat the relevant title. Reader navigation and chapter labels use the same numbering.
+
+Removed View as Guest buttons. Share Preview uses the public/guest access path. Export controls read Download; downloadBlob always uses an attachment link instead of the operating-system share sheet. Replaced old book-shaped brand marks in site headers, onboarding, public reading, export headers and the favicon with MemoryMark. Existing SVG/PNG brand assets were already current; inspected the PNG.
+
+Validation: 375 tests in 47 files passed, TypeScript and lint passed. After the last export-mark replacement, 27 focused document/download tests also passed. The initial production build compiled but failed on missing shared .next artifacts with the development server running. A production build using temporary isolated .next-check output and an extended verification tsconfig passed all 77 generated routes; temporary Next config overrides were then removed. Live browser and Word layout checks remain unverified.

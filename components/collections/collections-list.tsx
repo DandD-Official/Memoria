@@ -72,7 +72,7 @@ export function CollectionsList({ initialCollections, initiallyCreating = false,
       <PageHeader>
         <PageHeaderContent>
           <PageTitle>{label}s</PageTitle>
-          <PageDescription>{kind === "NOTEBOOK" ? "Organize memories by subject. Read, practice and share them together." : "Arrange memories into a focused reading and study sequence."}</PageDescription>
+          <PageDescription>{kind === "NOTEBOOK" ? "Organize memories under your own titles. Read, practice and share them together." : "Arrange memories into a focused reading and study sequence."}</PageDescription>
         </PageHeaderContent>
         <PageActions><Button onClick={() => setCreating((value) => !value)} className="w-full sm:w-auto"><Plus className="h-4 w-4" /> New {label}</Button></PageActions>
       </PageHeader>

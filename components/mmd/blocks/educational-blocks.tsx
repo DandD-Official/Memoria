@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { BookMarked, ClipboardList, FlaskConical, KeyRound, Star } from "lucide-react";
+import { BookOpen, ClipboardList, FlaskConical, KeyRound, Star } from "lucide-react";
 import type { MmdBlockNode } from "@/lib/mmd/ast";
 import { cn } from "@/lib/utils";
 
@@ -8,7 +8,7 @@ export function DefinitionBlock({ node, children }: { node: MmdBlockNode; childr
   return (
     <article className="my-5 rounded-card border border-accent/25 bg-accent-soft/15 p-5 shadow-sm">
       <div className="mb-2 flex items-start gap-2 text-accent-dark">
-        <BookMarked className="h-4 w-4 shrink-0" aria-hidden="true" />
+        <BookOpen className="h-4 w-4 shrink-0" aria-hidden="true" />
         <span className="font-display text-lg font-medium text-ink">{node.attrs.term}</span>
       </div>
       <div className="text-sm text-ink-soft [&>*:first-child]:mt-0 [&>*:last-child]:mb-0">

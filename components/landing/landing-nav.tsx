@@ -1,5 +1,6 @@
+import { MemoryMark } from "@/components/layout/brand";
 import Link from "next/link";
-import { BookMarked } from "lucide-react";
+
 import { ThemeToggle } from "@/components/layout/theme-toggle";
 
 export function LandingNav() {
@@ -7,7 +8,7 @@ export function LandingNav() {
     <header className="sticky top-0 z-40 border-b border-line/70 bg-paper/85 backdrop-blur">
       <nav className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
         <Link href="/" className="flex items-center gap-2.5 font-display text-lg font-medium text-ink">
-          <span className="flex h-9 w-9 items-center justify-center rounded-control border border-accent/25 bg-accent-soft text-accent-dark shadow-sm"><BookMarked className="h-5 w-5" strokeWidth={2.25} /></span>
+          <span className="flex h-9 w-9 items-center justify-center rounded-control border border-accent/25 bg-accent-soft text-accent-dark shadow-sm"><MemoryMark className="h-5 w-5" /></span>
           <span>Memoria</span>
         </Link>
         <div className="flex items-center gap-6">

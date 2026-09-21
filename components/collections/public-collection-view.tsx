@@ -2,7 +2,8 @@
 
 import { useCallback, useState } from "react";
 import Link from "next/link";
-import { BookMarked, MessageSquare, ChevronLeft, ChevronRight, RefreshCw, ArrowLeft, Pencil, LogIn } from "lucide-react";
+import { BookOpen, MessageSquare, ChevronLeft, ChevronRight, RefreshCw, ArrowLeft, Pencil, LogIn } from "lucide-react";
+import { MemoryMark } from "@/components/layout/brand";
 import { BookReader } from "@/components/books/book-reader";
 import type { BookDocument } from "@/lib/books/document";
 import { MmdRenderer as MarkdownRenderer } from "@/components/mmd/renderer";
@@ -54,10 +55,10 @@ export function PublicCollectionView({ collection, book, guestPreview = false }:
         <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <Link href={collection.viewerUserId ? "/shared" : "/"} className="inline-flex items-center gap-2 text-sm font-medium text-ink-soft hover:text-ink">
-              <ArrowLeft className="h-4 w-4" /><BookMarked className="h-4 w-4 text-accent-dark" /> Back to Memoria
+              <ArrowLeft className="h-4 w-4" /><MemoryMark className="h-6 w-6 text-accent-dark" /> Back to Memoria
             </Link>
             <div className="flex flex-wrap items-center gap-2">
-              {collection.canExport && <ExportMenu options={[{ value: "pdf", label: "PDF document" }, { value: "docx", label: "Word - editable text" }, { value: "json", label: "Memoria JSON" }]} onExport={exportBook} />}
+              {collection.canExport && <ExportMenu label="Download" options={[{ value: "pdf", label: "PDF document" }, { value: "docx", label: "Word - editable text" }, { value: "json", label: "Memoria JSON" }]} onExport={exportBook} />}
               <Badge tone={collection.viewerPermission === "VIEW" ? "neutral" : "accent"}>{collection.viewerPermission === "OWNER" ? "Owner" : collection.viewerPermission === "EDIT" ? "Editor" : "Viewer"}</Badge>
               {collection.viewerPermission === "EDIT" || collection.viewerPermission === "OWNER" ? collection.viewerUserId ? <Link href={`/books/${collection.id}`} className="inline-flex h-9 items-center gap-2 rounded-control border border-line px-3 text-sm font-medium text-ink hover:bg-surface-muted"><Pencil className="h-4 w-4" />Edit</Link> : <Link href={`/login?callbackUrl=${encodeURIComponent(`/c/${collection.slug}`)}`} className="inline-flex h-9 items-center gap-2 rounded-control border border-line px-3 text-sm font-medium text-ink hover:bg-surface-muted"><LogIn className="h-4 w-4" />Sign in to edit</Link> : null}
               <ThemeToggle />
@@ -66,9 +67,9 @@ export function PublicCollectionView({ collection, book, guestPreview = false }:
         </div>
       </header>
 
-      <main className="mx-auto max-w-[1500px] px-3 py-6 sm:px-6">{guestPreview && <p className="mb-4 rounded-control border border-line bg-surface p-3 text-sm">Viewing as a guest. <Link className="underline" href={collection.kind === "NOTEBOOK" ? `/notebooks/${collection.id}` : `/books/${collection.id}`}>Return to editing</Link></p>}{collection.viewerPermission === "OWNER" && <Link className="mb-4 inline-block text-sm underline" href={`/c/${collection.slug}?view=guest`}>View as Guest</Link>}
+      <main className="mx-auto max-w-[1500px] px-3 py-6 sm:px-6">{guestPreview && <p className="mb-4 rounded-control border border-line bg-surface p-3 text-sm">Viewing as a guest. <Link className="underline" href={collection.kind === "NOTEBOOK" ? `/notebooks/${collection.id}` : `/books/${collection.id}`}>Return to editing</Link></p>}
         <nav aria-label="Book sections" className="mb-5 flex w-full gap-1 rounded-card border border-line bg-surface-muted p-1 sm:w-fit">
-          <button type="button" aria-current={readerView === "book" ? "page" : undefined} onClick={() => setReaderView("book")} className={cn("inline-flex min-h-10 flex-1 items-center justify-center gap-2 rounded-control px-4 text-sm font-medium transition-colors sm:flex-none", readerView === "book" ? "bg-surface text-ink shadow-sm" : "text-ink-soft hover:text-ink")}><BookMarked className="h-4 w-4" />{collection.kind === "NOTEBOOK" ? "Read Notebook" : "Read Book"}</button>
+          <button type="button" aria-current={readerView === "book" ? "page" : undefined} onClick={() => setReaderView("book")} className={cn("inline-flex min-h-10 flex-1 items-center justify-center gap-2 rounded-control px-4 text-sm font-medium transition-colors sm:flex-none", readerView === "book" ? "bg-surface text-ink shadow-sm" : "text-ink-soft hover:text-ink")}><BookOpen className="h-4 w-4" />{collection.kind === "NOTEBOOK" ? "Read Notebook" : "Read Book"}</button>
           <button type="button" aria-current={readerView === "practice" ? "page" : undefined} onClick={() => setReaderView("practice")} className={cn("min-h-10 rounded-control px-4 text-sm font-medium", readerView === "practice" ? "bg-surface text-ink shadow-sm" : "text-ink-soft")}>Practice</button>
           <button type="button" aria-current={readerView === "feedback" ? "page" : undefined} onClick={() => setReaderView("feedback")} className={cn("inline-flex min-h-10 flex-1 items-center justify-center gap-2 rounded-control px-4 text-sm font-medium transition-colors sm:flex-none", readerView === "feedback" ? "bg-surface text-ink shadow-sm" : "text-ink-soft hover:text-ink")}><MessageSquare className="h-4 w-4" />Discussion</button>
         </nav>

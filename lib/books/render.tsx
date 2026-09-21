@@ -60,7 +60,13 @@ export async function renderBook(book: BookDocument): Promise<RenderedBook> {
       if (list.children.length && used + height > EXPORT_PAGE.contentHeight) {
         pages.push(tocPage); tocPage = makePage(); list = startContents(); used = contents.querySelector("header")!.getBoundingClientRect().height + 40;
       }
-      list.append(row.cloneNode(true)); used += height;
+      const clone = row.cloneNode(true) as HTMLElement;
+      // Keep a title with its first memory, and repeat it on continuation pages.
+      if (!list.children.length && !clone.querySelector("[data-book-toc-group]")) {
+        const heading = rows.find(candidate => candidate.dataset.bookTocGroupKey === row.dataset.bookTocGroupKey)?.querySelector<HTMLElement>("[data-book-toc-group]");
+        if (heading) { clone.prepend(heading.cloneNode(true)); used += heading.getBoundingClientRect().height; }
+      }
+      list.append(clone); used += height;
     }
     if (!rows.length) list.parentElement!.append(contents.querySelector(".book-empty")!.cloneNode(true));
     pages.push(tocPage);

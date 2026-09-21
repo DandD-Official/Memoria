@@ -3,7 +3,7 @@ import { formatCorrectAnswer } from "@/lib/quiz-grading";
 import type { QuizQuestion } from "@/lib/validation/quiz";
 import { subjectOrder } from "./notebooks";
 
-export interface BookChapter { id: string; title: string; description?: string | null; kind: "NOTE" | "REVIEWER" | "QUIZ"; content: string; subjectTitle?: string; quiz?: QuizQuestion[] }
+export interface BookChapter { id: string; title: string; description?: string | null; kind: "NOTE" | "REVIEWER" | "QUIZ"; content: string; subjectId?: string | null; subjectTitle?: string; quiz?: QuizQuestion[] }
 export interface BookDocument { title: string; kind?: "BOOK" | "NOTEBOOK"; subtitle?: string | null; description?: string | null; author: string; tocTitle: string; chapters: BookChapter[]; assets?: Record<string, string | null> }
 
 export function chapterBody(content: string, title: string): string {
@@ -32,6 +32,7 @@ export function collectionBookDocument(collection: PublicCollection): BookDocume
         : item.resourceType === "REVIEWER" ? collection.reviewers.find(row => row.id === item.resourceId)
         : collection.quizzes.find(row => row.id === item.resourceId);
       return { id: item.id, title: resource?.title ?? "Unavailable chapter", description: resource?.description, kind: item.resourceType as BookChapter["kind"],
+        subjectId: item.subjectId,
         subjectTitle: collection.subjects?.find(subject => subject.id === item.subjectId)?.title ?? (collection.kind === "NOTEBOOK" ? "Unfiled" : undefined),
         quiz: resource && "questions" in resource ? resource.questions as QuizQuestion[] : undefined,
         content: resource ? "content" in resource ? chapterBody(resource.content, resource.title) : quizChapterMarkdown(resource.questions as QuizQuestion[]) : "This chapter is no longer available." };
