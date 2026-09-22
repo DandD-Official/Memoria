@@ -39,3 +39,17 @@ describe("visual and creative reviewer prompting", () => {
     expect(sourcePackage).toContain("purposeful self-contained HTML/SVG visuals");
   });
 });
+
+
+describe("study guide quality across generation workflows", () => {
+  it.each(["preserve", "balanced", "condensed", "exam_focused", "visual_creative"] as const)("applies quality and citation rules to %s", style => {
+    const note = { title: "Energy", content: "Energy is conserved.", id: "1", sourceType: "TEXT", updatedAt: new Date("2026-01-01") };
+    for (const prompt of [buildNoteReformatPrompt([note], style), buildTopicNotePrompt("Energy", style), buildSourcePackage([note], style)]) {
+      expect(prompt).toContain("Do not include citations");
+      expect(prompt).toContain("ground explanations, examples, and answers in the supplied material");
+      expect(prompt).toContain("retrieval questions with answers");
+      expect(prompt).toContain("Combine SVG diagrams with native Memoria elements");
+      expect(prompt).toContain("no overlapping text");
+    }
+  });
+});

@@ -1,7 +1,8 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
-import { Bookmark, ChevronLeft, ChevronRight, ListTree } from "lucide-react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { BookOpen, FileText, Bookmark, ChevronLeft, ChevronRight, ListTree } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { MemoryReader } from "./memory-reader";
 import { bookContents } from "@/lib/books/contents";
 import { BookQuiz } from "./book-quiz";
 import { renderBook, type RenderedBook } from "@/lib/books/render";
@@ -9,8 +10,9 @@ import type { BookDocument } from "@/lib/books/document";
 import { readBookmarks, type BookBookmark } from "@/lib/books/notebooks";
 import { bookmarkPage, visibleBookPages } from "@/lib/books/reader-state";
 
-export function BookReader({ book, storageKey, canPersist = false, resumeChapter, onChapterChange }: { book: BookDocument; storageKey?: string; canPersist?: boolean; resumeChapter?: string | null; onChapterChange?: (id: string) => void }) {
+function PaginatedBookReader({ book, storageKey, canPersist = false, resumeChapter, onChapterChange, modeControl }: { modeControl: ReactNode; book: BookDocument; storageKey?: string; canPersist?: boolean; resumeChapter?: string | null; onChapterChange?: (id: string) => void }) {
   const rendered = useRef<RenderedBook | null>(null), viewport = useRef<HTMLDivElement>(null), papers = useRef<HTMLDivElement>(null);
+  const resume = useRef(resumeChapter); resume.current = resumeChapter;
   const callback = useRef(onChapterChange); callback.current = onChapterChange;
   const [page, setPage] = useState(0), [total, setTotal] = useState(0), [width, setWidth] = useState(794);
   const [spread, setSpread] = useState(false), [contents, setContents] = useState(true), [practice, setPractice] = useState(false);
@@ -23,20 +25,20 @@ export function BookReader({ book, storageKey, canPersist = false, resumeChapter
     void renderBook(book).then(async document => {
       if (cancelled) { document.cleanup(); return; }
       result = document; rendered.current = document;
-      let chapter = resumeChapter;
+      let chapter = resume.current;
       try {
         if (canPersist && storageKey) {
           const response = await fetch("/api/collections/" + storageKey + "/progress", { signal: controller.signal });
           if (!response.ok) throw new Error("Could not load bookmarks.");
           const data = await response.json();
           if (!cancelled) setBookmarks(readBookmarks(data.bookmarks).filter(mark => !mark.chapterId || document.chapterPages[mark.chapterId]));
-          chapter = data.lastItemId ?? chapter;
+          chapter = chapter ?? data.lastItemId;
         } else if (storageKey && !cancelled) setBookmarks(readBookmarks(JSON.parse(localStorage.getItem("memoria-bookmarks-guest:" + storageKey) ?? "[]")));
       } catch { if (!cancelled) setSaveError("Could not load saved reading progress."); }
       if (!cancelled) { setTotal(document.pages.length); if (chapter && document.chapterPages[chapter]) setPage(document.chapterPages[chapter] - 1); }
     }).catch(reason => { if (!cancelled) setError(reason instanceof Error ? reason.message : "Could not prepare pages."); });
     return () => { cancelled = true; controller.abort(); result?.cleanup(); rendered.current = null; };
-  }, [book, retry, storageKey, canPersist, resumeChapter]);
+  }, [book, retry, storageKey, canPersist]);
   useEffect(() => {
     const element = viewport.current; if (!element) return;
     const observer = new ResizeObserver(entries => setWidth(entries[0].contentRect.width)); observer.observe(element);
@@ -80,7 +82,10 @@ export function BookReader({ book, storageKey, canPersist = false, resumeChapter
     <div className="flex flex-wrap items-center gap-2 border-b border-line pb-3">
       <Button variant="ghost" size="sm" aria-expanded={contents} onClick={() => setContents(!contents)}><ListTree className="h-4 w-4" />Contents</Button>
       <div className="flex flex-1 gap-1"><Button size="sm" variant={!spread ? "secondary" : "ghost"} aria-pressed={!spread} onClick={() => setSpread(false)}>One page</Button><Button size="sm" variant={spread ? "secondary" : "ghost"} aria-pressed={spread} onClick={() => setSpread(true)}>Two pages</Button></div>
+      <div className="ms-auto flex items-center gap-2">
       <Button variant="ghost" size="sm" disabled={!total || saving || (!currentMark && bookmarks.length >= 100)} aria-pressed={!!currentMark} onClick={() => void saveMarks(currentMark ? bookmarks.filter(mark => mark.id !== currentMark.id) : [...bookmarks, { id: crypto.randomUUID(), chapterId: chapterId ?? null, pageOffset: page - (chapterId ? (rendered.current!.chapterPages[chapterId] - 1) : 0), label: (chapter?.title ?? book.title).slice(0, 170) + " · Page " + (page + 1) }])}><Bookmark className={"h-4 w-4 " + (currentMark ? "fill-current" : "")} />{currentMark ? "Bookmarked" : "Bookmark"}</Button>
+      {modeControl}
+      </div>
     </div>
     {saveError && <p role="alert" className="text-sm text-danger">{saveError}</p>}
     <div className={contents ? "grid items-start gap-5 lg:grid-cols-[220px_minmax(0,1fr)]" : "min-w-0"}>
@@ -100,4 +105,18 @@ export function BookReader({ book, storageKey, canPersist = false, resumeChapter
     </div>
     <div className="flex items-center justify-between border-t border-line pt-3"><Button variant="ghost" size="sm" disabled={!total || !page} onClick={() => navigate(page - (paired && page > 1 ? 2 : 1))}><ChevronLeft className="h-4 w-4" />Previous</Button><p role="status" className="text-xs text-ink-soft">{total ? "Page " + (page + 1) + (visible.length > 1 ? "–" + (page + 2) : "") + " of " + total : "Preparing pages"}</p><Button variant="ghost" size="sm" disabled={!total || page + visible.length >= total} onClick={() => navigate(page + visible.length)}>Next<ChevronRight className="h-4 w-4" /></Button></div>
   </section>;
+}
+
+export function BookReader(props: Omit<Parameters<typeof PaginatedBookReader>[0], "modeControl">) {
+  const [mode, setMode] = useState<"book" | "memories">("book");
+  const [chapter, setChapter] = useState(props.resumeChapter);
+  const { onChapterChange } = props;
+  const changeChapter = useCallback((id: string) => { setChapter(id); onChapterChange?.(id); }, [onChapterChange]);
+  const modeControl = <div role="group" aria-label="Reading mode" className="inline-flex shrink-0 items-center rounded-control border border-line bg-surface-muted p-1">
+    <button type="button" title="Read as book" aria-label="Read as book" aria-pressed={mode === "book"} onClick={() => setMode("book")} className={"flex h-10 w-10 items-center justify-center rounded-control transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent " + (mode === "book" ? "bg-surface text-ink shadow-sm" : "text-ink-soft hover:text-ink")}><BookOpen aria-hidden="true" className="h-4 w-4" /></button>
+    <button type="button" title="Read as memories" aria-label="Read as memories" aria-pressed={mode === "memories"} onClick={() => setMode("memories")} className={"flex h-10 w-10 items-center justify-center rounded-control transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent " + (mode === "memories" ? "bg-surface text-ink shadow-sm" : "text-ink-soft hover:text-ink")}><FileText aria-hidden="true" className="h-4 w-4" /></button>
+  </div>;
+  return mode === "book"
+    ? <PaginatedBookReader {...props} resumeChapter={chapter} onChapterChange={changeChapter} modeControl={modeControl} />
+    : <div className="space-y-5"><div className="flex justify-end border-b border-line pb-3">{modeControl}</div><MemoryReader {...props} resumeChapter={chapter} onChapterChange={changeChapter} /></div>;
 }

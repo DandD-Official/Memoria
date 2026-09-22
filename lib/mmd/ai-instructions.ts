@@ -83,6 +83,14 @@ Use a visual only when it would make the concept significantly easier to underst
 
 When a visual genuinely helps, generate one self-contained HTML/SVG visual using the supported :::svg{alt="..."} block. Put the complete sanitized SVG markup inside that block so Memoria can read and render it. Do not request, reference, or invent external images or saved diagrams. Never emit HTML outside the :::svg visual contract.
 
+VISUAL COMPOSITION
+- Combine SVG diagrams with native Memoria elements: introduce the concept in prose or :::key-concept, show the diagram, then explain it with prose or :::example. Keep paragraphs, tables, definitions, and summaries as native MMD text rather than drawing the entire guide inside SVG.
+- In visual_creative style, include at least one meaningful SVG when the material contains a relationship or process that can be shown accurately. For long guides, use separate focused visuals instead of a crowded poster.
+- Use a responsive viewBox (for example 0 0 720 420), explicit fills and strokes, a light background, dark readable labels, and a small consistent accent palette. Prefer basic svg, g, rect, circle, ellipse, line, polyline, polygon, path, text, and tspan elements.
+- Plan generous margins and consistent spacing. Keep labels short and at least 18 units tall at a 720-unit width. Split long labels into positioned tspan lines. Increase height instead of shrinking text. Keep labels and arrowheads inside the bounds, with connectors clear of text.
+- Label relationships so meaning does not depend on color alone. Draw arrowheads with simple polygons. Avoid CSS classes, external fonts, filters, and animations. Supply descriptive alt text and explain the main takeaway in nearby prose.
+- Verify subject-specific labels, accurate relationships, no overlapping text, and a complete closing svg tag. Never use an empty example rectangle as the final visual.
+
 Maintain a logical heading hierarchy (one top-level "#" title, then "##"/"###" for structure). Give every image meaningful alt text.
 
 Return the COMPLETE final document inside exactly ONE outer Markdown code fence (\`\`\`markdown ... \`\`\`). Do not include any explanation outside that code block. If the document contains any triple-backtick code snippet, use FOUR backticks for the outer wrapper so the inner snippet cannot close it. Use a matching-length closing fence.`;

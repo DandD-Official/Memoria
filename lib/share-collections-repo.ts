@@ -106,11 +106,12 @@ export async function getCollectionEditorData(userId: string, id: string) {
   const includedIds = (type: ResourceType) => collection.items.filter((item) => item.resourceType === type).map((item) => item.resourceId);
   const ownerFilter = access === "OWNER" ? { ownerId: collection.ownerId } : undefined;
   const [notes, reviewers, quizzes] = await Promise.all([
-    prisma.note.findMany({ where: ownerFilter ?? { id: { in: includedIds("NOTE") } }, orderBy: { updatedAt: "desc" }, select: { id: true, title: true } }),
-    prisma.reviewer.findMany({ where: ownerFilter ?? { id: { in: includedIds("REVIEWER") } }, orderBy: { updatedAt: "desc" }, select: { id: true, title: true } }),
-    prisma.quiz.findMany({ where: ownerFilter ?? { id: { in: includedIds("QUIZ") } }, orderBy: { updatedAt: "desc" }, select: { id: true, title: true } }),
+    prisma.note.findMany({ where: ownerFilter ?? { id: { in: includedIds("NOTE") } }, orderBy: { updatedAt: "desc" }, select: { id: true, title: true, description: true, updatedAt: true, isFavorite: true, archivedAt: true, tags: { select: { tag: { select: { name: true } } } } } }),
+    prisma.reviewer.findMany({ where: ownerFilter ?? { id: { in: includedIds("REVIEWER") } }, orderBy: { updatedAt: "desc" }, select: { id: true, title: true, description: true, updatedAt: true, isFavorite: true, archivedAt: true, tags: { select: { tag: { select: { name: true } } } } } }),
+    prisma.quiz.findMany({ where: ownerFilter ?? { id: { in: includedIds("QUIZ") } }, orderBy: { updatedAt: "desc" }, select: { id: true, title: true, description: true, updatedAt: true, isFavorite: true, archivedAt: true, tags: { select: { tag: { select: { name: true } } } } } }),
   ]);
-  return { collection, access, canExport: await canExportBook(userId, id), rows: { NOTE: notes, REVIEWER: reviewers, QUIZ: quizzes } };
+  const pickerRows = (resources: typeof notes) => resources.map(resource => ({ id: resource.id, title: resource.title, description: resource.description, updatedAt: resource.updatedAt.toISOString(), isFavorite: resource.isFavorite, archived: Boolean(resource.archivedAt), tags: resource.tags.map(link => link.tag.name) }));
+  return { collection, access, canExport: await canExportBook(userId, id), rows: { NOTE: pickerRows(notes), REVIEWER: pickerRows(reviewers), QUIZ: pickerRows(quizzes) } };
 }
 
 export async function updateCollection(

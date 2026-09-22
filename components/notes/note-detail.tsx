@@ -1,5 +1,6 @@
 "use client";
 
+import { AddToCollection } from "@/components/collections/add-to-collection";
 import { savedMmdMessage } from "@/lib/mmd/diagnostics";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -124,6 +125,7 @@ export function NoteDetail({ note, canEdit, isOwner, autoSave, systemAvailable, 
             share={isOwner ? <ShareDialog resourceType="NOTE" resourceId={note.id} /> : undefined}
             exportAction={<ExportMenu options={[{ value: "pdf", label: "PDF document" }, { value: "docx", label: "Word document" }, { value: "md", label: "Markdown" }, { value: "json", label: "Memoria JSON" }]} onExport={handleExport} />}
             tools={<>
+              {isOwner && <AddToCollection resourceType="NOTE" resourceId={note.id} />}
               {canEdit && <RepromptDialog noteId={note.id} systemAvailable={systemAvailable} />}
 
               {isOwner && <ResourceUtilityActions resourceType="NOTE" resourceId={note.id} archived={note.archived} />}

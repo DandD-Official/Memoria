@@ -3,7 +3,9 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, BookOpen, ChevronUp, ChevronDown, FileText, GripVertical, Layers3, ListChecks, Settings2, Share2, Trash2 } from "lucide-react";
+import { ArrowLeft, BookOpen, ChevronUp, ChevronDown, Plus, Settings2, Share2, Trash2 } from "lucide-react";
+import { MemoryPicker } from "./memory-picker";
+import type { MemoryPickerRow, PickerMemory } from "@/lib/books/memory-picker";
 import { BookShareDialog, type BookMember, type BookSharePermission } from "@/components/books/book-share-dialog";
 import { BookPreview } from "@/components/books/book-preview";
 import { ExportMenu } from "@/components/exports/export-menu";
@@ -24,20 +26,13 @@ interface Collection {
   slug: string; isPublished: boolean; linkPermission: BookSharePermission; allowExport: boolean; expiresAt: string | null;
   passwordProtected: boolean; items: CollectionItem[]; members: BookMember[];
 }
-interface PickerRow { id: string; title: string }
-
-const TABS: { type: ResourceType; label: string; icon: typeof FileText }[] = [
-  { type: "NOTE", label: "Notes", icon: FileText },
-  { type: "REVIEWER", label: "Reviewers", icon: Layers3 },
-  { type: "QUIZ", label: "Quizzes", icon: ListChecks },
-];
-
-export function CollectionEditor({ initialCollection, access, canExport, rows }: { initialCollection: Collection; access: "OWNER" | "EDIT"; canExport: boolean; rows: Record<ResourceType, PickerRow[]> }) {
+export function CollectionEditor({ initialCollection, access, canExport, rows }: { initialCollection: Collection; access: "OWNER" | "EDIT"; canExport: boolean; rows: Record<ResourceType, MemoryPickerRow[]> }) {
   const router = useRouter();
   const [collection, setCollection] = useState(initialCollection);
-  const [tab, setTab] = useState<ResourceType>("NOTE");
+  const [pickerOpen, setPickerOpen] = useState(!initialCollection.items.length);
+  const [adding, setAdding] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
-  const [view, setView] = useState<"book" | "chapters" | "details">(initialCollection.items.length ? "book" : "chapters");
+  const [view, setView] = useState<"book" | "chapters">(initialCollection.items.length ? "book" : "chapters");
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [title, setTitle] = useState(initialCollection.title);
@@ -45,13 +40,19 @@ export function CollectionEditor({ initialCollection, access, canExport, rows }:
   const [description, setDescription] = useState(initialCollection.description ?? "");
   const [tocTitle, setTocTitle] = useState(initialCollection.tocTitle);
   const [saving, setSaving] = useState(false);
+  const [activeSubjectId, setActiveSubjectId] = useState(initialCollection.subjects?.[0]?.id ?? "");
+  const [newGroupTitle, setNewGroupTitle] = useState("");
   const notebook = collection.kind === "NOTEBOOK";
   const label = notebook ? "Notebook" : "Book";
   const base = notebook ? "/notebooks" : "/books";
-  const [subjectId, setSubjectId] = useState("");
-  const [search, setSearch] = useState("");
   const isOwner = access === "OWNER";
   const orderedItems = notebook ? subjectOrder(collection.items, collection.subjects ?? []) : collection.items;
+  const activeSubject = collection.subjects?.find(subject => subject.id === activeSubjectId);
+  const groupId = activeSubject?.id ?? "";
+  const groupTitle = activeSubject?.title ?? "Unfiled";
+  const visibleItems = notebook ? orderedItems.filter(item => (item.subjectId ?? "") === groupId) : orderedItems;
+  const busy = saving || adding || busyId !== null;
+  const groupTabs = [...(collection.subjects ?? []), { id: "", title: "Unfiled" }];
   const publicPath = `/c/${collection.slug}`;
 
   function rowFor(item: CollectionItem) { return rows[item.resourceType].find((row) => row.id === item.resourceId); }
@@ -62,16 +63,16 @@ export function CollectionEditor({ initialCollection, access, canExport, rows }:
     return data;
   }
 
-  async function toggleItem(resourceType: ResourceType, resourceId: string) {
-    const key = `${resourceType}:${resourceId}`;
-    const existing = collection.items.find((item) => item.resourceType === resourceType && item.resourceId === resourceId);
-    setBusyId(key); setError(null);
+  async function addMemory(memory: PickerMemory) {
+    const data = await request(`/api/collections/${collection.id}/items`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ resourceType: memory.resourceType, resourceId: memory.id, subjectId: notebook ? groupId || null : null }) });
+    setCollection(current => ({ ...current, items: current.items.some(item => item.id === data.item.id) ? current.items : [...current.items, data.item] }));
+  }
+  async function removeMemory(item: CollectionItem) {
+    setBusyId(item.id); setError(null);
     try {
-      const data = existing
-        ? await request(`/api/collections/${collection.id}/items?itemId=${existing.id}`, { method: "DELETE" })
-        : await request(`/api/collections/${collection.id}/items`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ resourceType, resourceId, subjectId: subjectId || null }) });
-      setCollection((current) => ({ ...current, items: existing ? current.items.filter((item) => item.id !== existing.id) : [...current.items, data.item] }));
-    } catch (caught) { setError(caught instanceof Error ? caught.message : "Couldn't update this Book."); }
+      await request(`/api/collections/${collection.id}/items?itemId=${item.id}`, { method: "DELETE" });
+      setCollection(current => ({ ...current, items: current.items.filter(row => row.id !== item.id) }));
+    } catch (caught) { setError(caught instanceof Error ? caught.message : "Couldn't remove this memory."); }
     finally { setBusyId(null); }
   }
 
@@ -80,25 +81,24 @@ export function CollectionEditor({ initialCollection, access, canExport, rows }:
     try {
       await request(`/api/collections/${collection.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ subjects }) });
       setCollection(current => ({ ...current, subjects, items: current.items.map(item => ({ ...item, subjectId: subjects.some(subject => subject.id === item.subjectId) ? item.subjectId : null })) }));
-      if (!subjects.some(subject => subject.id === subjectId)) setSubjectId("");
+      const created = subjects.find(subject => !collection.subjects?.some(previous => previous.id === subject.id));
+      if (created) { setActiveSubjectId(created.id); setPickerOpen(true); }
+      else if (activeSubjectId && !subjects.some(subject => subject.id === activeSubjectId)) setActiveSubjectId(subjects[0]?.id ?? "");
       return true;
     } catch (caught) { setError(caught instanceof Error ? caught.message : "Couldn't save titles."); return false; }
     finally { setSaving(false); }
   }
-  async function assignSubject(itemId: string, next: string) {
-    setBusyId(itemId); setError(null);
-    try {
-      await request(`/api/collections/${collection.id}/items`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ itemId, subjectId: next || null }) });
-      setCollection(current => ({ ...current, items: current.items.map(item => item.id === itemId ? { ...item, subjectId: next || null } : item) }));
-    } catch (caught) { setError(caught instanceof Error ? caught.message : "Couldn't move this memory."); }
-    finally { setBusyId(null); }
+  async function createGroup() {
+    const name = newGroupTitle.trim();
+    if (!name || busy || (collection.subjects?.length ?? 0) >= 50) return;
+    if (await saveSubjects([...(collection.subjects ?? []), { id: crypto.randomUUID(), title: name }])) setNewGroupTitle("");
   }
 
   async function moveItem(itemId: string, direction: -1 | 1) {
     const index = orderedItems.findIndex((item) => item.id === itemId);
     const target = index + direction;
     if (index < 0 || target < 0 || target >= collection.items.length) return;
-    if (busyId) return;
+    if (busy || (notebook && (orderedItems[index].subjectId ?? "") !== (orderedItems[target].subjectId ?? ""))) return;
     setBusyId(itemId); setError(null);
     const previous = collection.items;
     const next = [...orderedItems];
@@ -151,27 +151,48 @@ export function CollectionEditor({ initialCollection, access, canExport, rows }:
       <nav aria-label="Book studio sections" className="mb-5 flex w-full gap-1 overflow-x-auto rounded-card border border-line bg-surface-muted p-1 sm:w-fit">
         {[
           { key: "book" as const, label, icon: BookOpen },
-          { key: "chapters" as const, label: notebook ? "Titles & memories" : "Chapters", icon: GripVertical },
-          { key: "details" as const, label: "Details", icon: Settings2 },
-        ].map((item) => <button key={item.key} type="button" aria-current={view === item.key ? "page" : undefined} onClick={() => setView(item.key)} className={cn("inline-flex min-h-10 shrink-0 items-center gap-2 rounded-control px-4 text-sm font-medium transition-colors", view === item.key ? "bg-surface text-ink shadow-sm" : "text-ink-soft hover:text-ink")}><item.icon className="h-4 w-4" />{item.label}</button>)}
+          { key: "chapters" as const, label: notebook ? "Groups & details" : "Chapters & details", icon: Settings2 },
+        ].map((item) => <button key={item.key} type="button" aria-current={view === item.key ? "page" : undefined} disabled={busy} onClick={() => setView(item.key)} className={cn("inline-flex min-h-10 shrink-0 items-center gap-2 rounded-control px-4 text-sm font-medium transition-colors", view === item.key ? "bg-surface text-ink shadow-sm" : "text-ink-soft hover:text-ink")}><item.icon className="h-4 w-4" />{item.label}</button>)}
       </nav>
 
       {view === "book" && <BookPreview id={collection.id} revision={JSON.stringify([collection.title, collection.subtitle, collection.description, collection.tocTitle, collection.subjects, collection.items])} />}
 
       {view === "chapters" && <section className="rounded-card border border-line bg-surface p-5 shadow-sm">
-          {notebook && <NotebookSubjects subjects={collection.subjects ?? []} busy={saving || busyId !== null} save={saveSubjects} />}
-          <div className="flex items-start gap-3"><span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-control bg-accent-soft text-accent-dark"><GripVertical className="h-4 w-4" /></span><div><h2 className="font-display text-xl text-ink">{notebook ? "Choose memories for each title" : "Build the chapters"}</h2><p className="mt-1 text-sm text-ink-soft">{isOwner ? "Choose material and arrange it in reading order." : "Reorder or remove the chapters already in this Book."}</p></div></div>
-          {collection.items.length > 0 && <ol className="mt-5 divide-y divide-line rounded-control border border-line">{orderedItems.map((item, index) => <li key={item.id} className="flex flex-wrap items-center gap-2 px-3 py-2"><span className="font-display text-lg text-accent-dark">{String(index + 1).padStart(2, "0")}</span><span className="min-w-0 flex-1 text-sm">{rowFor(item)?.title ?? "Unavailable chapter"}</span>{notebook && <select aria-label={`Title for ${rowFor(item)?.title ?? "memory"}`} disabled={busyId !== null || saving} value={item.subjectId ?? ""} onChange={event => void assignSubject(item.id, event.target.value)} className="h-11 max-w-40 rounded-control border border-line bg-surface px-2 text-sm"><option value="">Unfiled</option>{collection.subjects?.map(subject => <option key={subject.id} value={subject.id}>{subject.title}</option>)}</select>}<Button variant="ghost" size="sm" aria-label={`Move chapter ${index + 1} up`} disabled={index === 0 || busyId !== null || saving || (notebook && orderedItems[index - 1]?.subjectId !== item.subjectId)} onClick={() => void moveItem(item.id, -1)}><ChevronUp className="h-4 w-4" /></Button><Button variant="ghost" size="sm" aria-label={`Move chapter ${index + 1} down`} disabled={index === orderedItems.length - 1 || busyId !== null || saving || (notebook && orderedItems[index + 1]?.subjectId !== item.subjectId)} onClick={() => void moveItem(item.id, 1)}><ChevronDown className="h-4 w-4" /></Button></li>)}</ol>}
-          <div className="mt-5 flex flex-wrap gap-3"><Input aria-label="Find memories" placeholder="Find a memory?" value={search} onChange={event => setSearch(event.target.value)} />{notebook && <label className="flex items-center gap-2 text-sm">Add new memories to<select value={subjectId} onChange={event => setSubjectId(event.target.value)} className="h-11 rounded-control border border-line bg-surface px-3"><option value="">Unfiled</option>{collection.subjects?.map(subject => <option key={subject.id} value={subject.id}>{subject.title}</option>)}</select></label>}</div>
-          <div className="mt-5 flex max-w-full gap-1 overflow-x-auto rounded-control bg-surface-muted p-1">{TABS.map((item) => <button key={item.type} type="button" onClick={() => setTab(item.type)} className={cn("inline-flex min-h-10 shrink-0 items-center gap-2 rounded-control px-3 text-sm font-medium", tab === item.type ? "bg-surface text-ink shadow-sm" : "text-ink-soft hover:text-ink")}><item.icon className="h-4 w-4" />{item.label}</button>)}</div>
-          <div className="mt-3 divide-y divide-line rounded-card border border-line">{rows[tab].length === 0 ? <p className="p-6 text-center text-sm text-ink-faint">No {TABS.find((item) => item.type === tab)!.label.toLowerCase()} available.</p> : rows[tab].filter(row => row.title.toLowerCase().includes(search.toLowerCase())).map((row) => { const included = collection.items.some((item) => item.resourceType === tab && item.resourceId === row.id); return <label key={row.id} className="flex min-h-12 cursor-pointer items-center gap-3 px-3 py-2 hover:bg-surface-muted"><span className={cn("flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold", included ? "bg-action text-action-foreground" : "bg-ink/5 text-ink-faint")}>{included ? collection.items.findIndex((item) => item.resourceType === tab && item.resourceId === row.id) + 1 : "+"}</span><span className="min-w-0 flex-1 truncate text-sm font-medium text-ink">{row.title}</span><input type="checkbox" checked={included} disabled={busyId !== null} onChange={() => void toggleItem(tab, row.id)} className="h-4 w-4 shrink-0 accent-accent" /></label>; })}</div>
+        <details className="mb-6 rounded-control border border-line p-4">
+          <summary className="cursor-pointer text-sm font-medium">{label} details</summary>
+          <div className="mt-5 max-w-2xl">
+        <h2 className="font-display text-xl text-ink">{label} details</h2><p className="mt-1 text-sm text-ink-soft">These words appear on the cover and opening pages.</p>
+        <div className="mt-5 space-y-4"><div><Label htmlFor="book-title">Title</Label><Input id="book-title" value={title} onChange={(event) => setTitle(event.target.value)} /></div><div><Label htmlFor="book-subtitle">Subtitle (optional)</Label><Input id="book-subtitle" value={subtitle} onChange={(event) => setSubtitle(event.target.value)} placeholder="A short line beneath the title" /></div><div><Label htmlFor="book-toc-title">Contents heading</Label><Input id="book-toc-title" value={tocTitle} onChange={(event) => setTocTitle(event.target.value)} /></div><div><Label htmlFor="book-description">Description</Label><Textarea id="book-description" rows={5} value={description} onChange={(event) => setDescription(event.target.value)} /></div><Button className="w-full" loading={saving} disabled={adding || busyId !== null || !title.trim() || !tocTitle.trim()} onClick={() => void saveDetails()}>Save details</Button></div>
+          </div>
+        </details>
+        {notebook && <div className="mb-6 space-y-4">
+          <form className="flex flex-wrap items-end gap-3" onSubmit={event => { event.preventDefault(); void createGroup(); }}>
+            <div className="min-w-0 flex-1"><Label htmlFor="notebook-new-group">New group title</Label><Input id="notebook-new-group" placeholder="e.g. Biology" value={newGroupTitle} maxLength={120} disabled={busy} onChange={event => setNewGroupTitle(event.target.value)} /></div>
+            <Button type="submit" disabled={busy || !newGroupTitle.trim() || (collection.subjects?.length ?? 0) >= 50}><Plus aria-hidden="true" className="h-4 w-4" />Add group</Button>
+          </form>
+          <div role="tablist" aria-label="Notebook groups" className="flex flex-wrap gap-2 border-b border-line pb-3">
+            {groupTabs.map((group, index) => <button key={group.id} type="button" role="tab" id={"notebook-group-tab-" + index} aria-controls="notebook-group-panel" aria-selected={group.id === groupId} tabIndex={group.id === groupId ? 0 : -1} disabled={busy} onClick={() => setActiveSubjectId(group.id)} onKeyDown={event => {
+              if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+              event.preventDefault();
+              const rtl = getComputedStyle(event.currentTarget).direction === "rtl";
+              const step = (event.key === "ArrowRight" ? 1 : -1) * (rtl ? -1 : 1);
+              const next = event.key === "Home" ? 0 : event.key === "End" ? groupTabs.length - 1 : (index + step + groupTabs.length) % groupTabs.length;
+              setActiveSubjectId(groupTabs[next].id); document.getElementById("notebook-group-tab-" + next)?.focus();
+            }} className={cn("flex min-h-11 max-w-full items-center gap-2 rounded-control border px-4 py-2 text-start text-sm font-medium disabled:opacity-50", group.id === groupId ? "border-accent bg-accent-soft text-ink" : "border-line bg-surface text-ink-soft hover:border-accent")}><span className="break-words">{group.title}</span><span className="shrink-0 text-xs text-ink-faint">{collection.items.filter(item => (item.subjectId ?? "") === group.id).length}</span></button>)}
+          </div>
+        </div>}
+        <div id={notebook ? "notebook-group-panel" : undefined} role={notebook ? "tabpanel" : undefined} aria-labelledby={notebook ? "notebook-group-tab-" + groupTabs.findIndex(group => group.id === groupId) : undefined} tabIndex={notebook ? 0 : undefined}>
+
+
+          <div className="flex flex-wrap items-center justify-between gap-4"><div><h2 className="font-display text-xl text-ink">{notebook ? groupTitle : "Chapters in this book"}</h2><p className="mt-1 text-sm text-ink-soft">{visibleItems.length} {visibleItems.length === 1 ? "memory" : "memories"}{notebook ? " in this group." : " in reading order."} {isOwner ? "Add from your library, then arrange them here." : "Reorder or remove the memories below."}</p></div>{isOwner && <Button variant={pickerOpen ? "outline" : "primary"} disabled={busy} aria-expanded={pickerOpen} aria-controls="collection-memory-picker" onClick={() => setPickerOpen(!pickerOpen)}><Plus className="h-4 w-4" />{pickerOpen ? "Close library" : "Add memories"}</Button>}</div>
+          {isOwner && pickerOpen && <div id="collection-memory-picker"><MemoryPicker key={notebook ? groupId : collection.id} rows={rows} included={collection.items} destinationTitle={notebook ? groupTitle : collection.title} disabled={saving || busyId !== null} onAdd={addMemory} onBusyChange={setAdding} /></div>}
+          {!visibleItems.length && !pickerOpen && <p className="py-10 text-center text-sm text-ink-soft">Add memories to {notebook ? groupTitle : collection.title} to get started.</p>}
+          {visibleItems.length > 0 && <ol aria-label="Memories in reading order" className="mt-8 divide-y divide-line rounded-control border border-line">{visibleItems.map((item, index) => <li key={item.id} className="flex flex-wrap items-center gap-2 px-3 py-2"><span className="font-display text-lg text-accent-dark">{String(index + 1).padStart(2, "0")}</span><span className="min-w-0 flex-1 text-sm">{rowFor(item)?.title ?? "Unavailable chapter"}</span><Button variant="ghost" size="sm" aria-label={`Move chapter ${index + 1} up`} disabled={index === 0 || busyId !== null || saving || adding} onClick={() => void moveItem(item.id, -1)}><ChevronUp className="h-4 w-4" /></Button><Button variant="ghost" size="sm" aria-label={`Move chapter ${index + 1} down`} disabled={index === visibleItems.length - 1 || busyId !== null || saving || adding} onClick={() => void moveItem(item.id, 1)}><ChevronDown className="h-4 w-4" /></Button><Button variant="ghost" size="sm" disabled={busyId !== null || saving || adding} aria-label={`Remove ${rowFor(item)?.title ?? "memory"} from this ${label.toLowerCase()}`} onClick={() => void removeMemory(item)}><Trash2 className="h-4 w-4" /></Button></li>)}</ol>}
+        </div>
+          {notebook && <details className="mt-6 rounded-control border border-line p-4"><summary className="cursor-pointer text-sm font-medium">Manage notebook groups</summary><div className="mt-4"><NotebookSubjects subjects={collection.subjects ?? []} busy={saving || busyId !== null || adding} save={saveSubjects} /></div></details>}
+        {isOwner && <div className="mt-8 border-t border-line pt-5"><p className="text-sm font-medium text-ink">Danger zone</p><p className="mt-1 text-sm text-ink-soft">Deleting a Book cannot be undone.</p><ConfirmDialog trigger={<Button disabled={busy} variant="ghost" className="mt-3 text-danger hover:bg-danger/10"><Trash2 className="h-4 w-4" />Delete Book</Button>} title="Delete this Book?" description={`“${collection.title}” and its reading order will be removed. This cannot be undone.`} confirmLabel="Delete Book" destructive onConfirm={deleteBook} /></div>}
       </section>}
 
-      {view === "details" && <section className="mx-auto max-w-2xl rounded-card border border-line bg-surface p-5 shadow-sm sm:p-6">
-        <h2 className="font-display text-xl text-ink">{label} details</h2><p className="mt-1 text-sm text-ink-soft">These words appear on the cover and opening pages.</p>
-        <div className="mt-5 space-y-4"><div><Label htmlFor="book-title">Title</Label><Input id="book-title" value={title} onChange={(event) => setTitle(event.target.value)} /></div><div><Label htmlFor="book-subtitle">Subtitle (optional)</Label><Input id="book-subtitle" value={subtitle} onChange={(event) => setSubtitle(event.target.value)} placeholder="A short line beneath the title" /></div><div><Label htmlFor="book-toc-title">Contents heading</Label><Input id="book-toc-title" value={tocTitle} onChange={(event) => setTocTitle(event.target.value)} /></div><div><Label htmlFor="book-description">Description</Label><Textarea id="book-description" rows={5} value={description} onChange={(event) => setDescription(event.target.value)} /></div><Button className="w-full" loading={saving} disabled={!title.trim() || !tocTitle.trim()} onClick={() => void saveDetails()}>Save details</Button></div>
-        {isOwner && <div className="mt-8 border-t border-line pt-5"><p className="text-sm font-medium text-ink">Danger zone</p><p className="mt-1 text-sm text-ink-soft">Deleting a Book cannot be undone.</p><ConfirmDialog trigger={<Button variant="ghost" className="mt-3 text-danger hover:bg-danger/10"><Trash2 className="h-4 w-4" />Delete Book</Button>} title="Delete this Book?" description={`“${collection.title}” and its reading order will be removed. This cannot be undone.`} confirmLabel="Delete Book" destructive onConfirm={deleteBook} /></div>}
-      </section>}
       {isOwner && <BookShareDialog objectLabel={label} bookId={collection.id} publicPath={publicPath} open={shareOpen} onOpenChange={setShareOpen} linkEnabled={collection.isPublished} linkPermission={collection.linkPermission} linkAllowExport={collection.allowExport} passwordProtected={collection.passwordProtected} members={collection.members} onChanged={(changes) => setCollection((current) => ({ ...current, ...(changes.linkEnabled === undefined ? {} : { isPublished: changes.linkEnabled }), ...(changes.linkPermission === undefined ? {} : { linkPermission: changes.linkPermission }), ...(changes.linkAllowExport === undefined ? {} : { allowExport: changes.linkAllowExport }), ...(changes.passwordProtected === undefined ? {} : { passwordProtected: changes.passwordProtected }), ...(changes.members === undefined ? {} : { members: changes.members }) }))} />}
     </div>
   );

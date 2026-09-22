@@ -1,5 +1,6 @@
 "use client";
 
+import { AddToCollection } from "@/components/collections/add-to-collection";
 import { savedMmdMessage } from "@/lib/mmd/diagnostics";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -102,6 +103,7 @@ export function ReviewerDetail({ reviewer, isOwner, canEdit, autoSave, related }
             share={isOwner ? <ShareDialog resourceType="REVIEWER" resourceId={reviewer.id} /> : undefined}
             exportAction={<ExportMenu options={[{ value: "pdf", label: "PDF document" }, { value: "docx", label: "Word document" }, { value: "md", label: "Markdown" }, { value: "json", label: "Memoria JSON" }]} onExport={handleExport} />}
             tools={<>
+              {isOwner && <AddToCollection resourceType="REVIEWER" resourceId={reviewer.id} />}
 
               {isOwner && <ResourceUtilityActions resourceType="REVIEWER" resourceId={reviewer.id} archived={reviewer.archived} />}
               {isOwner && <RevisionHistory resourceType="REVIEWER" resourceId={reviewer.id} />}

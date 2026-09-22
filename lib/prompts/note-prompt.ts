@@ -31,6 +31,16 @@ const TOPIC_STYLE_INSTRUCTIONS: Record<ProcessingStyle, string> = {
   visual_creative: "Make the explanation memorable with purposeful visuals such as a process flow, timeline, hierarchy, comparison, cycle, or labeled system when one genuinely clarifies the topic.",
 };
 
+const STUDY_GUIDE_RULES = `STUDY GUIDE QUALITY
+- Produce a self-contained study guide, not a thin outline. Begin with a short overview and learning goals, then teach concepts in prerequisite order.
+- Explain what each major concept means, how or why it works, and how it connects to other ideas. Preserve important conditions, exceptions, units, and distinctions.
+- Include worked examples with steps and reasoning when supported by the material. Compare easily confused ideas in tables and explain processes as numbered steps.
+- Combine prose with Memoria's own :::definition, :::key-concept, :::example, :::warning, and :::summary elements where useful. Use :::columns with :::column children for short comparisons.
+- End with a concise recap and retrieval questions with answers inside :::details blocks. Scale depth to the selected style and available material; do not pad short sources.
+- For source-based work, ground explanations, examples, and answers in the supplied material. Preserve uncertainty and contradictions instead of inventing missing details.
+- Do not include citations, footnote references, source-number markers, bibliography, or a References section. Omit inherited citation markup while preserving substantive learning content. Never emit provider tokens such as [cite_start], [cite: ...], or filecite.
+- Before returning, check coverage, factual fidelity, complete explanations, heading order, and correctly closed MMD blocks.`;
+
 interface NoteForPrompt {
   title: string;
   content: string;
@@ -71,6 +81,8 @@ RULES
 - Organize the content into logical topics using headings and subheadings.
 - Make flashcard material machine-readable: write key definitions as "**Term**: definition" or place them in a two-column Term | Definition table, or as ":::definition{term=\"...\"}" blocks. This lets Memoria create flashcards automatically.
 
+${STUDY_GUIDE_RULES}
+
 ${buildMmdOutputRules()}
 
 SOURCE MATERIAL
@@ -97,6 +109,8 @@ RULES
 - Be accurate and honest. Do not invent citations, sources, data, quotations, or specific claims you cannot support.
 - If the topic has multiple interpretations, state the interpretation you are using.
 - Do not include an introduction or explanation outside the note.
+
+${STUDY_GUIDE_RULES}
 
 ${buildMmdOutputRules()}
 
@@ -137,6 +151,7 @@ export function buildSourcePackage(
     `Processing style: ${PROCESSING_STYLE_LABELS[style]}`,
     STYLE_INSTRUCTIONS[style],
     "",
+    STUDY_GUIDE_RULES,
     buildMmdOutputRules(),
   ].join("\n");
 
