@@ -10,12 +10,12 @@ import type { BookDocument } from "@/lib/books/document";
 import { readBookmarks, type BookBookmark } from "@/lib/books/notebooks";
 import { bookmarkPage, visibleBookPages } from "@/lib/books/reader-state";
 
-function PaginatedBookReader({ book, storageKey, canPersist = false, resumeChapter, onChapterChange, modeControl }: { modeControl: ReactNode; book: BookDocument; storageKey?: string; canPersist?: boolean; resumeChapter?: string | null; onChapterChange?: (id: string) => void }) {
+function PaginatedBookReader({ book, storageKey, canPersist = false, resumeChapter, onChapterChange, modeControl, editing = false }: { editing?: boolean; modeControl: ReactNode; book: BookDocument; storageKey?: string; canPersist?: boolean; resumeChapter?: string | null; onChapterChange?: (id: string) => void }) {
   const rendered = useRef<RenderedBook | null>(null), viewport = useRef<HTMLDivElement>(null), papers = useRef<HTMLDivElement>(null);
   const resume = useRef(resumeChapter); resume.current = resumeChapter;
   const callback = useRef(onChapterChange); callback.current = onChapterChange;
   const [page, setPage] = useState(0), [total, setTotal] = useState(0), [width, setWidth] = useState(794);
-  const [spread, setSpread] = useState(false), [contents, setContents] = useState(true), [practice, setPractice] = useState(false);
+  const [spread, setSpread] = useState(false), [contents, setContents] = useState(!editing), [practice, setPractice] = useState(false);
   const [error, setError] = useState(""), [retry, setRetry] = useState(0), [bookmarks, setBookmarks] = useState<BookBookmark[]>([]);
   const [saving, setSaving] = useState(false), [saveError, setSaveError] = useState("");
   useEffect(() => {
@@ -83,7 +83,7 @@ function PaginatedBookReader({ book, storageKey, canPersist = false, resumeChapt
       <Button variant="ghost" size="sm" aria-expanded={contents} onClick={() => setContents(!contents)}><ListTree className="h-4 w-4" />Contents</Button>
       <div className="flex flex-1 gap-1"><Button size="sm" variant={!spread ? "secondary" : "ghost"} aria-pressed={!spread} onClick={() => setSpread(false)}>One page</Button><Button size="sm" variant={spread ? "secondary" : "ghost"} aria-pressed={spread} onClick={() => setSpread(true)}>Two pages</Button></div>
       <div className="ms-auto flex items-center gap-2">
-      <Button variant="ghost" size="sm" disabled={!total || saving || (!currentMark && bookmarks.length >= 100)} aria-pressed={!!currentMark} onClick={() => void saveMarks(currentMark ? bookmarks.filter(mark => mark.id !== currentMark.id) : [...bookmarks, { id: crypto.randomUUID(), chapterId: chapterId ?? null, pageOffset: page - (chapterId ? (rendered.current!.chapterPages[chapterId] - 1) : 0), label: (chapter?.title ?? book.title).slice(0, 170) + " · Page " + (page + 1) }])}><Bookmark className={"h-4 w-4 " + (currentMark ? "fill-current" : "")} />{currentMark ? "Bookmarked" : "Bookmark"}</Button>
+      {!editing && <Button variant="ghost" size="sm" disabled={!total || saving || (!currentMark && bookmarks.length >= 100)} aria-pressed={!!currentMark} onClick={() => void saveMarks(currentMark ? bookmarks.filter(mark => mark.id !== currentMark.id) : [...bookmarks, { id: crypto.randomUUID(), chapterId: chapterId ?? null, pageOffset: page - (chapterId ? (rendered.current!.chapterPages[chapterId] - 1) : 0), label: (chapter?.title ?? book.title).slice(0, 170) + " · Page " + (page + 1) }])}><Bookmark className={"h-4 w-4 " + (currentMark ? "fill-current" : "")} />{currentMark ? "Bookmarked" : "Bookmark"}</Button>}
       {modeControl}
       </div>
     </div>
@@ -116,7 +116,7 @@ export function BookReader(props: Omit<Parameters<typeof PaginatedBookReader>[0]
     <button type="button" title="Read as book" aria-label="Read as book" aria-pressed={mode === "book"} onClick={() => setMode("book")} className={"flex h-10 w-10 items-center justify-center rounded-control transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent " + (mode === "book" ? "bg-surface text-ink shadow-sm" : "text-ink-soft hover:text-ink")}><BookOpen aria-hidden="true" className="h-4 w-4" /></button>
     <button type="button" title="Read as memories" aria-label="Read as memories" aria-pressed={mode === "memories"} onClick={() => setMode("memories")} className={"flex h-10 w-10 items-center justify-center rounded-control transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent " + (mode === "memories" ? "bg-surface text-ink shadow-sm" : "text-ink-soft hover:text-ink")}><FileText aria-hidden="true" className="h-4 w-4" /></button>
   </div>;
-  return mode === "book"
-    ? <PaginatedBookReader {...props} resumeChapter={chapter} onChapterChange={changeChapter} modeControl={modeControl} />
+  return props.editing || mode === "book"
+    ? <PaginatedBookReader {...props} resumeChapter={chapter} onChapterChange={changeChapter} modeControl={props.editing ? null : modeControl} />
     : <div className="space-y-5"><div className="flex justify-end border-b border-line pb-3">{modeControl}</div><MemoryReader {...props} resumeChapter={chapter} onChapterChange={changeChapter} /></div>;
 }

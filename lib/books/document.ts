@@ -39,3 +39,8 @@ export function collectionBookDocument(collection: PublicCollection): BookDocume
     }),
   };
 }
+
+/** undefined shows the complete book; an empty ID selects only unfiled chapters. */
+export function bookForGroup(book: BookDocument, subjectId?: string): BookDocument {
+  return subjectId === undefined ? book : { ...book, chapters: book.chapters.filter(chapter => (chapter.subjectId ?? "") === subjectId) };
+}

@@ -3,13 +3,13 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, BookOpen, ChevronUp, ChevronDown, Plus, Settings2, Share2, Trash2 } from "lucide-react";
+import { ArrowLeft, Check, ChevronUp, ChevronDown, Pencil, Plus, Settings2, Share2, Trash2 } from "lucide-react";
 import { MemoryPicker } from "./memory-picker";
 import type { MemoryPickerRow, PickerMemory } from "@/lib/books/memory-picker";
 import { BookShareDialog, type BookMember, type BookSharePermission } from "@/components/books/book-share-dialog";
 import { BookPreview } from "@/components/books/book-preview";
 import { ExportMenu } from "@/components/exports/export-menu";
-import { Badge } from "@/components/ui/badge";
+import { Dialog } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { NotebookSubjects } from "@/components/books/notebook-subjects";
@@ -26,13 +26,16 @@ interface Collection {
   slug: string; isPublished: boolean; linkPermission: BookSharePermission; allowExport: boolean; expiresAt: string | null;
   passwordProtected: boolean; items: CollectionItem[]; members: BookMember[];
 }
-export function CollectionEditor({ initialCollection, access, canExport, rows }: { initialCollection: Collection; access: "OWNER" | "EDIT"; canExport: boolean; rows: Record<ResourceType, MemoryPickerRow[]> }) {
+export function CollectionEditor({ initialCollection, access, canExport, rows, initiallyEditing = false }: { initiallyEditing?: boolean; initialCollection: Collection; access: "OWNER" | "EDIT"; canExport: boolean; rows: Record<ResourceType, MemoryPickerRow[]> }) {
   const router = useRouter();
   const [collection, setCollection] = useState(initialCollection);
-  const [pickerOpen, setPickerOpen] = useState(!initialCollection.items.length);
+  const [pickerOpen, setPickerOpen] = useState(false);
   const [adding, setAdding] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
-  const [view, setView] = useState<"book" | "chapters">(initialCollection.items.length ? "book" : "chapters");
+  const [editing, setEditing] = useState(initiallyEditing);
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const [groupsOpen, setGroupsOpen] = useState(false);
+  const [previewChapter, setPreviewChapter] = useState<string | undefined>();
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [title, setTitle] = useState(initialCollection.title);
@@ -41,7 +44,6 @@ export function CollectionEditor({ initialCollection, access, canExport, rows }:
   const [tocTitle, setTocTitle] = useState(initialCollection.tocTitle);
   const [saving, setSaving] = useState(false);
   const [activeSubjectId, setActiveSubjectId] = useState(initialCollection.subjects?.[0]?.id ?? "");
-  const [newGroupTitle, setNewGroupTitle] = useState("");
   const notebook = collection.kind === "NOTEBOOK";
   const label = notebook ? "Notebook" : "Book";
   const base = notebook ? "/notebooks" : "/books";
@@ -82,18 +84,12 @@ export function CollectionEditor({ initialCollection, access, canExport, rows }:
       await request(`/api/collections/${collection.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ subjects }) });
       setCollection(current => ({ ...current, subjects, items: current.items.map(item => ({ ...item, subjectId: subjects.some(subject => subject.id === item.subjectId) ? item.subjectId : null })) }));
       const created = subjects.find(subject => !collection.subjects?.some(previous => previous.id === subject.id));
-      if (created) { setActiveSubjectId(created.id); setPickerOpen(true); }
+      if (created) { setActiveSubjectId(created.id); setPreviewChapter(undefined); }
       else if (activeSubjectId && !subjects.some(subject => subject.id === activeSubjectId)) setActiveSubjectId(subjects[0]?.id ?? "");
       return true;
     } catch (caught) { setError(caught instanceof Error ? caught.message : "Couldn't save titles."); return false; }
     finally { setSaving(false); }
   }
-  async function createGroup() {
-    const name = newGroupTitle.trim();
-    if (!name || busy || (collection.subjects?.length ?? 0) >= 50) return;
-    if (await saveSubjects([...(collection.subjects ?? []), { id: crypto.randomUUID(), title: name }])) setNewGroupTitle("");
-  }
-
   async function moveItem(itemId: string, direction: -1 | 1) {
     const index = orderedItems.findIndex((item) => item.id === itemId);
     const target = index + direction;
@@ -110,12 +106,13 @@ export function CollectionEditor({ initialCollection, access, canExport, rows }:
   }
 
   async function saveDetails() {
-    if (!title.trim() || !tocTitle.trim()) return;
+    if (!title.trim() || !tocTitle.trim()) { setError("A title and contents heading are required."); return false; }
     setSaving(true); setError(null);
     try {
       const data = await request(`/api/collections/${collection.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ title: title.trim(), subtitle: subtitle.trim() || null, description: description.trim(), tocTitle: tocTitle.trim() }) });
       setCollection((current) => ({ ...current, title: data.collection.title, subtitle: data.collection.subtitle, description: data.collection.description, tocTitle: data.collection.tocTitle }));
-    } catch (caught) { setError(caught instanceof Error ? caught.message : "Couldn't save Book details."); }
+      return true;
+    } catch (caught) { setError(caught instanceof Error ? caught.message : "Couldn't save Book details."); return false; }
     finally { setSaving(false); }
   }
 
@@ -132,67 +129,80 @@ export function CollectionEditor({ initialCollection, access, canExport, rows }:
     catch (caught) { setError(caught instanceof Error ? caught.message : "Couldn't delete this Book."); }
   }
 
+  const detailsChanged = title.trim() !== collection.title || subtitle.trim() !== (collection.subtitle ?? "") || description.trim() !== (collection.description ?? "") || tocTitle.trim() !== collection.tocTitle;
+  async function finishEditing() {
+    if (busy) return;
+    if (detailsChanged && !(await saveDetails())) return;
+    setEditing(false); setPickerOpen(false); setPreviewChapter(undefined);
+  }
+  function selectGroup(id: string) { setActiveSubjectId(id); setPreviewChapter(undefined); }
+
   return (
-    <div className="mx-auto max-w-[1500px] px-3 py-6 sm:px-6 pb-10">
-      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-        <Link href={base} className="inline-flex min-h-10 items-center gap-2 text-sm font-medium text-ink-soft hover:text-ink"><ArrowLeft className="h-4 w-4" />All {label}s</Link>
-        <div className="flex items-center gap-2">
-          {canExport && <ExportMenu label="Download" options={[{ value: "pdf", label: "PDF document" }, { value: "docx", label: "Word - editable text" }, { value: "json", label: "Memoria JSON" }]} onExport={exportBook} />}
-          {isOwner && <Button size="sm" onClick={() => setShareOpen(true)}><Share2 className="h-4 w-4" />Share</Button>}
+    <div className="mx-auto max-w-[1500px] px-3 py-6 pb-10 sm:px-6">
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+        <Link href={base} className="inline-flex min-h-11 items-center gap-2 text-sm font-medium text-ink-soft hover:text-ink"><ArrowLeft aria-hidden="true" className="h-4 w-4" />All {label.toLowerCase()}s</Link>
+        <div className="flex flex-wrap items-center gap-2">
+          {canExport && <ExportMenu label="Download" options={[{ value: "pdf", label: "PDF document" }, { value: "docx", label: "Word document" }, { value: "json", label: "Memoria JSON" }]} onExport={exportBook} />}
+          {isOwner && <Button variant="outline" size="sm" onClick={() => setShareOpen(true)}><Share2 className="h-4 w-4" />Share</Button>}
+          <Button disabled={busy} onClick={() => editing ? void finishEditing() : setEditing(true)}>{editing ? <Check className="h-4 w-4" /> : <Pencil className="h-4 w-4" />}{editing ? "Done" : "Edit"}</Button>
         </div>
       </div>
-
-      <header className="mb-5 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-        <div><p className="text-xs font-semibold uppercase tracking-[0.18em] text-accent-dark">{label} studio</p><h1 className="mt-1 font-display text-3xl text-ink">{collection.title}</h1>{collection.subtitle && <p className="mt-1 text-sm text-ink-soft">{collection.subtitle}</p>}</div>
-        <Badge tone={isOwner ? "accent" : "neutral"}>{isOwner ? "Owner" : "Editor"}</Badge>
+      <header className="mb-6 space-y-3">
+        {editing && <h1 className="sr-only">Edit {collection.title}</h1>}
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-accent-dark">{editing ? "Editing " : ""}{label}</p>
+        {editing ? <div className="flex flex-wrap items-end gap-3"><div className="min-w-0 flex-1"><Label htmlFor="book-title" className="sr-only">{label} title</Label><Input id="book-title" maxLength={200} value={title} disabled={busy} onChange={event => setTitle(event.target.value)} onKeyDown={event => { if (event.key === "Enter") { event.preventDefault(); void finishEditing(); } }} className="h-auto min-h-14 bg-transparent py-2 font-display text-3xl sm:text-4xl" /></div><Button variant="outline" disabled={busy} onClick={() => setDetailsOpen(true)}><Settings2 className="h-4 w-4" />Cover details</Button></div> : <h1 className="break-words font-display text-3xl sm:text-4xl">{collection.title}</h1>}
+        {editing ? <p role="status" className="text-xs text-ink-soft">{busy ? "Saving changes..." : detailsChanged ? "Title and cover changes will save when you choose Done." : "Memories and groups save as you edit."}</p> : collection.subtitle && <p className="text-ink-soft">{collection.subtitle}</p>}
       </header>
-      {error && <p className="mb-4 rounded-control border border-danger/25 bg-danger/5 px-4 py-3 text-sm text-danger" role="alert">{error}</p>}
-
-      <nav aria-label="Book studio sections" className="mb-5 flex w-full gap-1 overflow-x-auto rounded-card border border-line bg-surface-muted p-1 sm:w-fit">
-        {[
-          { key: "book" as const, label, icon: BookOpen },
-          { key: "chapters" as const, label: notebook ? "Groups & details" : "Chapters & details", icon: Settings2 },
-        ].map((item) => <button key={item.key} type="button" aria-current={view === item.key ? "page" : undefined} disabled={busy} onClick={() => setView(item.key)} className={cn("inline-flex min-h-10 shrink-0 items-center gap-2 rounded-control px-4 text-sm font-medium transition-colors", view === item.key ? "bg-surface text-ink shadow-sm" : "text-ink-soft hover:text-ink")}><item.icon className="h-4 w-4" />{item.label}</button>)}
-      </nav>
-
-      {view === "book" && <BookPreview id={collection.id} revision={JSON.stringify([collection.title, collection.subtitle, collection.description, collection.tocTitle, collection.subjects, collection.items])} />}
-
-      {view === "chapters" && <section className="rounded-card border border-line bg-surface p-5 shadow-sm">
-        <details className="mb-6 rounded-control border border-line p-4">
-          <summary className="cursor-pointer text-sm font-medium">{label} details</summary>
-          <div className="mt-5 max-w-2xl">
-        <h2 className="font-display text-xl text-ink">{label} details</h2><p className="mt-1 text-sm text-ink-soft">These words appear on the cover and opening pages.</p>
-        <div className="mt-5 space-y-4"><div><Label htmlFor="book-title">Title</Label><Input id="book-title" value={title} onChange={(event) => setTitle(event.target.value)} /></div><div><Label htmlFor="book-subtitle">Subtitle (optional)</Label><Input id="book-subtitle" value={subtitle} onChange={(event) => setSubtitle(event.target.value)} placeholder="A short line beneath the title" /></div><div><Label htmlFor="book-toc-title">Contents heading</Label><Input id="book-toc-title" value={tocTitle} onChange={(event) => setTocTitle(event.target.value)} /></div><div><Label htmlFor="book-description">Description</Label><Textarea id="book-description" rows={5} value={description} onChange={(event) => setDescription(event.target.value)} /></div><Button className="w-full" loading={saving} disabled={adding || busyId !== null || !title.trim() || !tocTitle.trim()} onClick={() => void saveDetails()}>Save details</Button></div>
-          </div>
-        </details>
-        {notebook && <div className="mb-6 space-y-4">
-          <form className="flex flex-wrap items-end gap-3" onSubmit={event => { event.preventDefault(); void createGroup(); }}>
-            <div className="min-w-0 flex-1"><Label htmlFor="notebook-new-group">New group title</Label><Input id="notebook-new-group" placeholder="e.g. Biology" value={newGroupTitle} maxLength={120} disabled={busy} onChange={event => setNewGroupTitle(event.target.value)} /></div>
-            <Button type="submit" disabled={busy || !newGroupTitle.trim() || (collection.subjects?.length ?? 0) >= 50}><Plus aria-hidden="true" className="h-4 w-4" />Add group</Button>
-          </form>
-          <div role="tablist" aria-label="Notebook groups" className="flex flex-wrap gap-2 border-b border-line pb-3">
-            {groupTabs.map((group, index) => <button key={group.id} type="button" role="tab" id={"notebook-group-tab-" + index} aria-controls="notebook-group-panel" aria-selected={group.id === groupId} tabIndex={group.id === groupId ? 0 : -1} disabled={busy} onClick={() => setActiveSubjectId(group.id)} onKeyDown={event => {
-              if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
-              event.preventDefault();
-              const rtl = getComputedStyle(event.currentTarget).direction === "rtl";
-              const step = (event.key === "ArrowRight" ? 1 : -1) * (rtl ? -1 : 1);
-              const next = event.key === "Home" ? 0 : event.key === "End" ? groupTabs.length - 1 : (index + step + groupTabs.length) % groupTabs.length;
-              setActiveSubjectId(groupTabs[next].id); document.getElementById("notebook-group-tab-" + next)?.focus();
-            }} className={cn("flex min-h-11 max-w-full items-center gap-2 rounded-control border px-4 py-2 text-start text-sm font-medium disabled:opacity-50", group.id === groupId ? "border-accent bg-accent-soft text-ink" : "border-line bg-surface text-ink-soft hover:border-accent")}><span className="break-words">{group.title}</span><span className="shrink-0 text-xs text-ink-faint">{collection.items.filter(item => (item.subjectId ?? "") === group.id).length}</span></button>)}
-          </div>
-        </div>}
-        <div id={notebook ? "notebook-group-panel" : undefined} role={notebook ? "tabpanel" : undefined} aria-labelledby={notebook ? "notebook-group-tab-" + groupTabs.findIndex(group => group.id === groupId) : undefined} tabIndex={notebook ? 0 : undefined}>
-
-
-          <div className="flex flex-wrap items-center justify-between gap-4"><div><h2 className="font-display text-xl text-ink">{notebook ? groupTitle : "Chapters in this book"}</h2><p className="mt-1 text-sm text-ink-soft">{visibleItems.length} {visibleItems.length === 1 ? "memory" : "memories"}{notebook ? " in this group." : " in reading order."} {isOwner ? "Add from your library, then arrange them here." : "Reorder or remove the memories below."}</p></div>{isOwner && <Button variant={pickerOpen ? "outline" : "primary"} disabled={busy} aria-expanded={pickerOpen} aria-controls="collection-memory-picker" onClick={() => setPickerOpen(!pickerOpen)}><Plus className="h-4 w-4" />{pickerOpen ? "Close library" : "Add memories"}</Button>}</div>
-          {isOwner && pickerOpen && <div id="collection-memory-picker"><MemoryPicker key={notebook ? groupId : collection.id} rows={rows} included={collection.items} destinationTitle={notebook ? groupTitle : collection.title} disabled={saving || busyId !== null} onAdd={addMemory} onBusyChange={setAdding} /></div>}
-          {!visibleItems.length && !pickerOpen && <p className="py-10 text-center text-sm text-ink-soft">Add memories to {notebook ? groupTitle : collection.title} to get started.</p>}
-          {visibleItems.length > 0 && <ol aria-label="Memories in reading order" className="mt-8 divide-y divide-line rounded-control border border-line">{visibleItems.map((item, index) => <li key={item.id} className="flex flex-wrap items-center gap-2 px-3 py-2"><span className="font-display text-lg text-accent-dark">{String(index + 1).padStart(2, "0")}</span><span className="min-w-0 flex-1 text-sm">{rowFor(item)?.title ?? "Unavailable chapter"}</span><Button variant="ghost" size="sm" aria-label={`Move chapter ${index + 1} up`} disabled={index === 0 || busyId !== null || saving || adding} onClick={() => void moveItem(item.id, -1)}><ChevronUp className="h-4 w-4" /></Button><Button variant="ghost" size="sm" aria-label={`Move chapter ${index + 1} down`} disabled={index === visibleItems.length - 1 || busyId !== null || saving || adding} onClick={() => void moveItem(item.id, 1)}><ChevronDown className="h-4 w-4" /></Button><Button variant="ghost" size="sm" disabled={busyId !== null || saving || adding} aria-label={`Remove ${rowFor(item)?.title ?? "memory"} from this ${label.toLowerCase()}`} onClick={() => void removeMemory(item)}><Trash2 className="h-4 w-4" /></Button></li>)}</ol>}
+      {error && <p role="alert" className="mb-4 rounded-control border border-danger/25 bg-danger/5 px-4 py-3 text-sm text-danger">{error}</p>}
+      {editing && notebook && <div className="mb-5 flex flex-wrap items-center gap-3">
+        <div role="tablist" aria-label="Notebook groups" className="flex min-w-0 flex-1 flex-wrap gap-2">
+          {groupTabs.map((group, index) => <button key={group.id} type="button" role="tab" id={"notebook-group-tab-" + index} aria-controls="notebook-group-panel" aria-selected={group.id === groupId} tabIndex={group.id === groupId ? 0 : -1} disabled={busy} onClick={() => selectGroup(group.id)} onKeyDown={event => {
+            if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+            event.preventDefault();
+            const rtl = getComputedStyle(event.currentTarget).direction === "rtl";
+            const step = (event.key === "ArrowRight" ? 1 : -1) * (rtl ? -1 : 1);
+            const next = event.key === "Home" ? 0 : event.key === "End" ? groupTabs.length - 1 : (index + step + groupTabs.length) % groupTabs.length;
+            selectGroup(groupTabs[next].id); document.getElementById("notebook-group-tab-" + next)?.focus();
+          }} className={cn("flex min-h-11 max-w-full items-center gap-2 rounded-control border px-4 py-2 text-start text-sm font-medium disabled:opacity-50", group.id === groupId ? "border-accent bg-accent-soft text-ink" : "border-line bg-surface text-ink-soft hover:border-accent")}><span className="break-words">{group.title}</span><span className="shrink-0 text-xs text-ink-faint">{collection.items.filter(item => (item.subjectId ?? "") === group.id).length}</span></button>)}
         </div>
-          {notebook && <details className="mt-6 rounded-control border border-line p-4"><summary className="cursor-pointer text-sm font-medium">Manage notebook groups</summary><div className="mt-4"><NotebookSubjects subjects={collection.subjects ?? []} busy={saving || busyId !== null || adding} save={saveSubjects} /></div></details>}
-        {isOwner && <div className="mt-8 border-t border-line pt-5"><p className="text-sm font-medium text-ink">Danger zone</p><p className="mt-1 text-sm text-ink-soft">Deleting a Book cannot be undone.</p><ConfirmDialog trigger={<Button disabled={busy} variant="ghost" className="mt-3 text-danger hover:bg-danger/10"><Trash2 className="h-4 w-4" />Delete Book</Button>} title="Delete this Book?" description={`“${collection.title}” and its reading order will be removed. This cannot be undone.`} confirmLabel="Delete Book" destructive onConfirm={deleteBook} /></div>}
-      </section>}
-
+        <Button variant="outline" disabled={busy} onClick={() => setGroupsOpen(true)}><Plus className="h-4 w-4" />Groups</Button>
+      </div>}
+      <div id={editing && notebook ? "notebook-group-panel" : undefined} role={editing && notebook ? "tabpanel" : undefined} aria-labelledby={editing && notebook ? "notebook-group-tab-" + groupTabs.findIndex(group => group.id === groupId) : undefined} className={editing ? "grid items-start gap-6 min-[1100px]:grid-cols-[280px_minmax(0,1fr)]" : "min-w-0"}>
+        {editing && <aside aria-label="Edit contents" className="min-w-0 rounded-card border border-line bg-surface p-4 min-[1100px]:sticky min-[1100px]:top-24">
+          <p className="text-xs font-semibold uppercase tracking-wide text-ink-faint">{notebook ? "This group" : "Contents"}</p>
+          <h2 className="mt-2 break-words font-display text-xl">{notebook ? groupTitle : "Your chapters"}</h2>
+          <p className="mt-2 text-xs text-ink-soft">{visibleItems.length} {visibleItems.length === 1 ? "memory" : "memories"}. Select one to see its pages.</p>
+          {isOwner && <Button className="mt-4 w-full" disabled={busy} onClick={() => setPickerOpen(true)}><Plus className="h-4 w-4" />Add memories</Button>}
+          {!visibleItems.length && <div className="my-6 rounded-control border border-dashed border-line-strong p-4 text-sm text-ink-soft">{isOwner ? "Start this section with a few memories from your library." : "No memories in this section yet."}</div>}
+          <ol className="mt-4 max-h-[45dvh] space-y-2 overflow-y-auto" aria-label="Memories in reading order">{visibleItems.map((item, index) => <li key={item.id} className={cn("rounded-control border p-2", previewChapter === item.id ? "border-accent bg-accent-soft" : "border-line")}>
+            <button type="button" disabled={busy} aria-pressed={previewChapter === item.id} onClick={() => setPreviewChapter(item.id)} className="flex min-h-11 w-full items-start gap-2 py-2 text-start text-sm"><span className="text-ink-faint">{String(index + 1).padStart(2, "0")}</span><span className="min-w-0 break-words font-medium">{rowFor(item)?.title ?? "Unavailable memory"}</span></button>
+            <div className="flex justify-end gap-1"><Button variant="ghost" size="sm" disabled={busy || index === 0} aria-label={"Move " + (rowFor(item)?.title ?? "memory") + " up"} onClick={() => void moveItem(item.id, -1)}><ChevronUp className="h-4 w-4" /></Button><Button variant="ghost" size="sm" disabled={busy || index === visibleItems.length - 1} aria-label={"Move " + (rowFor(item)?.title ?? "memory") + " down"} onClick={() => void moveItem(item.id, 1)}><ChevronDown className="h-4 w-4" /></Button><Button variant="ghost" size="sm" disabled={busy} aria-label={"Remove " + (rowFor(item)?.title ?? "memory") + " from " + label.toLowerCase()} onClick={() => void removeMemory(item)}><Trash2 className="h-4 w-4" /></Button></div>
+          </li>)}</ol>
+        </aside>}
+        <section aria-label={label + " pages"} className="min-w-0">
+          {editing && notebook && <div className="mb-4">
+            {activeSubject ? <><Label htmlFor="active-group-title">Group title</Label><Input key={activeSubject.id + activeSubject.title} id="active-group-title" defaultValue={activeSubject.title} maxLength={120} disabled={busy} className="h-auto py-2 font-display text-2xl" onKeyDown={event => { if (event.key === "Enter") event.currentTarget.blur(); }} onBlur={event => {
+              const input = event.currentTarget; const value = input.value.trim();
+              if (!value) { input.value = activeSubject.title; return; }
+              if (value !== activeSubject.title) void saveSubjects((collection.subjects ?? []).map(subject => subject.id === groupId ? { ...subject, title: value } : subject)).then(saved => { if (!saved) input.value = activeSubject.title; });
+            }} /></> : <p className="font-display text-2xl">Unfiled</p>}
+          </div>}
+          <BookPreview id={collection.id} revision={JSON.stringify([collection.title, collection.subtitle, collection.description, collection.tocTitle, collection.subjects, collection.items])} editing={editing} subjectId={editing && notebook ? groupId : undefined} chapterId={previewChapter} updating={adding} />
+          {editing && isOwner && <button type="button" disabled={busy} onClick={() => setPickerOpen(true)} className="mt-5 flex min-h-20 w-full flex-wrap items-center justify-center gap-2 rounded-card border-2 border-dashed border-line-strong bg-surface p-4 text-sm font-medium hover:border-accent hover:bg-accent-soft disabled:opacity-50"><Plus className="h-5 w-5" />Add memories to {notebook ? groupTitle : collection.title}</button>}
+        </section>
+      </div>
+      <Dialog open={pickerOpen} onOpenChange={open => { if (!adding) setPickerOpen(open); }} title={"Add memories to " + (notebook ? groupTitle : collection.title)} description="Choose from your library. Memories are added directly to this section." className="sm:max-w-5xl" footer={<Button disabled={adding} variant="outline" onClick={() => setPickerOpen(false)}>Back to {label.toLowerCase()}</Button>}>
+        <MemoryPicker key={notebook ? groupId : collection.id} rows={rows} included={collection.items} destinationTitle={notebook ? groupTitle : collection.title} disabled={saving || busyId !== null} onAdd={addMemory} onBusyChange={setAdding} />
+      </Dialog>
+      <Dialog open={groupsOpen} onOpenChange={open => { if (!busy) setGroupsOpen(open); }} title="Notebook groups" description="Create a group to collect related memories, or rename and arrange your existing groups." footer={<Button disabled={busy} onClick={() => setGroupsOpen(false)}>Done</Button>}>
+        <NotebookSubjects subjects={collection.subjects ?? []} busy={busy} save={saveSubjects} />
+        {error && <p role="alert" className="mt-3 text-sm text-danger">{error}</p>}
+      </Dialog>
+      <Dialog open={detailsOpen} onOpenChange={open => { if (!busy) setDetailsOpen(open); }} title={label + " cover details"} description="These words appear on the cover and contents pages." footer={<Button disabled={busy || !title.trim() || !tocTitle.trim()} loading={saving} onClick={async () => { if (await saveDetails()) setDetailsOpen(false); }}>Save details</Button>}>
+        <div className="space-y-4"><div><Label htmlFor="book-subtitle">Subtitle</Label><Input id="book-subtitle" maxLength={240} value={subtitle} onChange={event => setSubtitle(event.target.value)} /></div><div><Label htmlFor="book-toc-title">Contents heading</Label><Input id="book-toc-title" maxLength={80} value={tocTitle} onChange={event => setTocTitle(event.target.value)} /></div><div><Label htmlFor="book-description">Description</Label><Textarea id="book-description" rows={4} maxLength={2000} value={description} onChange={event => setDescription(event.target.value)} /></div></div>
+        {error && <p role="alert" className="mt-3 text-sm text-danger">{error}</p>}
+        {isOwner && <div className="mt-6 border-t border-line pt-4"><ConfirmDialog trigger={<Button disabled={busy} variant="ghost" className="text-danger"><Trash2 className="h-4 w-4" />Delete {label.toLowerCase()}</Button>} title={"Delete this " + label.toLowerCase() + "?"} description={"The collection and its reading order will be removed. Your original memories will remain in your library."} confirmLabel={"Delete " + label.toLowerCase()} destructive onConfirm={deleteBook} /></div>}
+      </Dialog>
       {isOwner && <BookShareDialog objectLabel={label} bookId={collection.id} publicPath={publicPath} open={shareOpen} onOpenChange={setShareOpen} linkEnabled={collection.isPublished} linkPermission={collection.linkPermission} linkAllowExport={collection.allowExport} passwordProtected={collection.passwordProtected} members={collection.members} onChanged={(changes) => setCollection((current) => ({ ...current, ...(changes.linkEnabled === undefined ? {} : { isPublished: changes.linkEnabled }), ...(changes.linkPermission === undefined ? {} : { linkPermission: changes.linkPermission }), ...(changes.linkAllowExport === undefined ? {} : { allowExport: changes.linkAllowExport }), ...(changes.passwordProtected === undefined ? {} : { passwordProtected: changes.passwordProtected }), ...(changes.members === undefined ? {} : { members: changes.members }) }))} />}
     </div>
   );

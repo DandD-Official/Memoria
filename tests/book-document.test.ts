@@ -1,7 +1,7 @@
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import { collectionBookDocument, quizChapterMarkdown } from "@/lib/books/document";
+import { bookForGroup, collectionBookDocument, quizChapterMarkdown } from "@/lib/books/document";
 import { BookSurface } from "@/components/books/book-surface";
 import type { PublicCollection } from "@/lib/share-collections-repo";
 import { emptyDiagramData } from "@/lib/diagrams/schema";
@@ -42,5 +42,27 @@ describe("shared book document", () => {
   it("does not fetch anything when chapters contain no embedded references", async () => {
     await resolveBookDocument(collection, "owner");
     expect(findDiagramById).not.toHaveBeenCalled(); expect(findMedia).not.toHaveBeenCalled();
+  });
+});
+
+
+describe("notebook edit preview", () => {
+  const book = { ...collectionBookDocument(collection), chapters: [
+    { id: "one", title: "First", content: "One", kind: "NOTE" as const, subjectId: "science" },
+    { id: "two", title: "Second", content: "Two", kind: "NOTE" as const, subjectId: "math" },
+    { id: "three", title: "Third", content: "Three", kind: "NOTE" as const, subjectId: "science" },
+    { id: "four", title: "Unfiled", content: "Four", kind: "NOTE" as const, subjectId: null },
+  ], assets: { "media://image": "data:image/png;base64,test" } };
+  it("keeps only the chosen group's chapters in order, without losing cover or assets", () => {
+    const scoped = bookForGroup(book, "science");
+    expect(scoped.chapters.map(chapter => chapter.id)).toEqual(["one", "three"]);
+    expect(scoped.title).toBe(book.title);
+    expect(scoped.assets).toBe(book.assets);
+    expect(book.chapters).toHaveLength(4);
+  });
+  it("distinguishes reading the entire book from editing Unfiled or an empty group", () => {
+    expect(bookForGroup(book)).toBe(book);
+    expect(bookForGroup(book, "").chapters.map(chapter => chapter.id)).toEqual(["four"]);
+    expect(bookForGroup(book, "new-group").chapters).toEqual([]);
   });
 });
