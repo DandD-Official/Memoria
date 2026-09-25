@@ -61,6 +61,38 @@ The commands below use `npm.cmd` on Windows so PowerShell's script-execution pol
 
 Do not enter the homepage in the privacy or terms fields. These fields need the full page URLs above. Publishing the pages does not automatically complete Google's branding or domain verification; continue through the Google setup steps below.
 
+### 1.2 Fix Google's ownership and privacy-policy findings
+
+These are separate checks. A complete policy does not verify ownership, and ownership verification does not replace a complete policy.
+
+**If Google says the homepage is not registered to you:**
+
+Google's current [OAuth domain-verification instructions](https://support.google.com/cloud/answer/13804266) require a **Domain property verified through DNS**, using a Google account that owns the Cloud project. A Search Console URL-prefix property verified with an HTML tag is not sufficient for that OAuth domain check. The free `memoria-studynotes.vercel.app` address does not give you control of the domain's DNS. Keep hosting on Vercel and use a custom domain you control for this verification flow.
+
+1. Use a domain you already own, or register one with a domain registrar. The remaining examples use `your-domain.com`; replace this with the domain you actually control.
+2. Open **Vercel > your Memoria project > Settings > Domains > Add Domain**. Add your chosen production hostname, such as `memoria.your-domain.com`.
+3. Vercel shows the DNS record needed for that hostname. At the provider managing your domain's DNS, add the exact record Vercel gives you. Keep existing email and other unrelated DNS records. Wait until Vercel reports the hostname is configured and HTTPS works. See [Vercel's domain setup](https://vercel.com/docs/domains/working-with-domains/add-a-domain).
+4. In **Google Cloud Console > IAM & Admin > IAM**, confirm the Google account you will use has the **Owner** role on the same project as your OAuth client.
+5. Open [Google Search Console](https://search.google.com/search-console) with that Google account.
+6. Open the property selector at the top left and choose **Add property**. Choose the **Domain** option.
+7. Enter the root domain, for example `your-domain.com`, without `https://` or a path. Continue and copy the TXT verification value Google supplies.
+8. Open your DNS provider's record editor. Add a **TXT** record for the root domain, commonly named `@` or left blank depending on the provider. Paste Google's full verification value into the record's value field. Use the default TTL and save. Do not replace an existing TXT record.
+9. Return to Search Console and click **Verify**. If the record has not propagated, wait and retry. Leave the verification TXT record in place after success. General DNS verification instructions are in [Search Console Help](https://support.google.com/webmasters/answer/9008080).
+10. Set Vercel's Production `NEXTAUTH_URL` to `https://memoria.your-domain.com`. Also set `SUPPORT_EMAIL` to your monitored inbox. Redeploy the version containing both legal pages.
+11. In **Google Auth Platform > Branding**, change the homepage to `https://memoria.your-domain.com`, the privacy link to `https://memoria.your-domain.com/privacy-policy`, and the terms link to `https://memoria.your-domain.com/terms-of-service`. Add `your-domain.com` under **Authorized domains**. Use the actual final hostname shown in your browser, including `www` if that is your chosen host.
+12. In your Google **Web application OAuth client**, add `https://memoria.your-domain.com` as the JavaScript origin and `https://memoria.your-domain.com/api/integrations/google/callback` as the redirect URI. Save.
+13. In your Google Picker API key's website restrictions, add `https://memoria.your-domain.com/*`. Keep the required `https://docs.google.com/*` entry.
+14. In the public Notion integration, update the website and legal links and add `https://memoria.your-domain.com/api/integrations/notion/callback` as a redirect URI.
+15. Test the new hostname and both connections. Remove obsolete production origins, callbacks, and authorized domains only after the replacement works; retain localhost callbacks if you still use local development.
+
+**If Google says the privacy policy has insufficient content:**
+
+1. Deploy the code containing `/privacy-policy` and `/terms-of-service`. Saving files locally does not update the production site.
+2. Open the exact privacy URL entered in Branding in a private/incognito window. Confirm it shows the full Memoria policy, not a 404, login page, Vercel deployment-protection page, or an old placeholder.
+3. Confirm the visible policy explains the selected Drive documents and account details accessed, why they are used, storage/security, AI and other disclosures, retention, and deletion. The included page covers these topics and Notion access. Review the actual AI provider and gateway data-use terms you configure: Google-derived data must not be used to develop or train generalized AI models. Policy wording alone does not configure external providers' data handling.
+4. Confirm `SUPPORT_EMAIL` appears as the correct public email and the homepage footer links to the same privacy URL. Google's [privacy-policy guidance](https://support.google.com/cloud/answer/13806988) describes these content requirements.
+5. After ownership and content issues are resolved, return to **Google Auth Platform > Verification Center** and follow the available resubmission steps. If the verification team emailed you, reply to that message explaining what changed and giving the final URLs, as their instructions request. Do not claim verification has passed until Google confirms it.
+
 ## Step 2: prepare PostgreSQL and the environment file
 
 1. Create a PostgreSQL database, either locally or with your chosen hosting provider. Obtain its connection string, including the database name, username, password and any required SSL options.
