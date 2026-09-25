@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { Cloud, Link2, Unlink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -60,7 +61,7 @@ export function IntegrationConnections({ initialData }: { initialData: Integrati
   return (
     <section id="connections" className="card mt-5 scroll-mt-24 p-5">
       <div className="mb-3 flex items-center gap-2"><Cloud className="h-5 w-5 text-accent" /><h2 className="font-display text-xl text-ink">Connected accounts</h2></div>
-      <p className="mb-4 text-sm text-ink-soft">Connect your own Drive or Notion workspace. Credentials are encrypted and available only to your Memoria account.</p>
+      <p className="mb-4 text-sm text-ink-soft">Connect your own Drive or Notion workspace. Credentials are encrypted and available only to your Memoria account. <Link href="/privacy-policy#connected-services" className="text-ink underline underline-offset-2">How connected data is used</Link>.</p>
       <div className="space-y-3">
         {(["google", "notion"] as const).map((provider) => {
           const connection = data.connections.find((item) => item.provider === provider);

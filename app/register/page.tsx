@@ -98,6 +98,7 @@ export default function RegisterPage() {
               />
             </div>
             {error && <p className="rounded-control border border-danger/25 bg-danger/5 p-3 text-sm text-danger" role="alert">{error}</p>}
+            <p className="text-xs leading-relaxed text-ink-soft">By creating an account, you agree to the <Link href="/terms-of-service" className="text-ink underline underline-offset-2">Terms of Service</Link>. Read our <Link href="/privacy-policy" className="text-ink underline underline-offset-2">Privacy Policy</Link> to learn how your information is handled.</p>
             <Button type="submit" className="w-full" loading={loading}>
               Create account
             </Button>

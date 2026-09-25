@@ -33,9 +33,33 @@ If the website is already deployed, keep its existing database and secrets. Star
 3. Use `http://localhost:3000` for local development.
 4. Choose a stable production origin. This guide uses `https://memoria.example.com`; replace it everywhere with your actual address. If you use `https://memoria-studynotes.vercel.app`, use that exact address instead.
 5. Use the same production origin for `NEXTAUTH_URL`, OAuth callbacks and the URL users open. Avoid temporary preview URLs for production OAuth.
-6. Prepare an app homepage, support contact, privacy policy and terms URLs for provider registration. These must describe the actual service. This setup guide does not create those public pages for you.
+6. The app includes public `/privacy-policy` and `/terms-of-service` pages. Set `SUPPORT_EMAIL` to a real inbox you monitor and follow Step 1.1 below before submitting the URLs to Google or Notion.
 
 The commands below use `npm.cmd` on Windows so PowerShell's script-execution policy does not block `npm.ps1`. On macOS/Linux, use `npm` instead.
+
+### 1.1 Publish your privacy policy and terms
+
+1. Read the pages at `app/privacy-policy/page.tsx` and `app/terms-of-service/page.tsx`. Confirm that the descriptions match how you operate Memoria, including your infrastructure, AI services, data handling, and support practices. Update the text and displayed date when these change.
+2. Choose a public support email you actually monitor. You can use the same email selected for Google OAuth support; it does not need to be on a custom domain.
+3. For local development, add `SUPPORT_EMAIL="your-actual-email"` to `.env`, replacing the example with your real address. This address is intentionally public. It is separate from `EMAIL_FROM`, which controls outgoing transactional emails.
+4. In **Vercel > your project > Settings > Environment Variables**, add `SUPPORT_EMAIL` with the actual email as its value and select **Production**. Add it to Preview too if you want preview pages to display it.
+5. Deploy the code containing these pages. If it is already deployed, redeploy after setting the variable: the legal pages are generated during the build. Without this value, the contact section refers visitors to the support address on Google's authorization screen; set the value before submitting the app for verification so visitors can contact you directly.
+6. Open both URLs in a private/incognito browser window and check that they display without signing in, including the correct contact email:
+
+   - `https://memoria-studynotes.vercel.app/privacy-policy`
+   - `https://memoria-studynotes.vercel.app/terms-of-service`
+
+7. In **Google Cloud Console > Google Auth Platform > Branding**, enter:
+
+   | Field | Value |
+   | --- | --- |
+   | Application home page | `https://memoria-studynotes.vercel.app` |
+   | Application privacy policy link | `https://memoria-studynotes.vercel.app/privacy-policy` |
+   | Application terms of service link | `https://memoria-studynotes.vercel.app/terms-of-service` |
+
+8. Save the Branding changes. Use the same privacy policy and terms URLs when Notion requests them. If you use a different production domain, replace the origin in all three URLs while keeping the page paths.
+
+Do not enter the homepage in the privacy or terms fields. These fields need the full page URLs above. Publishing the pages does not automatically complete Google's branding or domain verification; continue through the Google setup steps below.
 
 ## Step 2: prepare PostgreSQL and the environment file
 
@@ -382,6 +406,7 @@ The app defaults to a 10 MB upload limit, but the hosting platform can impose a 
 | `DATABASE_URL` | Production PostgreSQL connection string |
 | `AUTH_SECRET` | Existing stable secret, or a newly generated value for a fresh installation |
 | `NEXTAUTH_URL` | Production HTTPS origin |
+| `SUPPORT_EMAIL` | Monitored public support/privacy inbox displayed on the legal pages; set before building |
 | `INTEGRATION_ENCRYPTION_KEY` | Stable encryption secret |
 | `GOOGLE_CLIENT_ID` | Google's web OAuth client ID |
 | `GOOGLE_CLIENT_SECRET` | Google's web OAuth client secret |
