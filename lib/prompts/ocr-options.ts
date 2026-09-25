@@ -26,6 +26,7 @@ export type OcrKeepOption = (typeof OCR_KEEP_OPTIONS)[number]["value"];
 export const DEFAULT_OCR_KEEP: OcrKeepOption[] = OCR_KEEP_OPTIONS.map(({ value }) => value);
 
 export const OCR_KEEP_MARKER = "USER KEEP PREFERENCES";
+const OCR_KEEP_END = "END KEEP PREFERENCES";
 
 function optionLabel(value: OcrKeepOption) {
   return OCR_KEEP_OPTIONS.find((option) => option.value === value)?.label ?? value;
@@ -42,11 +43,14 @@ export function buildOcrKeepInstructions(keep: OcrKeepOption[]) {
   return `${OCR_KEEP_MARKER}
 Keep and prioritize these content types in the final note: ${selectedLabels}.
 Preserve their original wording, order, and visible structure. Do not omit selected content just because it is embedded in an image.${omittedLabels ? `
-Do not spend output on these unselected content types: ${omittedLabels}.` : ""}`;
+Do not spend output on these unselected content types: ${omittedLabels}.` : ""}\n${OCR_KEEP_END}`;
 }
 
 /** Replaces the selection section so the copied prompt always matches the UI. */
 export function applyOcrKeepPreferences(prompt: string, keep: OcrKeepOption[]) {
+  const start = prompt.indexOf(OCR_KEEP_MARKER);
+  const end = prompt.indexOf(OCR_KEEP_END, start);
+  if (start >= 0 && end >= 0) return prompt.slice(0, start) + buildOcrKeepInstructions(keep) + prompt.slice(end + OCR_KEEP_END.length);
   const basePrompt = prompt.split(OCR_KEEP_MARKER)[0].trimEnd();
   return `${basePrompt}\n\n${buildOcrKeepInstructions(keep)}`;
 }

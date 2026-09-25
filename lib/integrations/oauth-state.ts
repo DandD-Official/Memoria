@@ -1,6 +1,7 @@
 import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 
 export type OAuthProvider = "google" | "notion";
+export const oauthCookieName = (provider: OAuthProvider) => `memoria-oauth-${provider}`;
 interface StatePayload { userId: string; provider: OAuthProvider; expiresAt: number; nonce: string }
 
 function signingSecret(): string {
@@ -17,7 +18,8 @@ export function createOAuthState(userId: string, provider: OAuthProvider): strin
 }
 
 export function verifyOAuthState(state: string, userId: string, provider: OAuthProvider): boolean {
-  const [encoded, supplied] = state.split(".");
+  const [encoded, supplied, extra] = state.split(".");
+  if (extra !== undefined) return false;
   if (!encoded || !supplied) return false;
   const expected = createHmac("sha256", signingSecret()).update(encoded).digest();
   const suppliedBuffer = Buffer.from(supplied, "base64url");

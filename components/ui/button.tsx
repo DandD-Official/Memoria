@@ -10,6 +10,7 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: ButtonVariant;
   size?: ButtonSize;
   loading?: boolean;
+  static?: boolean;
 }
 
 const variantClasses: Record<ButtonVariant, string> = {
@@ -29,7 +30,7 @@ const sizeClasses: Record<ButtonSize, string> = {
 
 export function buttonStyles({ variant = "primary", size = "md", className }: { variant?: ButtonVariant; size?: ButtonSize; className?: string } = {}) {
   return cn(
-    "inline-flex shrink-0 items-center justify-center whitespace-nowrap rounded-control font-medium motion-safe:transition-[background-color,border-color,color,box-shadow,scale] motion-safe:duration-150 motion-safe:ease-out active:scale-[0.96] disabled:pointer-events-none disabled:scale-100 disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50",
+    "memoria-button inline-flex shrink-0 items-center justify-center whitespace-nowrap rounded-control font-medium motion-safe:transition-[background-color,border-color,color,box-shadow,scale] motion-safe:duration-150 motion-safe:ease-out motion-safe:active:scale-[0.96] disabled:pointer-events-none disabled:scale-100 disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50",
     variantClasses[variant],
     sizeClasses[size],
     className
@@ -37,13 +38,14 @@ export function buttonStyles({ variant = "primary", size = "md", className }: { 
 }
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant = "primary", size = "md", loading, disabled, children, ...props }, ref) => {
+  ({ className, variant = "primary", size = "md", loading, disabled, children, static: isStatic, ...props }, ref) => {
     return (
       <button
         ref={ref}
         disabled={disabled || loading}
         className={buttonStyles({ variant, size, className })}
         aria-busy={loading || undefined}
+        data-static={isStatic || undefined}
         {...props}
       >
         {loading && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}

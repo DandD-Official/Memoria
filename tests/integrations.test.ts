@@ -27,6 +27,8 @@ describe("integration credentials", () => {
   it("accepts valid provider credentials", () => {
     process.env.GOOGLE_CLIENT_ID = "123456789-abc123xyz.apps.googleusercontent.com";
     process.env.GOOGLE_CLIENT_SECRET = "GOCSPX-valid-test-secret";
+    process.env.GOOGLE_PICKER_API_KEY = "AIza-valid-test-key";
+    process.env.GOOGLE_CLOUD_PROJECT_NUMBER = "123456789";
     process.env.NOTION_CLIENT_ID = "463558a3-725e-4f37-b6d3-0889894f68de";
     process.env.NOTION_CLIENT_SECRET = "notion-valid-test-secret";
 

@@ -1,4 +1,5 @@
 import { parseFrontmatter } from "@/lib/markdown-frontmatter";
+import { readPdfPage, type PdfPage } from "@/lib/imports/pdf-page";
 
 export const SUPPORTED_EXTENSIONS = ["txt", "md", "pdf", "docx", "pptx", "json"] as const;
 export type SupportedExtension = (typeof SUPPORTED_EXTENSIONS)[number];
@@ -195,10 +196,25 @@ async function extractPdfText(buffer: Buffer): Promise<{ text: string; hasImages
   try {
     // pdf-parse is CommonJS; dynamic import keeps it out of the client bundle.
     const pdfParse = (await import("pdf-parse")).default;
-    const result = await pdfParse(buffer);
+    // This PDF.js version mutates sliced byte arrays while parsing. Buffer.slice
+    // is a shared view, unlike Uint8Array.slice, and corrupts xref parsing.
+    // Its runtime accepts Uint8Array although @types/pdf-parse only lists Buffer.
+    const parsePdf = pdfParse as unknown as (bytes: Uint8Array, options: Parameters<typeof pdfParse>[1]) => ReturnType<typeof pdfParse>;
+    let pageHasVisuals = false;
+    let pageFailed = false;
+    const result = await parsePdf(new Uint8Array(buffer), { version: "v1.10.100", pagerender: async (page: PdfPage) => {
+      try {
+        const result = await readPdfPage(page);
+        pageHasVisuals ||= result.hasVisuals;
+        return result.text;
+      } catch {
+        pageFailed = true;
+        return `## Page ${page.pageNumber}\n\n[UNCLEAR: This page could not be extracted. Inspect the original PDF.]`;
+      }
+    } });
     const text = result.text.trim();
-    const hasImages = pdfContainsImages(buffer);
-    if (!text) {
+    const hasImages = pageHasVisuals || pageFailed || pdfContainsImages(buffer);
+    if (!text.replace(/^## Page \d+\s*/gm, "").trim()) {
       throw new FileParseError(
         hasImages
           ? "This PDF looks like it's made of scanned pages or images rather than selectable text — Memoria can't read text out of images yet, so there was nothing to import."

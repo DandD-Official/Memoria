@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="150" height="150" viewBox="0 0 150 150" role="img" aria-labelledby="title desc">
+  <title id="title">Memoria mark</title>
+  <desc id="desc">A continuous-line memory mark with a single dot.</desc>
+  <rect width="150" height="150" rx="24" fill="#f7f7ef"/>
+  <g transform="translate(42 44) scale(1.8)" fill="none" stroke="#22312b" stroke-width="2.2" stroke-linecap="round">
+    <path d="M6 26V13a6 6 0 0 1 12 0v10a4 4 0 0 1-8 0v-6a4 4 0 0 1 8 0v6a4 4 0 0 0 8 0V13a6 6 0 0 0-12 0v13"/>
+    <circle cx="30" cy="27" r="2.5" fill="#22312b" stroke="none"/>
+  </g>
+</svg>

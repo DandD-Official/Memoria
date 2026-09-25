@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireUserOrNull } from "@/lib/auth/session";
 import { extractNotionPageId, importNotionPage, NotionImportError } from "@/lib/imports/notion-import";
-import { getAccessToken } from "@/lib/integrations/repository";
+import { getAccessToken, withConnectionToken } from "@/lib/integrations/repository";
 import { syncConnectedNote } from "@/lib/notes-repo";
 import { withApiErrorHandling } from "@/lib/api/handler";
 import { revalidatePath } from "next/cache";
@@ -23,7 +23,7 @@ export const POST = withApiErrorHandling(async (request: Request) => {
   }
 
   try {
-    const { title, content, hasImages } = await importNotionPage(url, accessToken);
+    const { title, content, hasImages } = await withConnectionToken(user.id, "notion", token => importNotionPage(url, token));
     const { note, refreshed } = await syncConnectedNote({
       ownerId: user.id,
       title,

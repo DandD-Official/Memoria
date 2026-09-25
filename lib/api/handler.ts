@@ -1,3 +1,4 @@
+import { ConnectionExpiredError } from "@/lib/integrations/repository";
 import { NextResponse } from "next/server";
 import { unstable_rethrow } from "next/navigation";
 
@@ -33,6 +34,7 @@ export function withApiErrorHandling<Args extends unknown[]>(
       // Preserve Next.js control-flow signals (dynamic rendering, redirects,
       // notFound) instead of disguising them as application 500 responses.
       unstable_rethrow(err);
+      if (err instanceof ConnectionExpiredError) return NextResponse.json({ error: err.message }, { status: 409 });
       console.error(`[api:${requestId}] unhandled error:`, err);
       const response = NextResponse.json(
         { error: "Something went wrong on our end. Please try again in a moment.", requestId },

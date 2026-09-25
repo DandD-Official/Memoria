@@ -30,7 +30,7 @@ export function WorkspaceShell({ children, userName, unreadNotifications, studyS
       </div>
     </div>}
     {!focus && togetherNavigation.some(item => pathname === item.href || pathname.startsWith(`${item.href}/`)) && <div className="context-index"><nav aria-label="Together" className="mx-auto flex max-w-[1400px] flex-wrap gap-2 px-page py-2">{togetherNavigation.map(item => <Link key={item.href} href={item.href} aria-current={pathname === item.href || pathname.startsWith(`${item.href}/`) ? "page" : undefined} className={cn("inline-flex min-h-11 items-center gap-2 rounded-control px-3 text-sm", pathname === item.href || pathname.startsWith(`${item.href}/`) ? "bg-accent-soft font-semibold text-ink" : "text-ink-soft hover:bg-surface-muted")}><item.icon className="h-4 w-4" aria-hidden="true" />{item.label}</Link>)}</nav></div>}
-    <main id="main-content" tabIndex={-1} className={cn("workspace-content px-page", focus ? "mx-auto max-w-5xl py-8 sm:py-12" : "mx-auto max-w-[1400px] pb-28 pt-8 sm:pt-10 lg:pb-16", reading && "reading-workspace", compact && "!pt-5")}>{children}</main>
+    <main id="main-content" tabIndex={-1} className={cn("workspace-content px-page", focus ? "mx-auto max-w-5xl py-8 sm:py-12" : "mx-auto max-w-[1400px] pb-28 pt-8 sm:pt-10 lg:pb-16", reading && "reading-workspace", compact && "!pt-5")}><div key={pathname} className={focus ? undefined : "motion-page"}>{children}</div></main>
     {!focus && <MobileNav unreadNotifications={unreadNotifications} />}
   </div>;
 }

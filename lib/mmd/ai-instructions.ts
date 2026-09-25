@@ -1,4 +1,5 @@
 import { BLOCK_DEFS, type BlockDefinition } from "@/lib/mmd/spec-blocks";
+import { SVG_QUALITY_RULES } from "@/lib/prompts/visual-quality";
 
 const CATEGORY_ORDER: BlockDefinition["category"][] = ["code", "callout", "educational", "layout", "media", "ai"];
 
@@ -35,7 +36,7 @@ export const EXAMPLE_SYNTAX: Record<string, string> = {
   gallery: ":::gallery\n![Router](https://...)\n![Switch](https://...)\n:::",
   diagram: ':::diagram{id="network-topology"}\n:::',
   "image-request": ':::image-request{purpose="Explain OSI layers" alt="Diagram of the seven OSI layers"}\n:::',
-  svg: ':::svg{alt="A diagram of the OSI layers"}\n<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 360"><rect x="20" y="20" width="680" height="48" rx="8" fill="#fffaf0" stroke="#9b7653"/></svg>\n:::',
+  svg: ':::svg{alt="Retrieval practice: attempt recall, then check feedback" caption="Recall first; use feedback to correct gaps."}\n<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 240"><rect width="720" height="240" fill="#fffdf7"/><text x="32" y="48" font-family="Arial,sans-serif" font-size="26" fill="#22312b">Retrieval practice</text><rect x="32" y="88" width="270" height="100" rx="12" fill="#e9efd0" stroke="#496327"/><text x="56" y="130" font-family="Arial,sans-serif" font-size="22" fill="#22312b">1. Attempt recall</text><text x="56" y="160" font-family="Arial,sans-serif" font-size="18" fill="#22312b">Answer without notes</text><path d="M314 138 H390" stroke="#496327" stroke-width="3" fill="none"/><polygon points="390,131 404,138 390,145" fill="#496327"/><rect x="416" y="88" width="272" height="100" rx="12" fill="#e8eef1" stroke="#4a5d74"/><text x="440" y="130" font-family="Arial,sans-serif" font-size="22" fill="#22312b">2. Check feedback</text><text x="440" y="160" font-family="Arial,sans-serif" font-size="18" fill="#22312b">Correct missing details</text></svg>\n:::',
 };
 
 function describeAttrs(def: BlockDefinition): string {
@@ -90,6 +91,8 @@ VISUAL COMPOSITION
 - Plan generous margins and consistent spacing. Keep labels short and at least 18 units tall at a 720-unit width. Split long labels into positioned tspan lines. Increase height instead of shrinking text. Keep labels and arrowheads inside the bounds, with connectors clear of text.
 - Label relationships so meaning does not depend on color alone. Draw arrowheads with simple polygons. Avoid CSS classes, external fonts, filters, and animations. Supply descriptive alt text and explain the main takeaway in nearby prose.
 - Verify subject-specific labels, accurate relationships, no overlapping text, and a complete closing svg tag. Never use an empty example rectangle as the final visual.
+
+${SVG_QUALITY_RULES}
 
 Maintain a logical heading hierarchy (one top-level "#" title, then "##"/"###" for structure). Give every image meaningful alt text.
 

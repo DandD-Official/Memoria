@@ -16,6 +16,8 @@ Memoria can generate ready-to-use prompts for a manual copy/paste workflow, or r
 
 ## Getting started
 
+For the full local-to-production walkthrough, including public Google Drive/Notion connections, AI generation and account email, follow [SETUP.md](SETUP.md).
+
 ```bash
 npm install
 cp .env.example .env      # then fill in DATABASE_URL and AUTH_SECRET
@@ -127,7 +129,9 @@ Every API route re-derives access via `lib/permissions/index.ts::getAccessLevel`
 
 ### Optional connection setup
 
-- Google Drive: set `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`, then add the callback shown by the app to the Google OAuth client. Each person authorizes their own read-only Drive connection.
+Follow [the complete public connection setup guide](docs/connections-setup.md) for Google Drive and Notion, including production access without per-user email registration.
+
+- Google Drive: set `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`, then add the callback shown by the app to the Google OAuth client. Configure `GOOGLE_PICKER_API_KEY` and `GOOGLE_CLOUD_PROJECT_NUMBER` as well. Each person authorizes their own selected-file Drive connection; Memoria only reads selected Google Docs.
 - Notion: set `NOTION_CLIENT_ID` and `NOTION_CLIENT_SECRET`, configure the app callback, and let each person select their own workspace during OAuth.
 - AI generation: users add their own OpenAI, Anthropic, or Gemini key during onboarding or under Settings. `INTEGRATION_ENCRYPTION_KEY` must be set so OAuth tokens and AI keys are encrypted at rest.
 - Shared AI generation: set `AI_SYSTEM_PROVIDER`, `AI_SYSTEM_MODEL`, and `AI_SYSTEM_API_KEYS` in the server environment. The key list accepts comma- or newline-separated values and is tried in order. For an OpenAI-compatible gateway such as AI/ML API, set `AI_SYSTEM_BASE_URL` to its `/v1` URL; the app then uses `/chat/completions`. `POST /api/ai/general` is available without a session for shared-key generation; signed-in users can pass `source: "personal"` for their saved keys or `source: "system"` for the shared pool. The existing `/api/ai/generate` route remains an alias.

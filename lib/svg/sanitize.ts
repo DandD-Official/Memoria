@@ -31,10 +31,7 @@ const ALLOWED_ATTRIBUTES = new Set([
   "patternUnits", "patternContentUnits", "patternTransform", "href",
 ]);
 
-const CONTAINER_ELEMENTS = new Set([
-  "svg", "g", "defs", "marker", "text", "tspan", "linearGradient", "radialGradient",
-  "clipPath", "mask", "pattern", "symbol", "title", "desc", "use",
-]);
+// XML allows both <rect /> and <rect></rect>, including other leaf shapes.
 
 const XML_DECLARATION_RE = /^\s*<\?xml\b[^>]*\?>\s*/i;
 const TAG_RE = /<!--[\s\S]*?-->|<\/?[A-Za-z][A-Za-z0-9:.-]*[^>]*>/g;
@@ -57,6 +54,16 @@ function escapeAttribute(value: string): string {
   })[character] ?? character);
 }
 
+function decodeXmlEntities(value: string): string {
+  return value.replace(/&(?:#(x[0-9a-f]+|[0-9]+)|(amp|lt|gt|quot|apos));/gi, (entity, numeric: string | undefined, named: string | undefined) => {
+    if (numeric) {
+      const code = numeric[0].toLowerCase() === "x" ? parseInt(numeric.slice(1), 16) : parseInt(numeric, 10);
+      return code > 0 && code <= 0x10ffff && !(code >= 0xd800 && code <= 0xdfff) ? String.fromCodePoint(code) : "\ufffd";
+    }
+    return ({ amp: "&", lt: "<", gt: ">", quot: '"', apos: "'" } as Record<string, string>)[named || ""] ?? entity;
+  });
+}
+
 function safeAttributeValue(name: string, value: string): boolean {
   if (/[<>]/.test(value) || /(?:javascript|vbscript|data):/i.test(value)) return false;
   if (name === "xmlns" && value !== "http://www.w3.org/2000/svg") return false;
@@ -71,6 +78,7 @@ function parseAttributes(source: string): { attrs: string[]; selfClosing: boolea
   if (selfClosing) input = input.replace(/\/\s*$/, "").trim();
 
   const attrs: string[] = [];
+  const seen = new Set<string>();
   let position = 0;
   while (position < input.length) {
     while (/\s/.test(input[position] ?? "")) position += 1;
@@ -82,7 +90,9 @@ function parseAttributes(source: string): { attrs: string[]; selfClosing: boolea
     const name = match[1];
     const quotedValue = match[2];
     if (!ALLOWED_ATTRIBUTES.has(name) || !quotedValue) return null;
-    const value = quotedValue.slice(1, -1).replace(/\\(.)/g, "$1");
+    if (seen.has(name)) return null;
+    seen.add(name);
+    const value = decodeXmlEntities(quotedValue.slice(1, -1).replace(/\\(.)/g, "$1"));
     if (!safeAttributeValue(name, value)) return null;
     attrs.push(`${name}="${escapeAttribute(value)}"`);
     position = ATTRIBUTE_RE.lastIndex;
@@ -178,7 +188,8 @@ export function sanitizeSvgMarkup(source: string): string | null {
     const index = match.index ?? 0;
     const text = input.slice(cursor, index);
     if (text.includes("<") || text.includes(">")) return null;
-    output.push(text);
+    if (!stack.length && text.trim()) return null;
+    output.push(escapeAttribute(decodeXmlEntities(text)));
 
     const token = match[0];
     if (token.startsWith("<!--")) {
@@ -208,14 +219,13 @@ export function sanitizeSvgMarkup(source: string): string | null {
     output.push(`<${name}${parsed.attrs.length ? ` ${parsed.attrs.join(" ")}` : ""}${parsed.selfClosing ? " />" : ">"}`);
     rootSeen = true;
     if (!parsed.selfClosing) {
-      if (!CONTAINER_ELEMENTS.has(name)) return null;
       stack.push(name);
     }
     cursor = index + token.length;
   }
 
   const trailing = input.slice(cursor);
-  if (trailing.includes("<") || trailing.includes(">") || stack.length !== 0 || !rootSeen) return null;
+  if (trailing.trim() || stack.length !== 0 || !rootSeen) return null;
   output.push(trailing);
   return output.join("").trim();
 }

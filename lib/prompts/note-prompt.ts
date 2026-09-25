@@ -1,4 +1,5 @@
 import { buildMmdOutputRules } from "@/lib/mmd/ai-instructions";
+import { visualStyleRules } from "@/lib/prompts/visual-quality";
 
 export type ProcessingStyle = "preserve" | "balanced" | "condensed" | "exam_focused" | "visual_creative";
 
@@ -20,7 +21,7 @@ const STYLE_INSTRUCTIONS: Record<ProcessingStyle, string> = {
   exam_focused:
     "Prioritize the concepts, definitions, and facts that are most likely to appear on a test. De-emphasize incidental detail that is unlikely to be assessed.",
   visual_creative:
-    "Create a visually rich, memorable reviewer. Keep all important source facts, but actively look for concepts that become clearer as a process flow, timeline, hierarchy, comparison, cycle, map, or labeled system. Add purposeful self-contained HTML/SVG visuals when the source supports them, using the supported :::svg block and concise explanatory text. Visuals should clarify the source rather than decorate it, and must never introduce facts that are not present in the source.",
+    "Create a visually rich, memorable reviewer. Keep all important source facts, but actively look for concepts that become clearer as a process flow, timeline, hierarchy, comparison, cycle, map, or labeled system. Add purposeful self-contained HTML/SVG visuals when the source supports them, using the supported :::svg block and concise explanatory text. Visuals should clarify the source rather than decorate it, and must never introduce facts as source-derived when they are not present in the source. Reliable explanatory additions must be explicitly labeled Additional context.",
 };
 
 const TOPIC_STYLE_INSTRUCTIONS: Record<ProcessingStyle, string> = {
@@ -38,6 +39,7 @@ const STUDY_GUIDE_RULES = `STUDY GUIDE QUALITY
 - Combine prose with Memoria's own :::definition, :::key-concept, :::example, :::warning, and :::summary elements where useful. Use :::columns with :::column children for short comparisons.
 - End with a concise recap and retrieval questions with answers inside :::details blocks. Scale depth to the selected style and available material; do not pad short sources.
 - For source-based work, ground explanations, examples, and answers in the supplied material. Preserve uncertainty and contradictions instead of inventing missing details.
+- When additional information would make the guide clearer, add reliable prerequisite explanations or illustrative examples in a clearly labeled "Additional context" section. Keep them distinct from source claims. Never fabricate missing values, study results, or figure details; identify missing source information explicitly.
 - Do not include citations, footnote references, source-number markers, bibliography, or a References section. Omit inherited citation markup while preserving substantive learning content. Never emit provider tokens such as [cite_start], [cite: ...], or filecite.
 - Before returning, check coverage, factual fidelity, complete explanations, heading order, and correctly closed MMD blocks.`;
 
@@ -75,13 +77,15 @@ Reformat the study material below into clean, organized Memoria Markdown. ${STYL
 
 RULES
 - Preserve all factual information: terminology, names, dates, numbers, and technical terms must stay accurate.
-- Do not invent information that is not present in the source material.
+- You may add reliable background, prerequisite explanations, or illustrative examples when they improve understanding. Clearly label these additions "Additional context" and keep them separate from extracted source facts. Do not invent source-specific values, claims, quotations, or missing diagram details. If more source information is needed, mark what is missing instead of guessing.
 - Do not remove information that is clearly important, even if it seems minor.
 - If something in the source is unclear, illegible, or ambiguous, mark it as [UNCLEAR: ...] instead of guessing or inventing a replacement.
 - Organize the content into logical topics using headings and subheadings.
 - Make flashcard material machine-readable: write key definitions as "**Term**: definition" or place them in a two-column Term | Definition table, or as ":::definition{term=\"...\"}" blocks. This lets Memoria create flashcards automatically.
 
 ${STUDY_GUIDE_RULES}
+
+${visualStyleRules(style)}
 
 ${buildMmdOutputRules()}
 
@@ -111,6 +115,8 @@ RULES
 - Do not include an introduction or explanation outside the note.
 
 ${STUDY_GUIDE_RULES}
+
+${visualStyleRules(style)}
 
 ${buildMmdOutputRules()}
 
@@ -152,6 +158,7 @@ export function buildSourcePackage(
     STYLE_INSTRUCTIONS[style],
     "",
     STUDY_GUIDE_RULES,
+    visualStyleRules(style),
     buildMmdOutputRules(),
   ].join("\n");
 

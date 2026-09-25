@@ -1,7 +1,9 @@
 "use client";
 
+import { useId } from "react";
 import type { MmdBlockNode } from "@/lib/mmd/ast";
 import { sanitizeSvgMarkup } from "@/lib/svg/sanitize";
+import { namespaceSvgIds } from "@/lib/svg/namespace";
 import { FullscreenView } from "@/components/ui/fullscreen-view";
 import { useMmdRenderContext } from "@/components/mmd/render-context";
 
@@ -15,7 +17,9 @@ function svgSource(node: MmdBlockNode): string {
 /** :::svg{alt="..." caption="..." align="..." size="..."} */
 export function SvgBlock({ node }: { node: MmdBlockNode }) {
   const { mode } = useMmdRenderContext();
-  const markup = sanitizeSvgMarkup(svgSource(node));
+  const id = useId();
+  const safe = sanitizeSvgMarkup(svgSource(node));
+  const markup = safe ? namespaceSvgIds(safe, id) : null;
   const { alt, caption } = node.attrs;
 
   if (!markup) {

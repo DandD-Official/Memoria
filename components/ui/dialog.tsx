@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useId, useRef } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -19,10 +19,17 @@ export function Dialog({ open, onOpenChange, title, description, children, foote
   const titleId = useId();
   const descriptionId = useId();
   const dialogRef = useRef<HTMLDialogElement>(null);
+  const [present, setPresent] = useState(open);
   const onOpenChangeRef = useRef(onOpenChange);
   onOpenChangeRef.current = onOpenChange;
   useEffect(() => {
-    if (!open || !dialogRef.current) return;
+    if (open) { setPresent(true); return; }
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches || document.documentElement.classList.contains("reduce-motion");
+    const timeout = window.setTimeout(() => setPresent(false), reduced ? 0 : 160);
+    return () => window.clearTimeout(timeout);
+  }, [open]);
+  useEffect(() => {
+    if (!present || !dialogRef.current) return;
     const dialog = dialogRef.current;
     const previousFocus = document.activeElement as HTMLElement | null;
     const previousOverflow = document.body.style.overflow;
@@ -33,10 +40,10 @@ export function Dialog({ open, onOpenChange, title, description, children, foote
       document.body.style.overflow = previousOverflow;
       if (previousFocus?.isConnected) previousFocus.focus();
     };
-  }, [open]);
-  if (!open || typeof document === "undefined") return null;
+  }, [present]);
+  if (!present || typeof document === "undefined") return null;
   return createPortal(
-    <dialog ref={dialogRef} aria-labelledby={titleId} aria-describedby={description ? descriptionId : undefined}
+    <dialog ref={dialogRef} data-state={open ? "open" : "closing"} aria-labelledby={titleId} aria-describedby={description ? descriptionId : undefined}
       onCancel={event => { event.preventDefault(); onOpenChangeRef.current(false); }}
       onClick={event => { if (event.target === event.currentTarget) { const bounds = event.currentTarget.getBoundingClientRect(); if (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom) onOpenChangeRef.current(false); } }}
       className={cn("native-overlay w-full overscroll-contain border border-line bg-surface-raised p-5 text-ink shadow-dialog sm:p-7",

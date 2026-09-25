@@ -29,5 +29,6 @@ function isNotionClientId(value: string | undefined): boolean {
 export function isProviderConfigured(provider: OAuthProvider): boolean {
   return provider === "google"
     ? isGoogleClientId(process.env.GOOGLE_CLIENT_ID) && isUsableSecret(process.env.GOOGLE_CLIENT_SECRET)
+      && isUsableSecret(process.env.GOOGLE_PICKER_API_KEY) && /^\d+$/.test(process.env.GOOGLE_CLOUD_PROJECT_NUMBER?.trim() ?? "")
     : isNotionClientId(process.env.NOTION_CLIENT_ID) && isUsableSecret(process.env.NOTION_CLIENT_SECRET);
 }

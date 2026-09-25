@@ -13,11 +13,12 @@ const securityHeaders = [
     value: [
       "default-src 'self'",
       // Next.js needs 'unsafe-inline' for its hydration bootstrap script; 'unsafe-eval' is dev-only (fast refresh).
-      `script-src 'self' 'unsafe-inline'${process.env.NODE_ENV !== "production" ? " 'unsafe-eval'" : ""}`,
+      `script-src 'self' 'unsafe-inline' https://apis.google.com${process.env.NODE_ENV !== "production" ? " 'unsafe-eval'" : ""}`,
       "style-src 'self' 'unsafe-inline'",
       "font-src 'self'",
       "img-src 'self' data: blob:",
-      "connect-src 'self'",
+      "connect-src 'self' https://apis.google.com https://www.googleapis.com",
+      "frame-src 'self' https://docs.google.com https://accounts.google.com",
       "frame-ancestors 'none'",
       "base-uri 'self'",
       "form-action 'self'",

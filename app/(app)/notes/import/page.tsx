@@ -3,6 +3,8 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { pickGoogleDocument } from "@/lib/integrations/google-picker";
+import { generatedVisualIssues } from "@/lib/ai/output-quality";
 import { Dialog } from "@/components/ui/dialog";
 import { Upload, Link2, FileText, Cloud, Copy, Check, ArrowRight } from "lucide-react";
 import { FileDropzone } from "@/components/notes/file-dropzone";
@@ -156,10 +158,18 @@ export default function ImportNotePage() {
     if (!ocrResult.trim()) return;
     setStatus("processing");
     const content = stripCodeFences(ocrResult);
+    const visualIssues = generatedVisualIssues(content);
+    if (visualIssues.length) {
+      setStatus("failed");
+      setError(`The extraction contains a broken visual. Ask your AI/OCR tool to fix: ${visualIssues.join(" ")}`);
+      return;
+    }
+    try {
     const response = await fetch("/api/notes", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ title: file?.name.replace(/\.[^/.]+$/, "") || "OCR import", content }) });
     const data = await response.json().catch(() => null);
     if (response.ok) navigateAfterSave(`/notes/${data.note.id}`);
     else { setStatus("failed"); setError(data?.error ?? "Couldn't save the extracted text."); }
+    } catch { setStatus("failed"); setError("Couldn't reach the server. Your pasted extraction is still here; try saving again."); }
   }
 
   function toggleOcrKeep(option: OcrKeepOption) {
@@ -239,24 +249,41 @@ export default function ImportNotePage() {
     }
   }
 
-  async function loadCloudResources(provider: "google" | "notion") {
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
+  async function loadCloudResources(provider: "google" | "notion", cursor?: string) {
     setCloudProvider(provider);
-    setSelectedResource("");
-    setResources([]);
+    if (!cursor) { setSelectedResource(""); setResources([]); setNextCursor(null); }
     setError(null);
     setStatus("processing");
     try {
-      const response = await fetch(`/api/integrations/${provider}/resources`, { cache: "no-store" });
+      const response = await fetch(`/api/integrations/${provider}/resources${cursor ? `?cursor=${encodeURIComponent(cursor)}` : ""}`, { cache: "no-store" });
       const data = await response.json().catch(() => null);
       if (!response.ok) {
         setError(data?.error ?? `Couldn't read ${provider}.`);
         setStatus("failed");
         return;
       }
-      setResources(data.resources ?? []);
+      setResources(previous => cursor ? [...previous, ...(data.resources ?? []).filter((item: { id: string }) => !previous.some(existing => existing.id === item.id))] : data.resources ?? []);
+      setNextCursor(data.nextCursor ?? null);
       setStatus("idle");
     } catch {
       setError("We couldn't reach the server.");
+      setStatus("failed");
+    }
+  }
+
+  async function chooseGoogleDocument() {
+    setError(null);
+    setStatus("processing");
+    try {
+      const picked = await pickGoogleDocument();
+      if (picked) {
+        setResources(previous => [picked, ...previous.filter(item => item.id !== picked.id)]);
+        setSelectedResource(picked.id);
+      }
+      setStatus("idle");
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Google Drive could not be opened.");
       setStatus("failed");
     }
   }
@@ -294,7 +321,7 @@ export default function ImportNotePage() {
       <div><p className="index-label mb-4">01 / Choose your source</p><div className="grid grid-cols-2 gap-2 lg:grid-cols-1" role="group" aria-label="Import source">
         {([{ key: "file", label: "Files & documents", detail: "PDF, slides, Word, text, JSON", icon: Upload }, { key: "write", label: "Write or paste", detail: "Start with your own words", icon: FileText }, { key: "link", label: "A shared link", detail: "Google Docs or Notion", icon: Link2 }, { key: "cloud", label: "Connected sources", detail: "Choose from your accounts", icon: Cloud }] as const).map(source => <button key={source.key} type="button" disabled={status === "processing"} aria-pressed={tab === source.key} onClick={() => { setTab(source.key); setError(null); if (source.key === "cloud" && resources.length === 0) void loadCloudResources(cloudProvider); }} className={cn("min-h-20 rounded-control border p-3 text-left", tab === source.key ? "border-action bg-accent-soft" : "border-line hover:bg-surface-muted")}><source.icon className="mb-2 h-4 w-4" /><span className="block text-sm font-medium">{source.label}</span><span className="mt-1 block text-xs leading-relaxed text-ink-soft">{source.detail}</span></button>)}
       </div><p className="annotation mt-6 hidden lg:block">Your original material becomes an editable note. You decide what to make from it next.</p></div>
-      <div className="min-w-0 border-t-2 border-action bg-surface p-5 sm:p-7"><p className="index-label mb-6">02 / {tab === "file" ? "Bring in a document" : tab === "cloud" ? "Choose your material" : "Capture the source"}</p>
+      <div key={tab} className="motion-panel min-w-0 border-t-2 border-action bg-surface p-5 sm:p-7"><p className="index-label mb-6">02 / {tab === "file" ? "Bring in a document" : tab === "cloud" ? "Choose your material" : "Capture the source"}</p>
         {tab === "file" ? (
           <>
             <FileDropzone onFileSelected={setFile} onFilesSelected={setFiles} multiple accept=".md,.txt,.pdf,.docx,.pptx,.json" />
@@ -302,8 +329,7 @@ export default function ImportNotePage() {
               <FileText className="h-3.5 w-3.5" /> Supports .md, .txt, .pdf, .docx, .pptx, and Memoria&apos;s own exported .json files
             </p>
             <p className="mt-1 text-xs text-ink-faint">
-              Only text is imported — if a PDF, Word, or PowerPoint file has images or embedded visuals, those are skipped and
-              you&apos;ll see a notice after importing.
+              Text is extracted automatically. If a document includes graphics, you can reconstruct them with the prepared AI/OCR prompt before saving, or choose to keep only the extracted text.
             </p>
             {error && <p role="alert" className="mt-3 text-sm text-danger">{error}</p>}
             {notice && <p className="mt-3 rounded-lg border border-accent/30 bg-accent-soft/40 p-3 text-sm text-accent-dark">{notice}</p>}
@@ -376,10 +402,11 @@ export default function ImportNotePage() {
         ) : (
           <>
             <div className="flex gap-2">
-              <Button variant={cloudProvider === "google" ? "primary" : "outline"} size="sm" onClick={() => void loadCloudResources("google")}>Google Drive</Button>
-              <Button variant={cloudProvider === "notion" ? "primary" : "outline"} size="sm" onClick={() => void loadCloudResources("notion")}>Notion</Button>
+              <Button variant={cloudProvider === "google" ? "primary" : "outline"} size="sm" disabled={status === "processing"} onClick={() => void loadCloudResources("google")}>Google Drive</Button>
+              <Button variant={cloudProvider === "notion" ? "primary" : "outline"} size="sm" disabled={status === "processing"} onClick={() => void loadCloudResources("notion")}>Notion</Button>
             </div>
             <p className="mt-3 text-sm text-ink-soft">Choose a document from your connected account. Manage access in <a className="text-accent-dark underline" href="/settings">Settings</a>.</p>
+            {cloudProvider === "google" && <div className="mt-4"><Button variant="outline" disabled={status === "processing"} onClick={() => void chooseGoogleDocument()}><Cloud className="h-4 w-4" /> Choose from Google Drive</Button><p className="mt-2 text-xs text-ink-soft">Choose a Google Doc to grant access. Previously selected documents appear below. PDF, Word, and slide files can be imported through Files &amp; documents.</p></div>}
             {status === "processing" && <p className="mt-4 text-sm text-ink-soft">Loading documents…</p>}
             {resources.length > 0 && (
               <div className="mt-4">
@@ -390,6 +417,7 @@ export default function ImportNotePage() {
                 </select>
               </div>
             )}
+            {nextCursor && <Button variant="ghost" className="mt-2" disabled={status === "processing"} onClick={() => void loadCloudResources(cloudProvider, nextCursor)}>Load more documents</Button>}
             {status !== "processing" && resources.length === 0 && !error && <p className="mt-4 text-sm text-ink-soft">No importable documents were found.</p>}
             {error && <p role="alert" className="mt-3 text-sm text-danger">{error}</p>}
             <div className="mt-5 flex justify-end"><Button disabled={!selectedResource} loading={status === "processing"} onClick={() => void importCloudResource()}>Import document</Button></div>
@@ -399,6 +427,8 @@ export default function ImportNotePage() {
       </div>
       {imageWarning && <Dialog open onOpenChange={() => setImageWarning(null)} title="Some content needs a closer look" description="Text in scans, images, and charts may be missing. Choose how to continue before anything is saved." className="sm:max-w-2xl">
         <div>
+          {error && <p role="alert" className="text-sm text-danger">{error}</p>}
+          {showOcrHelp && <p className="mt-3 text-sm text-ink-soft">Attach the original PDF or page images to your AI/OCR tool along with this prompt. It needs the visible diagrams to reconstruct their information accurately.</p>}
           {imageWarning.errors.length > 0 && <ul className="mt-4 list-disc space-y-1 pl-5 text-xs text-danger">{imageWarning.errors.map((item) => <li key={item.filename}>{item.filename}: {item.error}</li>)}</ul>}
           {showOcrHelp && <OcrKeepSelector selected={ocrKeep} onToggle={toggleOcrKeep} />}
           {!showOcrHelp ? <div className="mt-6 grid gap-3 sm:grid-cols-2"><button onClick={() => { setImageWarning(null); void performFileImport(true); }} className="rounded-lg border border-line p-4 text-left hover:border-accent"><span className="block font-medium text-ink">Continue with partial text</span><span className="mt-1 block text-xs text-ink-soft">Import only the text Memoria could read.</span></button><button onClick={() => setShowOcrHelp(true)} className="rounded-lg border border-accent bg-accent-soft/30 p-4 text-left"><span className="block font-medium text-ink">Use an AI/OCR tool</span><span className="mt-1 block text-xs text-ink-soft">Copy a prepared prompt, then paste the completed extraction back.</span></button></div> : <div className="mt-5"><div className="flex items-center justify-between"><Label htmlFor="ocr-prompt">Extraction prompt</Label><button onClick={async () => { await navigator.clipboard.writeText(imageWarning.prompt); setPromptCopied(true); setTimeout(() => setPromptCopied(false), 1500); }} className="inline-flex items-center gap-1 text-xs font-medium text-accent-dark">{promptCopied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}{promptCopied ? "Copied" : "Copy prompt"}</button></div><Textarea id="ocr-prompt" readOnly rows={7} value={imageWarning.prompt} className="mt-1 font-mono text-xs" /><div className="mt-4"><Label htmlFor="ocr-result">Paste the completed Markdown</Label><Textarea id="ocr-result" rows={8} value={ocrResult} onChange={(event) => setOcrResult(event.target.value)} placeholder="# Extracted lesson…" className="mt-1 font-mono text-sm" /></div></div>}

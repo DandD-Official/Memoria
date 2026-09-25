@@ -26,7 +26,9 @@
 const NOTION_API_VERSION = "2026-03-11";
 const NOTION_API_BASE = "https://api.notion.com/v1";
 
-export class NotionImportError extends Error {}
+export class NotionImportError extends Error {
+  constructor(message: string, readonly status?: number) { super(message); }
+}
 
 /**
  * Accepts only Notion page URLs:
@@ -118,7 +120,7 @@ export async function notionFetch(path: string, accessToken: string, init?: Requ
     );
   }
   if (res.status === 401 || res.status === 403) {
-    throw new NotionImportError("Notion rejected the request. Reconnect your Notion account in Settings.");
+    throw new NotionImportError("Notion rejected the request. Reconnect your Notion account in Settings.", res.status);
   }
   if (!res.ok) {
     throw new NotionImportError(`Notion API returned an error (status ${res.status}). Please try again.`);

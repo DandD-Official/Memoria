@@ -516,4 +516,27 @@
 
 
 .native-overlay::backdrop { background: rgb(18 32 23 / 0.45); }
-@media (prefers-reduced-motion: no-preference) { .native-overlay[open] { animation: panel-in 150ms ease-out; } }
+@keyframes memoria-enter { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@keyframes memoria-exit { from { opacity: 1; transform: translateY(0); } to { opacity: 0; transform: translateY(4px); } }
+@keyframes memoria-backdrop { from { background-color: rgb(18 32 23 / 0); } to { background-color: rgb(18 32 23 / 0.45); } }
+@media (prefers-reduced-motion: no-preference) {
+  .motion-page { animation: memoria-enter 240ms cubic-bezier(0.2, 0, 0, 1) both; }
+  .motion-page .page-header { animation: memoria-enter 240ms cubic-bezier(0.2, 0, 0, 1) both; }
+  .motion-page .page-header + * { animation: memoria-enter 240ms 100ms cubic-bezier(0.2, 0, 0, 1) both; }
+  .motion-panel { animation: memoria-enter 150ms cubic-bezier(0.2, 0, 0, 1) both; }
+  .native-overlay[open] { animation: memoria-enter 220ms ease-out both; }
+  .native-overlay[open]::backdrop { animation: memoria-backdrop 220ms ease-out both; }
+  .native-overlay[data-state="closing"] { animation: memoria-exit 160ms ease-out both; pointer-events: none; }
+  .native-overlay[data-state="closing"]::backdrop { animation: memoria-backdrop 160ms ease-out reverse both; }
+  :is(.context-index, .workspace-header, .mobile-dock) a,
+  :is(.context-index, .workspace-header, .mobile-dock) button,
+  .resource-entry, button[aria-pressed] {
+    transition: background-color 150ms cubic-bezier(0.2, 0, 0, 1), color 150ms cubic-bezier(0.2, 0, 0, 1), border-color 150ms cubic-bezier(0.2, 0, 0, 1);
+  }
+  .context-index button svg { transition: rotate 150ms cubic-bezier(0.2, 0, 0, 1), transform 150ms cubic-bezier(0.2, 0, 0, 1); }
+}
+.reduce-motion .motion-page, .reduce-motion .motion-panel, .reduce-motion .page-header,
+.reduce-motion .page-header + *, .reduce-motion .native-overlay { animation: none !important; }
+.reduce-motion .native-overlay::backdrop { animation: none !important; }
+.reduce-motion .memoria-button:active, .memoria-button[data-static]:active { transform: none !important; scale: 1 !important; }
+@media print { .motion-page, .motion-panel, .page-header, .page-header + * { animation: none !important; transform: none !important; opacity: 1 !important; } }
