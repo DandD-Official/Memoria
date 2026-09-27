@@ -23,9 +23,9 @@ export const navigationGroups: NavigationGroup[] = [
   { label: "Your learning", items: [{ href: "/progress", label: "Learning progress", icon: LineChart }, { href: "/shared", label: "Shared with me", icon: Share2 }] },
 ];
 export const togetherNavigation: NavigationItem[] = [
-  { href: "/workspaces", label: "Workspaces", icon: FileText },
   { href: "/books", label: "Books", icon: BookOpen },
   { href: "/notebooks", label: "Notebooks", icon: Layers3 },
+  { href: "/workspaces", label: "Workspaces", icon: FileText },
   { href: "/shared", label: "Shared with me", icon: Share2 },
 ];
 export const utilityNavigation: NavigationItem[] = [{ href: "/workspaces", label: "Shared workspaces", icon: FileText }, { href: "/walkthrough", label: "Walkthrough & help", icon: BookOpen }, { href: "/settings", label: "Preferences & account", icon: Settings }];
