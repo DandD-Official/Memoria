@@ -13,8 +13,9 @@ import { MmdReferenceGuide } from "@/components/mmd/editor/reference-guide";
 import { Tooltip } from "@/components/ui/tooltip";
 import { INSERT_TEMPLATES } from "@/lib/mmd/editor-templates";
 import { cn } from "@/lib/utils";
+import { LoadingState } from "@/components/ui/loading-state";
 
-const CodeEditor = dynamic(() => import("@/components/mmd/editor/code-editor"), { ssr: false, loading: () => <div className="h-full bg-surface-muted p-4 text-sm text-ink-faint" role="status">Loading editor?</div> });
+const CodeEditor = dynamic(() => import("@/components/mmd/editor/code-editor"), { ssr: false, loading: () => <LoadingState variant="document" label="Loading formatting tools and editor" className="px-4" /> });
 
 interface MarkdownEditorProps {
   value: string;

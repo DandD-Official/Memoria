@@ -5,6 +5,7 @@ import { signOut } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Input, Label } from "@/components/ui/input";
+import { toast } from "@/components/ui/toast";
 
 export function AccountSettings({ initial }: { initial: { name: string; email: string } }) {
   const [name, setName] = useState(initial.name);
@@ -28,6 +29,7 @@ export function AccountSettings({ initial }: { initial: { name: string; email: s
         return;
       }
       setMessage("Account updated.");
+      toast("Account settings saved.");
     } catch (caught) { setError(caught instanceof Error ? caught.message : "Couldn't reach the server."); }
     finally { setBusy(null); }
   }

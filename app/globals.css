@@ -538,5 +538,10 @@
 .reduce-motion .motion-page, .reduce-motion .motion-panel, .reduce-motion .page-header,
 .reduce-motion .page-header + *, .reduce-motion .native-overlay { animation: none !important; }
 .reduce-motion .native-overlay::backdrop { animation: none !important; }
+.toast-viewport::backdrop { background: transparent; pointer-events: none; }
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .interactive-card:hover { transform: translateY(-2px); box-shadow: var(--elevation-raised); }
+}
+.reduce-motion .interactive-card:hover { transform: none; box-shadow: none; }
 .reduce-motion .memoria-button:active, .memoria-button[data-static]:active { transform: none !important; scale: 1 !important; }
 @media print { .motion-page, .motion-panel, .page-header, .page-header + * { animation: none !important; transform: none !important; opacity: 1 !important; } }

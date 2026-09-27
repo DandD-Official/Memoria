@@ -453,7 +453,7 @@ The app defaults to a 10 MB upload limit, but the hosting platform can impose a 
 | `AI_SYSTEM_API_KEYS` | Shared AI key or comma/newline-separated fallback keys |
 | `AI_SYSTEM_BASE_URL` | Empty for direct access; gateway base URL when applicable |
 | `MAX_UPLOAD_SIZE_BYTES` | App file-size limit; example default is `10485760` |
-| `CRON_SECRET` | Optional independent secret for the cleanup endpoint |
+| `CRON_SECRET` | Independent secret required for the scheduled cleanup of expired workspaces |
 
 Leave optional service variables empty until you configure that service. Do not paste illustrative placeholders as working credentials. All four Google variables are required for the Connect button to be available.
 
@@ -495,24 +495,39 @@ npm.cmd run build
 
 Automated tests do not confirm your Google/Notion application is publicly published, that email DNS is correct, or that live consent works. Complete the manual checks after configuring the provider dashboards.
 
-## Step 12: optional scheduled cleanup
+## Step 12: enable scheduled workspace cleanup
 
-1. Generate a separate random secret and save it as `CRON_SECRET`.
-2. Configure your chosen scheduler to make a **POST** request to:
+1. Generate a separate random secret and save it as `CRON_SECRET` in Vercel's Production environment variables. Redeploy after setting it.
+2. `vercel.json` configures a daily cleanup at `0 3 * * *` (03:00 UTC; execution timing depends on the hosting plan). Vercel sends an authenticated **GET** request automatically. Check **Vercel > your project > Settings > Cron Jobs** after deployment. See [Vercel Cron management](https://vercel.com/docs/cron-jobs/manage-cron-jobs).
+3. On another host, configure a daily scheduler to make a **POST** request to:
 
    ```text
    https://memoria.example.com/api/maintenance/cleanup
    ```
 
-3. Set this request header using the scheduler's secret store:
+4. For an external scheduler, set this request header using its secret store:
 
    ```text
    Authorization: Bearer YOUR_CRON_SECRET
    ```
 
-4. Run it once and confirm the response contains deletion counts. Then choose an interval, such as daily.
+5. Run it once and confirm the response includes a `workspaces` deletion count. Opening the endpoint in a browser without the authorization header should return 401.
 
-The endpoint deletes expired account tokens/invites, old rate-limit buckets and old read notifications. The repository does not currently configure a schedule. Use a scheduler that supports POST and authorization headers; simply opening the URL in a browser will not run cleanup.
+The endpoint deletes expired workspaces and their notes/members, expired account tokens/invites, old rate-limit buckets, and old read notifications. Workspace access stops exactly 72 hours after creation, even if cleanup is delayed. Physical deletion happens on the next successful cleanup run; opening the workspace list also removes expired workspaces. Configure and monitor the scheduler to reclaim storage even when nobody visits the site. Ordinary library notes are unaffected.
+
+## Step 13: enable and test workspaces, walkthroughs, and previews
+
+1. Deploy the new database migration `20260926000000_temporary_workspaces`. Vercel's production build already runs migrations through `npm run vercel-build`. For a local development database, run `npm.cmd run db:deploy`, then `npm.cmd run db:generate` and restart the app. These tables are required before workspace pages can work.
+2. Set `CRON_SECRET` and confirm scheduled cleanup as described in Step 12. No realtime service, WebSocket host, or additional AI key is required.
+3. Complete onboarding with a new test account. The final step offers walkthroughs, note import, or shared workspaces. Existing users can find walkthroughs in the account menu at `/walkthrough` and workspaces under **Together > Workspaces** at `/workspaces`.
+4. Create a workspace, add two notes, format one in the Memoria editor, and check Source/Split/Preview. Verify auto-save status and manual Save. The deadline is fixed at creation and is shown in local time.
+5. Open SVG helper. Enter what the diagram should explain and its required facts. Choose provided or personal AI, or copy the prompt and paste the response. Including note context is opt-in. Preview and insert the result; malformed SVG blocks cannot be inserted through the helper.
+6. Create a second test account and invite its email through **People & sharing**. Open the workspace in a separate browser profile. Verify view-only access prevents editing and edit access allows changes. Saved updates sync every five seconds while visible. There are no live cursors or automatic character-level merging; conflicting saves preserve the draft and require review.
+7. On both accounts, turn off auto-save and edit the same note. Save with account A, then save the old draft with account B. B must see the newer version and retain its own draft. Test loading A's saved version and keeping B's draft for a manual merge.
+8. Revoke B's access and confirm its next fetch/save is rejected. A URL alone must not grant access. Verify someone outside the workspace cannot read or change its notes.
+9. Export saved notes as ZIP and download an unsaved draft separately. On a **disposable development workspace only**, set its `expiresAt` into the past using Prisma Studio, then verify reads and writes are denied and cleanup removes it with its notes and invitations. Do not change expiry on real user workspaces for testing.
+10. Set `NEXTAUTH_URL` to the production HTTPS origin and rebuild. Social preview URLs use that origin. Open `/opengraph-image`: it should display the custom 1200 × 630 PNG. The public homepage includes OpenGraph and Twitter metadata; private workspace contents are never placed in previews. Social services can cache old previews after deployment.
+11. Check the homepage during a fresh load, route skeletons, save/error toasts, export menus near the viewport edges, and sharing dialogs at narrow widths. Repeat with reduced motion enabled. The initial loading screen ends as soon as the app hydrates; it adds no artificial delay.
 
 ## Troubleshooting
 

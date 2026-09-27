@@ -2,7 +2,10 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Check, Copy, Link2, Loader2, Search, Share2, Trash2, UserRound, X, Layers } from "lucide-react";
+import { Check, Copy, Link2, Loader2, Search, Share2, Trash2, UserRound, Layers } from "lucide-react";
+import { Dialog } from "@/components/ui/dialog";
+import { toast } from "@/components/ui/toast";
+import { LoadingState } from "@/components/ui/loading-state";
 import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -31,22 +34,33 @@ export function ShareDialog({ resourceType, resourceId }: { resourceType: "NOTE"
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(false);
   const [searching, setSearching] = useState(false);
 
   useEffect(() => {
     if (!open) return;
     setError(null);
+    setInitialLoading(true);
+    const controller = new AbortController();
+    async function load(url: string) {
+      const response = await fetch(url, { signal: controller.signal });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Could not load sharing settings.");
+      return data;
+    }
     Promise.all([
-      fetch(`/api/share?resourceType=${resourceType}&resourceId=${resourceId}`).then((response) => response.json()),
+      load(`/api/share?resourceType=${resourceType}&resourceId=${resourceId}`),
       resourceType === "NOTE"
-        ? fetch(`/api/share/public?resourceType=${resourceType}&resourceId=${resourceId}`).then((response) => response.json())
+        ? load(`/api/share/public?resourceType=${resourceType}&resourceId=${resourceId}`)
         : Promise.resolve({ url: null }),
     ])
       .then(([shareData, publicData]) => {
         setShares(shareData.shares ?? []);
         setPublicUrl(publicData.url ?? null);
       })
-      .catch(() => setError("We couldn't reach the server. Check your connection and try again."));
+      .catch(error => { if (!controller.signal.aborted) setError(error instanceof Error ? error.message : "Could not load sharing. Close this dialog and try again."); })
+      .finally(() => { if (!controller.signal.aborted) setInitialLoading(false); });
+    return () => controller.abort();
   }, [open, resourceType, resourceId]);
 
   useEffect(() => {
@@ -90,6 +104,7 @@ export function ShareDialog({ resourceType, resourceId }: { resourceType: "NOTE"
     if (!publicUrl) return;
     try {
       await navigator.clipboard.writeText(publicUrl);
+      toast("Share link copied.");
       setCopied(true);
       window.setTimeout(() => setCopied(false), 1800);
     } catch {
@@ -99,10 +114,12 @@ export function ShareDialog({ resourceType, resourceId }: { resourceType: "NOTE"
 
   async function removePublicLink() {
     setLoading(true);
+    try {
     const response = await fetch("/api/share/public", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ resourceType, resourceId }) });
-    setLoading(false);
-    if (response.ok) setPublicUrl(null);
+    if (response.ok) { setPublicUrl(null); toast("Public link disabled."); }
     else setError("Couldn't disable the public link.");
+    } catch { setError("Could not reach the server. Try disabling the link again."); }
+    finally { setLoading(false); }
   }
 
   async function handleShare() {
@@ -117,6 +134,7 @@ export function ShareDialog({ resourceType, resourceId }: { resourceType: "NOTE"
       setSelectedUser(null);
       setSuggestions([]);
       setShares((previous) => [...previous.filter((share) => share.id !== data.share.id), data.share]);
+      toast("Edit access granted.");
     } catch {
       setError("We couldn't reach the server. Check your connection and try again.");
     } finally {
@@ -125,8 +143,11 @@ export function ShareDialog({ resourceType, resourceId }: { resourceType: "NOTE"
   }
 
   async function handleRevoke(shareId: string, pending = false) {
+    try {
     const response = await fetch("/api/share", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ resourceType, resourceId, shareId, pending }) });
-    if (response.ok) setShares((previous) => previous.filter((share) => share.id !== shareId));
+    if (response.ok) { setShares((previous) => previous.filter((share) => share.id !== shareId)); toast("Sharing access removed."); }
+    else setError("Could not remove access. Try again.");
+    } catch { setError("Could not reach the server. Try removing access again."); }
   }
 
   return (
@@ -134,13 +155,8 @@ export function ShareDialog({ resourceType, resourceId }: { resourceType: "NOTE"
       <button onClick={() => setOpen(true)} className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-line px-3 text-sm text-ink hover:bg-ink/5">
         <Share2 className="h-3.5 w-3.5" /> Share
       </button>
-      {open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 p-4" onClick={() => setOpen(false)}>
-          <div className="card max-h-[85vh] w-full max-w-md overflow-y-auto p-6" onClick={(event) => event.stopPropagation()}>
-            <div className="mb-5 flex items-center justify-between">
-              <div><h3 className="font-display text-lg text-ink">Share</h3><p className="text-xs text-ink-soft">Choose view-only link access or invite an editor.</p></div>
-              <button onClick={() => setOpen(false)}><X className="h-4 w-4 text-ink-faint" /></button>
-            </div>
+      <Dialog open={open} onOpenChange={setOpen} title="Share" description="Choose view-only link access or invite an editor." className="overflow-y-auto">
+            {initialLoading && <LoadingState label="Loading sharing permissions" rows={2} />}
 
             {resourceType === "NOTE" && (
               <section className="rounded-lg border border-line bg-ink/[0.02] p-4">
@@ -177,9 +193,7 @@ export function ShareDialog({ resourceType, resourceId }: { resourceType: "NOTE"
               </div>
             )}
             <div className="mt-4 border-t border-line pt-4"><Link href="/books" className="flex min-h-10 items-center gap-1.5 text-sm text-ink-soft hover:text-ink"><Layers className="h-3.5 w-3.5" /> Add this to a Book</Link></div>
-          </div>
-        </div>
-      )}
+      </Dialog>
     </>
   );
 }

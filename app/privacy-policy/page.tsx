@@ -17,7 +17,7 @@ const sections: LegalSection[] = [
     id: "information", title: "Information we handle",
     content: <ul>
       <li><strong>Account details:</strong> your name, email address, password hash, account dates, verification records, and preferences. Passwords are hashed rather than stored as plain text.</li>
-      <li><strong>Study material:</strong> content you upload, import, create, or save, including notes, images, diagrams, reviewers, quizzes, flashcards, revisions, and collections.</li>
+      <li><strong>Study material:</strong> content you upload, import, create, or save, including notes, images, diagrams, reviewers, quizzes, flashcards, revisions, collections, and temporary shared workspaces.</li>
       <li><strong>Activity and sharing:</strong> attempts, study progress, sessions, invitations, permissions, comments, reports, and notifications.</li>
       <li><strong>Connections:</strong> authorization tokens and account or workspace details needed to identify and use your connected services. Personal AI API keys are stored if you add them.</li>
       <li><strong>Technical information:</strong> session identifiers, browser information, request metadata, and IP addresses used for security and request limits. Hosting services may also process operational logs.</li>
@@ -53,6 +53,7 @@ const sections: LegalSection[] = [
     content: <>
       <p>Saved account information and study content are stored in the application database. OAuth access and refresh tokens and saved personal AI keys are encrypted at rest. Access to account resources is checked on the server. These protections reduce risk, but no storage or transmission method is completely secure.</p>
       <p>Account data and saved material remain while you use the service unless you delete them. Expired verification records, rate-limit records, and other operational data may remain until maintenance removes them. Infrastructure logs and backups can have separate retention periods and may not disappear immediately when you delete active account data.</p>
+      <p>Temporary workspaces are an exception: they expire 72 hours after creation. Access and editing stop at that deadline, and their notes and membership records are removed during the next cleanup run. Editing does not extend the deadline. Export copies before expiry if you want to retain them. Workspace collaborators can view or edit according to the access you grant and can export material they can view.</p>
     </>,
   },
   {
@@ -67,7 +68,7 @@ const sections: LegalSection[] = [
   },
   {
     id: "browser-storage", title: "Cookies and browser storage",
-    content: <p>Memoria uses cookies for authentication, session security, and connection authorization. Browser storage remembers preferences and tools such as your theme, recent searches, timer settings, guest bookmarks, and remembered login email when selected. You can clear these through your browser settings; doing so may sign you out or reset preferences. The application does not include advertising trackers.</p>,
+    content: <p>Memoria uses cookies for authentication, session security, and connection authorization. Browser storage remembers preferences and tools such as your theme, recent searches, timer settings, guest bookmarks, walkthrough progress, and remembered login email when selected. You can clear these through your browser settings; doing so may sign you out or reset preferences. The application does not include advertising trackers.</p>,
   },
   {
     id: "changes", title: "Changes to this policy",

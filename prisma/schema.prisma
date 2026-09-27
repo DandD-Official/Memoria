@@ -52,8 +52,53 @@ model User {
   feedbackPosts         ShareFeedback[]         @relation("FeedbackAuthor")
   feedbackReports       FeedbackReport[]
   activeSessions        ActiveSession[]
+  workspaces            Workspace[]
+  workspaceMemberships  WorkspaceMember[]
 
   @@map("users")
+}
+
+model Workspace {
+  id        String @id @default(cuid())
+  ownerId   String
+  owner     User @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  title     String
+  version   Int @default(1)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  expiresAt DateTime
+  notes     WorkspaceNote[]
+  members   WorkspaceMember[]
+
+  @@index([ownerId])
+  @@index([expiresAt])
+  @@map("workspaces")
+}
+
+model WorkspaceNote {
+  id          String @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  title       String
+  content     Bytes
+  version     Int @default(1)
+  updatedAt   DateTime @updatedAt
+
+  @@index([workspaceId])
+  @@map("workspace_notes")
+}
+
+model WorkspaceMember {
+  id          String @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  permission  Permission @default(EDIT)
+
+  @@unique([workspaceId, userId])
+  @@index([userId])
+  @@map("workspace_members")
 }
 
 enum AccountTokenType {

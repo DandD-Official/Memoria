@@ -23,16 +23,17 @@ export const navigationGroups: NavigationGroup[] = [
   { label: "Your learning", items: [{ href: "/progress", label: "Learning progress", icon: LineChart }, { href: "/shared", label: "Shared with me", icon: Share2 }] },
 ];
 export const togetherNavigation: NavigationItem[] = [
+  { href: "/workspaces", label: "Workspaces", icon: FileText },
   { href: "/books", label: "Books", icon: BookOpen },
   { href: "/notebooks", label: "Notebooks", icon: Layers3 },
   { href: "/shared", label: "Shared with me", icon: Share2 },
 ];
-export const utilityNavigation: NavigationItem[] = [{ href: "/settings", label: "Preferences & account", icon: Settings }];
+export const utilityNavigation: NavigationItem[] = [{ href: "/workspaces", label: "Shared workspaces", icon: FileText }, { href: "/walkthrough", label: "Walkthrough & help", icon: BookOpen }, { href: "/settings", label: "Preferences & account", icon: Settings }];
 export const mobilePrimaryNavigation = primaryNavigation;
 export const mobileMoreNavigation: NavigationItem[] = [{ href: "/search", label: "Search everything", icon: Search }, { href: "/notifications", label: "Notifications", icon: Bell }, ...navigationGroups.flatMap(group => group.items).filter(item => !primaryNavigation.includes(item)), ...utilityNavigation];
 export function isNavigationItemActive(pathname: string, href: string) {
   if (href === "/library") return libraryNavigation.some(item => pathname === item.href || pathname.startsWith(`${item.href}/`));
-  if (href === "/books") return pathname.startsWith("/books") || pathname.startsWith("/notebooks") || pathname.startsWith("/shared");
+  if (href === "/books") return pathname.startsWith("/books") || pathname.startsWith("/notebooks") || pathname.startsWith("/shared") || pathname.startsWith("/workspaces");
   if (href === "/study") return pathname.startsWith("/study") || pathname.startsWith("/progress");
   return pathname === href || pathname.startsWith(`${href}/`);
 }

@@ -4,7 +4,8 @@ import { MemoryMark } from "@/components/layout/brand";
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Check, Cloud, KeyRound, Palette, User } from "lucide-react";
+import { Check, Cloud, KeyRound, Palette, User, Compass } from "lucide-react";
+import { toast } from "@/components/ui/toast";
 import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/input";
 import { useTheme, type Appearance } from "@/components/layout/theme-provider";
@@ -15,6 +16,7 @@ const steps = [
   { label: "Connections", icon: Cloud },
   { label: "AI", icon: KeyRound },
   { label: "Preferences", icon: Palette },
+  { label: "First steps", icon: Compass },
 ];
 
 type Difficulty = "EASY" | "NORMAL" | "HARD" | "MIXED";
@@ -30,6 +32,7 @@ export function OnboardingFlow({ initialName, email, configuredProviders }: Onbo
   const router = useRouter();
   const { theme, setTheme } = useTheme();
   const [step, setStep] = useState(0);
+  const [firstStep, setFirstStep] = useState("/walkthrough");
   const [name, setName] = useState(initialName);
   const [provider, setProvider] = useState<"OPENAI" | "ANTHROPIC" | "GEMINI">("OPENAI");
   const [apiKey, setApiKey] = useState("");
@@ -101,7 +104,8 @@ export function OnboardingFlow({ initialName, email, configuredProviders }: Onbo
         await saveStep(3);
       }
       await checkedFetch("/api/onboarding", { method: "POST" });
-      router.replace("/dashboard");
+      toast("Your learning space is ready.");
+      router.replace(saveDraft ? firstStep : "/dashboard");
       router.refresh();
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Couldn't finish setup.");
@@ -129,7 +133,7 @@ export function OnboardingFlow({ initialName, email, configuredProviders }: Onbo
             <p className="text-xs font-medium uppercase tracking-wide text-accent-dark">Welcome to Memoria</p>
             <h1 className="mt-1 font-display text-2xl text-ink">Make the workspace yours</h1>
             <p className="mt-1 text-sm text-ink-soft">Every step is optional. You can change any of this later in Settings.</p>
-            <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-4" aria-label="Onboarding steps">
+            <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-5" aria-label="Onboarding steps">
               {steps.map((item, index) => (
                 <button
                   key={item.label}
@@ -255,7 +259,8 @@ export function OnboardingFlow({ initialName, email, configuredProviders }: Onbo
               </div>
             )}
 
-            {error && <p className="mt-4 text-sm text-danger">{error}</p>}
+            {step === 4 && <fieldset className="space-y-3"><legend className="mb-4 font-display text-xl">What would you like to do first?</legend><p className="mb-4 text-sm leading-relaxed text-ink-soft">You can change direction at any time. Find walkthroughs again in your account menu.</p>{[{ href: "/walkthrough", title: "Show me around", text: "Short, step-by-step guides to the main tools." }, { href: "/notes/import", title: "Bring my notes", text: "Upload a file, paste text, or import from a connection." }, { href: "/workspaces", title: "Create with others", text: "Start a shared workspace with multiple notes and an SVG helper. Workspaces expire after three days." }].map(item => <label key={item.href} className={`flex cursor-pointer items-start gap-3 rounded-card border p-4 ${firstStep === item.href ? "border-action bg-accent-soft" : "border-line hover:bg-surface-muted"}`}><input type="radio" name="first-step" className="mt-1" value={item.href} checked={firstStep === item.href} onChange={() => setFirstStep(item.href)} /><span><span className="block text-sm font-semibold">{item.title}</span><span className="mt-1 block text-xs leading-relaxed text-ink-soft">{item.text}</span></span></label>)}</fieldset>}
+            {error && <p role="alert" className="mt-4 text-sm text-danger">{error}</p>}
 
             <div className="mt-7 flex items-center justify-between">
               <button type="button" disabled={busy} onClick={() => (step === 0 ? void finish(false) : selectStep(step - 1))} className="text-sm text-ink-soft hover:text-ink disabled:opacity-60">

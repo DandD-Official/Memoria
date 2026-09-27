@@ -39,6 +39,8 @@ export function Topbar({ userName, unreadNotifications, studyStreak }: { userNam
     <Sheet open={accountOpen} onOpenChange={setAccountOpen} title={userName} description="Your personal learning space.">
       <div className="divide-y divide-line">
         <div className="flex items-center justify-between py-5"><span className="text-sm">Appearance</span><ThemeToggle /></div>
+        <Link onClick={() => setAccountOpen(false)} href="/workspaces" className="flex min-h-14 items-center gap-3 text-sm">Shared workspaces<ArrowUpRight className="ms-auto h-4 w-4" /></Link>
+        <Link onClick={() => setAccountOpen(false)} href="/walkthrough" className="flex min-h-14 items-center gap-3 text-sm">Walkthrough & help<ArrowUpRight className="ms-auto h-4 w-4" /></Link>
         <Link onClick={() => setAccountOpen(false)} href="/progress" className="flex min-h-14 items-center gap-3 text-sm"><LineChart className="h-4 w-4" />Learning progress<span className="ms-auto text-xs text-ink-faint">{studyStreak > 0 ? `${studyStreak}-day review streak` : ""}</span></Link>
         <Link onClick={() => setAccountOpen(false)} href="/settings" className="flex min-h-14 items-center gap-3 text-sm"><Settings className="h-4 w-4" />Preferences & account<ArrowUpRight className="ms-auto h-4 w-4" /></Link>
         <div className="pt-5"><Button variant="ghost" loading={signingOut} onClick={async () => { setSigningOut(true); try { await signOut({ callbackUrl: "/" }); } finally { setSigningOut(false); } }}><LogOut className="h-4 w-4" />Sign out</Button></div>

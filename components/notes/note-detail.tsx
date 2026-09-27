@@ -20,6 +20,7 @@ import { RevisionHistory } from "@/components/library/revision-history";
 import { ExportMenu } from "@/components/exports/export-menu";
 import type { ExportProgressHandler } from "@/lib/export/types";
 import { RepromptDialog } from "@/components/notes/reprompt-dialog";
+import { toast } from "@/components/ui/toast";
 
 interface NoteDetailProps {
   note: {
@@ -56,15 +57,19 @@ export function NoteDetail({ note, canEdit, isOwner, autoSave, systemAvailable, 
     if (signature === lastSaved.current) return;
     const timer = window.setTimeout(async () => {
       setSaving(true);
+      try {
       const response = await fetch(`/api/notes/${note.id}`, { method: "PATCH", headers: { "Content-Type": "application/json", "X-Memora-Autosave": "1" }, body: JSON.stringify({ title, content }) });
-      setSaving(false);
       if (response.ok) { setSaveMessage(savedMmdMessage(content)); lastSaved.current = signature; savedValues.current = { title, content }; setSaved(true); window.setTimeout(() => setSaved(false), 1500); }
+      else { setSaveMessage("Auto-save failed. Your draft is still here; choose Save changes to retry."); toast("Could not auto-save. Your draft is still in the editor.", "error"); }
+      } catch { setSaveMessage("Connection interrupted. Your draft is still here; choose Save changes to retry."); toast("Auto-save interrupted. Check your connection and retry saving.", "error"); }
+      finally { setSaving(false); }
     }, 1200);
     return () => window.clearTimeout(timer);
   }, [autoSave, canEdit, content, isEditing, note.id, title]);
 
   async function handleSave() {
     setSaving(true);
+    try {
     const res = await fetch(`/api/notes/${note.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -72,6 +77,7 @@ export function NoteDetail({ note, canEdit, isOwner, autoSave, systemAvailable, 
     });
     setSaving(false);
     if (res.ok) {
+      toast("Note saved.");
       setSaveMessage(savedMmdMessage(content));
       lastSaved.current = `${title}\u0000${content}`;
       savedValues.current = { title, content };
@@ -81,17 +87,22 @@ export function NoteDetail({ note, canEdit, isOwner, autoSave, systemAvailable, 
       // immediately receive the updated title and timestamp on navigation.
       router.refresh();
       setTimeout(() => setSaved(false), 2000);
-    }
+    } else { const data = await res.json().catch(() => null); toast(data?.error || "Could not save. Your changes are still in the editor.", "error"); }
+    } catch { toast("Could not reach the server. Your changes are still in the editor.", "error"); }
+    finally { setSaving(false); }
   }
 
   function cancelEditing() {
     setTitle(savedValues.current.title);
     setContent(savedValues.current.content);
     setIsEditing(false);
+    toast("Unsaved changes discarded.");
   }
 
   async function handleDelete() {
-    await fetch(`/api/notes/${note.id}`, { method: "DELETE" });
+    const response = await fetch(`/api/notes/${note.id}`, { method: "DELETE" });
+    if (!response.ok) throw new Error("Could not delete note.");
+    toast("Note deleted.");
     router.replace("/notes");
   }
 
