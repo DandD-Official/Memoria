@@ -5,6 +5,57 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Matched pane heights keep source landmarks level with the live preview. */
+[data-editor-mode="split"] .cm-scroller,
+[data-editor-mode="split"] #mmd-preview-pane > div:last-child {
+  height: clamp(24rem, 65dvh, 42rem);
+  min-height: 0;
+  overscroll-behavior: contain;
+  overflow-anchor: none;
+}
+.cm-tooltip-autocomplete { max-width: min(34rem, 85vw); }
+.cm-tooltip-autocomplete ul li[aria-selected] {
+  background: rgb(var(--color-accent-soft)) !important;
+  color: rgb(var(--color-ink)) !important;
+}
+.cm-completionDetail { color: rgb(var(--color-ink-soft)); }
+
+.memoria-intro, .memoria-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100dvh;
+  background: rgb(var(--color-paper));
+  color: rgb(var(--color-ink));
+}
+.memoria-intro {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  pointer-events: none;
+  animation: memoria-intro-away 1.25s ease-out forwards;
+}
+.memoria-intro:has(~ :focus-within) { display: none; }
+.memoria-opening-mark { margin-bottom: 1rem; }
+.memoria-opening-mark path {
+  stroke-dasharray: 180;
+  animation: memoria-draw-thread 850ms cubic-bezier(0.2, 0, 0, 1) both;
+}
+.memoria-opening-word { animation: memoria-word-in 450ms 100ms ease-out both; }
+.memoria-opening-caption { animation: memoria-word-in 450ms 200ms ease-out both; }
+.memoria-loading-thread { animation: memoria-thread-breathe 1.8s ease-in-out infinite; }
+.memoria-skeleton, .memoria-loading-dot { animation: memoria-thread-breathe 1.8s ease-in-out infinite; }
+@keyframes memoria-draw-thread { from { stroke-dashoffset: 180; } to { stroke-dashoffset: 0; } }
+@keyframes memoria-word-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes memoria-thread-breathe { 0%, 100% { opacity: .45; } 50% { opacity: 1; } }
+@keyframes memoria-intro-away { 0%, 65% { opacity: 1; visibility: visible; } 100% { opacity: 0; visibility: hidden; } }
+@media (prefers-reduced-motion: reduce) {
+  .memoria-intro { display: none; }
+  .memoria-loading *, .memoria-skeleton, .memoria-loading-dot { animation: none !important; }
+}
+.reduce-motion .memoria-intro { display: none; }
+
 :root {
   --font-display: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif;
   --font-sans: "Segoe UI", "Helvetica Neue", Arial, sans-serif;

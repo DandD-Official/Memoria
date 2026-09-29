@@ -30,7 +30,14 @@ export const togetherNavigation: NavigationItem[] = [
 ];
 export const utilityNavigation: NavigationItem[] = [{ href: "/workspaces", label: "Shared workspaces", icon: FileText }, { href: "/walkthrough", label: "Walkthrough & help", icon: BookOpen }, { href: "/settings", label: "Preferences & account", icon: Settings }];
 export const mobilePrimaryNavigation = primaryNavigation;
-export const mobileMoreNavigation: NavigationItem[] = [{ href: "/search", label: "Search everything", icon: Search }, { href: "/notifications", label: "Notifications", icon: Bell }, ...navigationGroups.flatMap(group => group.items).filter(item => !primaryNavigation.includes(item)), ...utilityNavigation];
+export const mobileMoreNavigation: NavigationItem[] = [
+  { href: "/search", label: "Search everything", icon: Search },
+  { href: "/notifications", label: "Notifications", icon: Bell },
+  ...libraryNavigation.slice(1),
+  ...togetherNavigation,
+  { href: "/progress", label: "Learning progress", icon: LineChart },
+  ...utilityNavigation.filter(item => !togetherNavigation.some(tab => tab.href === item.href)),
+];
 export function isNavigationItemActive(pathname: string, href: string) {
   if (href === "/library") return libraryNavigation.some(item => pathname === item.href || pathname.startsWith(`${item.href}/`));
   if (href === "/books") return pathname.startsWith("/books") || pathname.startsWith("/notebooks") || pathname.startsWith("/shared") || pathname.startsWith("/workspaces");

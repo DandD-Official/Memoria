@@ -3,6 +3,7 @@
 import dynamic from "next/dynamic";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
+import { LoadingState } from "@/components/ui/loading-state";
 import { PageDescription, PageHeader, PageHeaderContent, PageShell, PageTitle } from "@/components/ui/page";
 
 const GuestReviewerFlow = dynamic(
@@ -54,5 +55,5 @@ export default function GuestPage() {
 }
 
 function ActivityLoading() {
-  return <div className="card h-48 animate-pulse bg-ink/[0.03]" role="status"><span className="sr-only">Loading activity</span></div>;
+  return <LoadingState label="Opening your practice activity…" variant="document" />;
 }

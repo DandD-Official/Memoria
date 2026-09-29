@@ -4,6 +4,7 @@ import Link from "next/link";
 import { BookPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
+import { LoadingState } from "@/components/ui/loading-state";
 import { readSubjects } from "@/lib/books/notebooks";
 
 type Destination = { id: string; title: string; kind: "BOOK" | "NOTEBOOK"; subjects?: unknown };
@@ -36,7 +37,7 @@ export function AddToCollection({ resourceId, resourceType }: { resourceId: stri
   return <>
     <Button variant="outline" size="sm" onClick={() => setOpen(true)}><BookPlus className="h-4 w-4" />Add to book or notebook</Button>
     <Dialog open={open} onOpenChange={value => { if (!saving) setOpen(value); }} title="Add to book or notebook" description="Keep this memory together with related material." footer={<Button onClick={() => void add()} loading={saving} disabled={loading || !destination || !!added}>Add memory</Button>}>
-      {loading ? <p role="status">Loading books and notebooks?</p> : added ? <p role="status">Memory added to <Link className="underline" href={(added.kind === "NOTEBOOK" ? "/notebooks/" : "/books/") + added.id}>{added.title}</Link>.</p> : collections.length ? <div className="space-y-4">
+      {loading ? <LoadingState label="Loading books and notebooks…" rows={2} /> : added ? <p role="status">Memory added to <Link className="underline" href={(added.kind === "NOTEBOOK" ? "/notebooks/" : "/books/") + added.id}>{added.title}</Link>.</p> : collections.length ? <div className="space-y-4">
         <label className="block text-sm font-medium">Book or notebook<select className="mt-2 min-h-11 w-full rounded-control border border-line bg-surface px-3" disabled={saving} value={selected} onChange={event => { setSelected(event.target.value); setSubject(""); }} >{collections.map(item => <option key={item.id} value={item.id}>{item.title} ({item.kind === "NOTEBOOK" ? "Notebook" : "Book"})</option>)}</select></label>
         {destination?.kind === "NOTEBOOK" && <label className="block text-sm font-medium">Notebook group<select className="mt-2 min-h-11 w-full rounded-control border border-line bg-surface px-3" disabled={saving} value={subject} onChange={event => setSubject(event.target.value)}><option value="">Unfiled</option>{readSubjects(destination.subjects).map(item => <option key={item.id} value={item.id}>{item.title}</option>)}</select></label>}
       </div> : !error && <p>Create a <Link className="underline" href="/books">book</Link> or <Link className="underline" href="/notebooks">notebook</Link> first, then add this memory.</p>}

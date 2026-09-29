@@ -5,8 +5,9 @@ import { Network, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import dynamic from "next/dynamic";
+import { LoadingState } from "@/components/ui/loading-state";
 
-const DiagramEditor = dynamic(() => import("@/components/diagrams/diagram-editor").then(module => module.DiagramEditor), { ssr: false });
+const DiagramEditor = dynamic(() => import("@/components/diagrams/diagram-editor").then(module => module.DiagramEditor), { ssr: false, loading: () => <LoadingState variant="document" label="Opening the diagram editor…" /> });
 
 interface DiagramSummary { id: string; title: string; updatedAt: string }
 
@@ -50,7 +51,7 @@ export function MmdDiagramPicker({ onInsert, disabled }: { onInsert: (id: string
       >
         {creating ? <DiagramEditor initialDiagrams={[]} onDirtyChange={setDirty} onInsert={id => { onInsert(id); setOpen(false); setCreating(false); setDirty(false); }} /> : <>
         <Button type="button" variant="outline" className="mb-4 w-full" onClick={() => setCreating(true)}><Plus className="h-4 w-4" />Create a diagram</Button>
-        {loading && <p className="text-sm text-ink-soft">Loading your diagrams…</p>}
+        {loading && <LoadingState label="Loading your diagrams…" rows={2} />}
         {error && <p className="rounded-control bg-danger/10 px-3 py-2 text-sm text-danger" role="alert">{error}</p>}
         {!loading && !error && diagrams.length === 0 && (
           <div className="rounded-card border border-dashed border-line p-5 text-center">

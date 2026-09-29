@@ -22,6 +22,7 @@ import { ImageRequestPlaceholder } from "@/components/mmd/blocks/image-request-b
 import { SvgBlock } from "@/components/mmd/blocks/svg-block";
 import { MathBlock } from "@/components/mmd/blocks/math-block";
 import { CodeBlock } from "@/components/mmd/blocks/code-block";
+import { useMmdRenderContext } from "@/components/mmd/render-context";
 
 const CALLOUT_NAMES = new Set(["note", "tip", "warning", "danger", "info", "success"]);
 
@@ -55,7 +56,13 @@ export function MmdNodeList({ nodes }: { nodes: MmdNode[] }) {
 }
 
 function MmdNodeRenderer({ node }: { node: MmdNode }) {
-  if (node.type === "markdown") return <InlineMarkdown content={node.content} />;
+  const { onSourceLine } = useMmdRenderContext();
+  if (node.type === "markdown") return <InlineMarkdown content={node.content} startLine={onSourceLine ? node.position?.openLine : undefined} />;
+  if (onSourceLine && node.position) return <div style={{ display: "contents" }} data-source-line={node.position.openLine} data-source-end={node.position.closeLine ?? node.position.openLine}><MmdBlockRenderer node={node} /></div>;
+  return <MmdBlockRenderer node={node} />;
+}
+
+function MmdBlockRenderer({ node }: { node: Exclude<MmdNode, { type: "markdown" }> }) {
   if (node.type === "mmd-error") return <MmdErrorBlock node={node} />;
 
   // node.type === "block" from here on.

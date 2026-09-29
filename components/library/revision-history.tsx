@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Sheet } from "@/components/ui/sheet";
+import { LoadingState } from "@/components/ui/loading-state";
 import { formatDate } from "@/lib/utils";
 
 type ResourceType = "NOTE" | "REVIEWER";
@@ -91,7 +92,7 @@ export function RevisionHistory({ resourceType, resourceId }: { resourceType: Re
         )}
 
         {revisions === null && !error ? (
-          <div className="flex min-h-32 items-center justify-center text-sm text-ink-faint" role="status">Loading version history…</div>
+          <LoadingState label="Loading version history…" rows={2} />
         ) : revisions?.length === 0 ? (
           <div className="rounded-card border border-dashed border-line p-6 text-center">
             <History className="mx-auto h-6 w-6 text-ink-faint" aria-hidden="true" />

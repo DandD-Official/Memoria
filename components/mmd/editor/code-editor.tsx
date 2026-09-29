@@ -6,20 +6,22 @@ import { EditorView, Decoration, ViewPlugin, keymap, lineNumbers, highlightActiv
 import { defaultKeymap, history, historyKeymap, undo, redo } from "@codemirror/commands";
 import { StreamLanguage, syntaxHighlighting, HighlightStyle, foldGutter, foldService } from "@codemirror/language";
 import { tags } from "@lezer/highlight";
-import { autocompletion, completionKeymap, snippetCompletion, acceptCompletion, completionStatus, nextSnippetField, hasNextSnippetField, type CompletionContext } from "@codemirror/autocomplete";
+import { autocompletion, completionKeymap, startCompletion, acceptCompletion, completionStatus, nextSnippetField, hasNextSnippetField } from "@codemirror/autocomplete";
 import { searchKeymap, highlightSelectionMatches } from "@codemirror/search";
 import { setDiagnostics, lintGutter, openLintPanel, type Diagnostic } from "@codemirror/lint";
 import { analyzeMmd, type MmdDiagnostic } from "@/lib/mmd/diagnostics";
 import { readFence, scanMmd } from "@/lib/mmd/grammar";
-import { BLOCK_DEFS } from "@/lib/mmd/spec-blocks";
-import { indentLines, enterEdit, smartBackspace, electricCloser, templateEdit, enumValues, blockCandidates } from "@/lib/mmd/editor-commands";
+import { completeMmd } from "@/lib/mmd/completions";
+import { indentLines, enterEdit, smartBackspace, electricCloser, templateEdit } from "@/lib/mmd/editor-commands";
 
 export interface CodeEditorHandle {
+  scrollElement: () => HTMLElement;
+  lineTop: (line: number) => number;
   edit: (transform: (selected: string) => string, block?: boolean) => void;
   jump: (line: number) => void;
-  command: (name: "indent" | "outdent" | "undo" | "redo") => void;
+  command: (name: "indent" | "outdent" | "undo" | "redo" | "suggest") => void;
 }
-interface Props { value: string; onChange: (value: string) => void; minRows: number; editorRef: MutableRefObject<CodeEditorHandle | null> }
+interface Props { value: string; onChange: (value: string) => void; minRows: number; editorRef: MutableRefObject<CodeEditorHandle | null>; onReady?: () => void }
 
 const decorate = StateEffect.define<DecorationSet>();
 const decorations = StateField.define<DecorationSet>({ create: () => Decoration.none, update: (value, tr) => {
@@ -79,33 +81,12 @@ const highlight = HighlightStyle.define([
   { tag: tags.monospace, backgroundColor: "rgb(var(--color-surface-muted))" },
   { tag: tags.punctuation, color: "rgb(var(--color-ink-soft))" },
 ]);
-async function complete(context: CompletionContext) {
-  const line = context.state.doc.lineAt(context.pos);
-  const before = line.text.slice(0, context.pos - line.from);
-  const block = /^[ \t]*:::([\w-]*)$/.exec(before);
-  if (block) return { from: context.pos - block[1].length, options: blockCandidates().map(item => snippetCompletion(`${item.label}${item.required.length ? `{${item.required.map((attr, i) => `${attr}="\${${i + 1}:${attr}}"`).join(" ")}}` : ""}\n  \${body}\n:::`, { label: item.label, detail: item.detail, type: "type" })) };
-  const opener = /^[ \t]*:::([\w-]+)\{/.exec(before);
-  if (!opener) return null;
-  const value = /([\w-]+)="([^"\n]*)$/.exec(before);
-  if (value) {
-    let options = enumValues(opener[1], value[1]).map(label => ({ label, type: "enum" }));
-    if (opener[1] === "diagram" && value[1] === "id") {
-      try {
-        const response = await fetch("/api/diagrams");
-        if (response.ok) { const data = await response.json(); options = (Array.isArray(data) ? data : data.diagrams ?? []).map((diagram: { id: string; title: string }) => ({ label: diagram.id, displayLabel: diagram.title, type: "enum" })); }
-      } catch { /* Offline editing still works. */ }
-    }
-    return { from: context.pos - value[2].length, options };
-  }
-  const word = before.match(/[\w-]*$/)![0];
-  return { from: context.pos - word.length, options: Object.keys(BLOCK_DEFS[opener[1]]?.attrs ?? {}).map(label => snippetCompletion(`${label}="\${value}"`, { label, type: "property" })) };
-}
 function indent(view: EditorView, outdent = false) {
   const { from, to } = view.state.selection.main;
   view.dispatch({ changes: indentLines(view.state.doc.toString(), from, to, outdent), userEvent: "input.indent" }); return true;
 }
 
-export default function CodeEditor({ value, onChange, minRows, editorRef }: Props) {
+export default function CodeEditor({ value, onChange, minRows, editorRef, onReady }: Props) {
   const host = useRef<HTMLDivElement>(null); const viewRef = useRef<EditorView>();
   const changeRef = useRef(onChange); changeRef.current = onChange;
   const [problems, setProblems] = useState<MmdDiagnostic[]>([]);
@@ -152,7 +133,7 @@ export default function CodeEditor({ value, onChange, minRows, editorRef }: Prop
         }
         return null;
       }),
-      lintGutter(), autocompletion({ override: [complete] }), EditorView.lineWrapping,
+      lintGutter(), autocompletion({ override: [completeMmd], activateOnTyping: true, maxRenderedOptions: 30, defaultKeymap: false }), EditorView.lineWrapping,
       Prec.highest(keymap.of([
         { key: "Escape", run: () => { escapeTab = true; return false; } },
         { key: "Tab", run: target => { if (escapeTab) { escapeTab = false; return false; } if (hasNextSnippetField(target.state)) return nextSnippetField(target); if (completionStatus(target.state) === "active") return acceptCompletion(target); return indent(target); } },
@@ -202,10 +183,16 @@ export default function CodeEditor({ value, onChange, minRows, editorRef }: Prop
     ] }) });
     viewRef.current = view; refresh();
     editorRef.current = {
+      scrollElement: () => view.scrollDOM,
+      lineTop(line) {
+        const at = view.state.doc.line(Math.max(1, Math.min(line, view.state.doc.lines))).from;
+        return view.lineBlockAt(at).top + view.documentTop - view.scrollDOM.getBoundingClientRect().top + view.scrollDOM.scrollTop;
+      },
       edit(transform, block) { const { from, to } = view.state.selection.main; const edit = templateEdit(view.state.doc.toString(), from, to, transform(view.state.sliceDoc(from, to)), block); view.dispatch({ ...edit, userEvent: "input" }); view.focus(); },
       jump(line) { jump(view.state.doc.line(Math.max(1, Math.min(line, view.state.doc.lines))).from); },
-      command(name) { if (name === "undo") undo(view); else if (name === "redo") redo(view); else indent(view, name === "outdent"); view.focus(); },
+      command(name) { if (name === "undo") undo(view); else if (name === "redo") redo(view); else if (name === "suggest") startCompletion(view); else indent(view, name === "outdent"); view.focus(); },
     };
+    onReady?.();
     return () => { clearTimeout(timeout); editorRef.current = null; viewRef.current = undefined; view.destroy(); };
     // The editor owns its history; prop changes are synchronized below.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -223,7 +210,7 @@ export default function CodeEditor({ value, onChange, minRows, editorRef }: Prop
       <button type="button" className="min-h-11 underline" onClick={() => setShortcuts(!shortcuts)} aria-expanded={shortcuts}>Shortcuts</button>
     </div>
     {hint && <div className="flex items-center gap-2 border-t border-line px-3 text-xs text-ink-soft"><p className="flex-1">Type ::: for blocks · Tab to indent · F8 jumps to problems</p><button type="button" className="min-h-11 min-w-11" aria-label="Dismiss editor hint" onClick={() => setHint(false)}>×</button></div>}
-    {shortcuts && <p className="border-t border-line p-3 text-xs leading-relaxed text-ink-soft">Esc then Tab leaves the editor. Ctrl/Cmd+F finds text. Ctrl/Cmd+Z undoes. Ctrl/Cmd+[ or ] changes indentation. F8 / Shift+F8 moves between problems. Ctrl/Cmd+. opens fixes.</p>}
+    {shortcuts && <p className="border-t border-line p-3 text-xs leading-relaxed text-ink-soft">Ctrl+Space shows suggestions. Enter accepts a suggestion. Tab moves between snippet fields. Esc then Tab leaves the editor. Ctrl/Cmd+F finds text. Ctrl/Cmd+Z undoes. Ctrl/Cmd+[ or ] changes indentation. F8 / Shift+F8 moves between problems. Ctrl/Cmd+. opens fixes.</p>}
     {showProblems && <div className="max-h-60 overflow-auto border-t border-line p-2" aria-label="Problems">
       {!problems.length && <p className="p-2 text-sm text-ink-soft">No source problems.</p>}
       {problems.map((item, i) => <div key={i} className="border-b border-line py-1 text-sm">

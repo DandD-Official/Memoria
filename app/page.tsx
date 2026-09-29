@@ -4,9 +4,11 @@ import { Brand, MemoryMark } from "@/components/layout/brand";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { ButtonLink } from "@/components/ui/button";
 import { LearningExample } from "@/components/landing/learning-example";
+import { BrandLoading } from "@/components/ui/brand-loading";
 
 export default function LandingPage() {
   return <div className="landing-journal">
+    <BrandLoading intro />
     <a href="#main-content" className="skip-link">Skip to content</a>
     <header className="mx-auto flex min-h-24 max-w-7xl items-center justify-between gap-4 px-page">
       <Brand /><nav aria-label="Main navigation" className="flex items-center gap-3 sm:gap-6"><a href="#possibilities" className="hidden text-sm text-ink-soft hover:text-ink md:block">The possibilities</a><ThemeToggle /><Link href="/login" className="inline-flex min-h-11 items-center text-sm font-medium">Log in</Link><ButtonLink href="/guest" variant="outline" className="hidden sm:inline-flex">Try it out <ArrowUpRight className="h-4 w-4" /></ButtonLink></nav>

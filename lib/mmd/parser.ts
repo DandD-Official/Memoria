@@ -30,7 +30,7 @@ import { BLOCK_DEFS, type BlockDefinition } from "@/lib/mmd/spec-blocks";
  */
 
 type RawNode = RawTextNode | RawBlockNode;
-interface RawTextNode { kind: "text"; content: string }
+interface RawTextNode { kind: "text"; content: string; position: SourcePosition }
 interface RawBlockNode { kind: "block"; name: string; attrsRaw: string; bodyLines: string[]; children: RawNode[]; closed: boolean; raw: string; position: SourcePosition; malformed?: boolean }
 
 /** Iterative matching avoids overflowing the JS stack on hostile nesting. */
@@ -39,10 +39,14 @@ function tokenize(source: string): RawNode[] {
   const root: RawNode[] = [];
   const stack: { node: RawBlockNode; start: number; text: string[] }[] = [];
   let rootText: string[] = [];
-  function flush() {
+  function flush(end: number) {
     const frame = stack[stack.length - 1];
     const text = frame ? frame.text : rootText;
-    if (text.length) (frame ? frame.node.children : root).push({ kind: "text", content: text.join("\n") });
+    if (text.length) {
+      const first = lines[end - text.length];
+      const last = lines[end - 1];
+      (frame ? frame.node.children : root).push({ kind: "text", content: text.join("\n"), position: { openLine: first.line, closeLine: last.line, startOffset: first.from, endOffset: last.to, indent: first.indent, attributes: [] } });
+    }
     if (frame) frame.text = []; else rootText = [];
   }
   function finish(frame: typeof stack[number], end: number, closed: boolean) {
@@ -63,18 +67,18 @@ function tokenize(source: string): RawNode[] {
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
     if (line.kind === "open" || line.kind === "malformed") {
-      flush();
+      flush(i);
       const node: RawBlockNode = { kind: "block", name: line.name, attrsRaw: line.attrsRaw, bodyLines: [], children: [], closed: false, raw: line.text, malformed: line.kind === "malformed", position: { openLine: line.line, closeLine: null, startOffset: line.from, endOffset: line.to, indent: line.indent, attributes: line.attributes } };
       (stack.length ? stack[stack.length - 1].node.children : root).push(node);
       if (node.malformed) { node.closed = true; continue; }
       stack.push({ node, start: i, text: [] });
     } else if (line.kind === "close" && stack.length) {
-      flush(); finish(stack.pop()!, i, true);
+      flush(i); finish(stack.pop()!, i, true);
     } else {
       (stack.length ? stack[stack.length - 1].text : rootText).push(line.text);
     }
   }
-  flush();
+  flush(lines.length);
   while (stack.length) finish(stack.pop()!, lines.length - 1, false);
   return root;
 }
@@ -123,13 +127,13 @@ function joinNonEmpty(lines: string[]): string {
   return lines.join("\n");
 }
 
-function postprocess(node: RawNode, depth: number): MmdNode {
-  const result = processNode(node, depth);
-  if (node.kind === "block") result.position = node.position;
+function postprocess(node: RawNode, depth: number, sourcePositions: boolean): MmdNode {
+  const result = processNode(node, depth, sourcePositions);
+  if (node.kind === "block" || sourcePositions) result.position = node.position;
   return result;
 }
 
-function processNode(node: RawNode, depth: number): MmdNode {
+function processNode(node: RawNode, depth: number, sourcePositions: boolean): MmdNode {
   if (node.kind === "text") {
     return { type: "markdown", content: node.content };
   }
@@ -170,7 +174,7 @@ function processNode(node: RawNode, depth: number): MmdNode {
 
   if (policy.kind === "restricted") {
     const children: MmdNode[] = node.children.map((child) => {
-      if (child.kind === "text") return { type: "markdown", content: child.content };
+      if (child.kind === "text") return postprocess(child, depth + 1, sourcePositions);
       if (!policy.allow.includes(child.name)) {
         return errorNode(
           `:::${node.name} cannot contain a nested :::${child.name} block`,
@@ -180,7 +184,7 @@ function processNode(node: RawNode, depth: number): MmdNode {
       // Allowed nested block: process it, but only one level deep — its
       // own further-nested children are flattened by its own policy as
       // usual (most restricted-allow children are themselves "leaf").
-      return postprocess(child, depth + 1);
+      return postprocess(child, depth + 1, sourcePositions);
     });
     return { type: "block", block: node.name, attrs, children, raw: node.raw };
   }
@@ -193,25 +197,25 @@ function processNode(node: RawNode, depth: number): MmdNode {
       );
     }
     const children: MmdNode[] = node.children.map((child) => {
-      if (child.kind === "text") return { type: "markdown", content: child.content };
+      if (child.kind === "text") return postprocess(child, depth + 1, sourcePositions);
       if (policy.disallow?.includes(child.name)) {
         return errorNode(
           `:::${node.name} cannot contain a nested :::${child.name} block`,
           child.raw
         );
       }
-      return postprocess(child, depth + 1);
+      return postprocess(child, depth + 1, sourcePositions);
     });
     return { type: "block", block: node.name, attrs, children, raw: node.raw };
   }
 
   // policy.kind === "only"
   const processedChildren: MmdNode[] = node.children.map((child) => {
-    if (child.kind === "text") return { type: "markdown", content: child.content };
+    if (child.kind === "text") return postprocess(child, depth + 1, sourcePositions);
     if (!policy.allow.includes(child.name)) {
       return errorNode(`:::${node.name} may only contain: ${policy.allow.join(", ")}`, child.raw);
     }
-    return postprocess(child, depth + 1);
+    return postprocess(child, depth + 1, sourcePositions);
   });
 
   const isValid = processedChildren.every((child) => {
@@ -231,9 +235,9 @@ function processNode(node: RawNode, depth: number): MmdNode {
 // Public API
 // ---------------------------------------------------------------------
 
-export function parseMmd(source: string): MmdDocument {
+export function parseMmd(source: string, { sourcePositions = false }: { sourcePositions?: boolean } = {}): MmdDocument {
   const rawNodes = tokenize(source);
-  const children = rawNodes.map((node) => postprocess(node, 0));
+  const children = rawNodes.map((node) => postprocess(node, 0, sourcePositions));
   return { mmdVersion: MMD_VERSION, children };
 }
 

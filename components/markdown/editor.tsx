@@ -1,6 +1,7 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
+import { useScrollSync } from "@/components/mmd/editor/use-scroll-sync";
 import dynamic from "next/dynamic";
 import type { CodeEditorHandle } from "@/components/mmd/editor/code-editor";
 import { indentReplacement } from "@/lib/mmd/grammar";
@@ -31,6 +32,10 @@ const TABLE_TEMPLATE = `\n| Header 1 | Header 2 | Header 3 |\n|----------|------
 export function MarkdownEditor({ value, onChange, minRows = 16, className }: MarkdownEditorProps) {
   const editorRef = useRef<CodeEditorHandle | null>(null);
   const [mode, setMode] = useState<EditorMode>("edit");
+  const previewRef = useRef<HTMLDivElement>(null);
+  const [editorReady, setEditorReady] = useState(false);
+  const handleEditorReady = useCallback(() => setEditorReady(true), []);
+  useScrollSync(editorRef, previewRef, mode === "split", value, editorReady);
   const [showGuide, setShowGuide] = useState(false);
   const [showFullMmdReference, setShowFullMmdReference] = useState(false);
   function applyEdit(transform: (selected: string) => string, options?: { block?: boolean }) {
@@ -84,7 +89,7 @@ export function MarkdownEditor({ value, onChange, minRows = 16, className }: Mar
         </div>
         <span className="font-mono text-[0.6875rem] text-ink-faint">{value.length.toLocaleString()} chars</span>
       </div>
-      <div style={{ minHeight: minRows * 24 }}><CodeEditor value={value} onChange={onChange} minRows={minRows} editorRef={editorRef} /></div>
+      <div style={{ minHeight: minRows * 24 }}><CodeEditor value={value} onChange={onChange} minRows={minRows} editorRef={editorRef} onReady={handleEditorReady} /></div>
     </section>
   );
 
@@ -92,16 +97,16 @@ export function MarkdownEditor({ value, onChange, minRows = 16, className }: Mar
     <section id="mmd-preview-pane" aria-label="Rendered preview" className="min-w-0 border-t border-line bg-surface-raised lg:border-s-0 lg:border-t-0">
       <div className="border-b border-line bg-surface-muted/60 px-4 py-2">
         <p className="text-xs font-semibold uppercase tracking-[0.14em] text-ink-faint">Preview</p>
-        <p className="mt-0.5 text-[0.6875rem] text-ink-faint">What your reader will see</p>
+        <p className="mt-0.5 text-[0.6875rem] text-ink-faint">{mode === "split" ? "Scroll either pane to follow the same passage" : "What your reader will see"}</p>
       </div>
-      <div className="min-h-110 max-h-[42rem] overflow-y-auto p-4 sm:p-6">
+      <div ref={previewRef} className="relative min-h-110 max-h-[42rem] overflow-y-auto overscroll-contain p-4 sm:p-6">
         {value.trim() ? <MarkdownRenderer content={value} onSourceLine={jumpToLine} onReplaceBlock={(raw, replacement) => onChange(value.replace(raw, indentReplacement(raw, replacement)))} /> : <p className="text-sm text-ink-faint">Nothing to preview yet.</p>}
       </div>
     </section>
   );
 
   return (
-    <div className={cn("min-w-0 overflow-hidden rounded-panel border border-line bg-surface shadow-card", className)}>
+    <div data-editor-mode={mode} className={cn("min-w-0 overflow-hidden rounded-panel border border-line bg-surface shadow-card", className)}>
       <div className="border-b border-line bg-surface-muted/35 p-2">
         <div className="flex min-w-0 flex-wrap items-center gap-2">
           <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1" aria-label="Editor tools">
@@ -113,6 +118,7 @@ export function MarkdownEditor({ value, onChange, minRows = 16, className }: Mar
             <span className="mx-1 h-5 w-px bg-line" aria-hidden="true" />
             {(["indent", "outdent", "undo", "redo"] as const).map(command => <button key={command} type="button" disabled={mode === "preview"} onClick={() => editorRef.current?.command(command)} className="min-h-11 rounded-control px-2 text-xs capitalize text-ink-soft hover:bg-ink/5 disabled:opacity-40">{command}</button>)}
             <MmdInsertMenu onInsert={insertMmdBlock} disabled={mode === "preview"} />
+            <button type="button" disabled={mode === "preview"} onClick={() => editorRef.current?.command("suggest")} title="Show suggestions (Ctrl+Space)" className="min-h-11 rounded-control px-2 text-xs text-ink-soft hover:bg-ink/5 disabled:opacity-40">Suggestions</button>
             <MmdDiagramPicker onInsert={appendDiagram} disabled={mode === "preview"} />
             <MmdStyleMenu onInsert={insertStyledCard} disabled={mode === "preview"} />
             <Tooltip content="Formatting guide"><button type="button" aria-label="Formatting guide" onClick={() => setShowGuide((current) => !current)} className={cn("inline-flex h-9 w-9 items-center justify-center rounded-control", showGuide ? "bg-accent-soft text-accent-dark" : "text-ink-soft hover:bg-ink/5 hover:text-ink")}><HelpCircle className="h-4 w-4" aria-hidden="true" /></button></Tooltip>

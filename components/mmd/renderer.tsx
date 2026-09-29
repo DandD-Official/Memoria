@@ -36,13 +36,13 @@ export function MmdRenderer({
     return (
       <MmdRenderProvider onSourceLine={onSourceLine} mode={mode} assetRegistry={assetRegistry} resolvedAssets={resolvedAssets}>
         <div className="memora-markdown">
-          <InlineMarkdown content={content} />
+          <InlineMarkdown content={content} startLine={onSourceLine ? 1 : undefined} />
         </div>
       </MmdRenderProvider>
     );
   }
 
-  const doc = parseMmd(content);
+  const doc = parseMmd(content, { sourcePositions: !!onSourceLine });
   return (
     <MmdRenderProvider onSourceLine={onSourceLine} mode={mode} assetRegistry={assetRegistry} resolvedAssets={resolvedAssets}>
       <div className="memora-markdown">

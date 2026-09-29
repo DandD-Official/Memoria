@@ -6,6 +6,7 @@ import { Sparkles } from "lucide-react";
 import { AiSourcePicker, type AiKeySource } from "@/components/ai/ai-source-picker";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
+import { LoadingState } from "@/components/ui/loading-state";
 import { Input } from "@/components/ui/input";
 import { buildTopicNotePrompt, type ProcessingStyle } from "@/lib/prompts/note-prompt";
 import { stripCodeFences } from "@/lib/validation/reviewer";
@@ -34,6 +35,7 @@ export function GenerateNoteDialog({ systemAvailable }: { systemAvailable: boole
   }
 
   async function generateNote() {
+    if (busy) return;
     const normalizedTopic = topic.trim();
     if (normalizedTopic.length < 3) {
       setError("Enter a topic with at least three characters.");
@@ -100,6 +102,7 @@ export function GenerateNoteDialog({ systemAvailable }: { systemAvailable: boole
             <Input
               id="generate-note-topic"
               value={topic}
+              disabled={busy}
               onChange={(event) => setTopic(event.target.value)}
               onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); void generateNote(); } }}
               placeholder="e.g. How TCP congestion control works"
@@ -116,6 +119,7 @@ export function GenerateNoteDialog({ systemAvailable }: { systemAvailable: boole
           </label>
 
           <AiSourcePicker value={source} onChange={setSource} systemAvailable={systemAvailable} />
+          {busy && <LoadingState label="Writing and saving your note. This can take a moment…" rows={2} />}
           {error && <p role="alert" className="rounded-control border border-danger/30 bg-danger/5 px-3 py-2 text-sm text-danger">{error}</p>}
           <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
             <Button type="button" variant="ghost" onClick={() => closeDialog(false)} disabled={busy}>Cancel</Button>

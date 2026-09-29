@@ -5,6 +5,7 @@ import { remarkMmdMath } from "@/lib/mmd/math";
 import { TableCellContent } from "@/components/markdown/table-cell";
 import { Children, isValidElement, type ReactElement } from "react";
 import { CodeBlock } from "@/components/mmd/blocks/code-block";
+import { rehypeSourceLines } from "@/lib/mmd/source-map";
 
 /**
  * Renders a run of ordinary Markdown. Used both for top-level content and
@@ -19,24 +20,26 @@ import { CodeBlock } from "@/components/mmd/blocks/code-block";
  * so the existing typography rules in app/globals.css apply via
  * descendant selectors regardless of nesting depth.
  */
-export function InlineMarkdown({ content }: { content: string }) {
+export function InlineMarkdown({ content, startLine }: { content: string; startLine?: number }) {
   if (!content.trim()) return null;
   return (
     <ReactMarkdown
       remarkPlugins={[remarkGfm, remarkMmdMath]}
+      rehypePlugins={startLine === undefined ? [] : [[rehypeSourceLines, { startLine }]]}
       components={{
-        pre: ({ children }) => {
+        pre: ({ children, node }) => {
           const child = Children.toArray(children).find(isValidElement) as ReactElement<{ children?: string; className?: string }> | undefined;
           const source = String(child?.props.children ?? "").replace(/\n$/, "");
           const language = child?.props.className?.replace(/^language-/, "") || "text";
-          return <CodeBlock node={{ type: "block", block: "code", attrs: { language }, raw: source, children: [{ type: "markdown", content: source }] }} />;
+          const code = <CodeBlock node={{ type: "block", block: "code", attrs: { language }, raw: source, children: [{ type: "markdown", content: source }] }} />;
+          return startLine === undefined ? code : <div data-source-line={node?.properties?.["data-source-line"] as number | undefined} data-source-end={node?.properties?.["data-source-end"] as number | undefined}>{code}</div>;
         },
-        table: ({ children, ...props }) => (
+        table: ({ children, node: _node, ...props }) => (
           <ResponsiveTable>
             <table {...props}>{children}</table>
           </ResponsiveTable>
         ),
-        td: ({ children, ...props }) => <td {...props}><TableCellContent>{children}</TableCellContent></td>,
+        td: ({ children, node: _node, ...props }) => <td {...props}><TableCellContent>{children}</TableCellContent></td>,
       }}
     >
       {content}
