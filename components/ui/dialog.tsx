@@ -3,6 +3,7 @@ import { useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { lockBodyScroll } from "@/lib/body-scroll-lock";
 
 interface DialogProps {
   open: boolean;
@@ -14,14 +15,17 @@ interface DialogProps {
   className?: string;
   fullScreen?: boolean;
   placement?: "center" | "side";
+  onAfterClose?: () => void;
 }
-export function Dialog({ open, onOpenChange, title, description, children, footer, className, fullScreen = false, placement = "center" }: DialogProps) {
+export function Dialog({ open, onOpenChange, title, description, children, footer, className, fullScreen = false, placement = "center", onAfterClose }: DialogProps) {
   const titleId = useId();
   const descriptionId = useId();
   const dialogRef = useRef<HTMLDialogElement>(null);
   const [present, setPresent] = useState(open);
   const onOpenChangeRef = useRef(onOpenChange);
   onOpenChangeRef.current = onOpenChange;
+  const onAfterCloseRef = useRef(onAfterClose);
+  onAfterCloseRef.current = onAfterClose;
   useEffect(() => {
     if (open) { setPresent(true); return; }
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches || document.documentElement.classList.contains("reduce-motion");
@@ -32,13 +36,13 @@ export function Dialog({ open, onOpenChange, title, description, children, foote
     if (!present || !dialogRef.current) return;
     const dialog = dialogRef.current;
     const previousFocus = document.activeElement as HTMLElement | null;
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
+    const unlockScroll = lockBodyScroll();
     dialog.showModal();
     return () => {
       dialog.close();
-      document.body.style.overflow = previousOverflow;
+      unlockScroll();
       if (previousFocus?.isConnected) previousFocus.focus();
+      onAfterCloseRef.current?.();
     };
   }, [present]);
   if (!present || typeof document === "undefined") return null;

@@ -27,8 +27,8 @@ export function MemoryReader({ book, storageKey, canPersist, resumeChapter, onCh
     {error && <p role="alert" className="text-sm text-danger">{error}</p>}
     <div key={chapter.id} className="rounded-card border border-line bg-surface p-5 sm:p-8">
       <header className="mb-6"><p className="text-sm text-ink-soft">Memory {index + 1} of {entries.length}{chapter.subjectTitle ? " ? " + chapter.subjectTitle : ""}</p><h2 className="mt-2 font-display text-3xl">{chapter.title}</h2>{chapter.description && <p className="mt-2 text-ink-soft">{chapter.description}</p>}</header>
-      {chapter.quiz ? <BookQuiz title={chapter.title} questions={chapter.quiz} /> : <DocumentReader content={chapter.content} kind={chapter.kind === "REVIEWER" ? "reviewer" : "note"} resolvedAssets={book.assets} />}
+      {chapter.quiz ? <BookQuiz title={chapter.title} questions={chapter.quiz} /> : <DocumentReader content={chapter.content} title={chapter.title} kind={chapter.kind === "REVIEWER" ? "reviewer" : "note"} resolvedAssets={book.assets} />}
     </div>
-    <nav aria-label="Memory navigation" className="flex justify-between gap-3"><Button variant="outline" disabled={index === 0} onClick={() => setId(entries[index - 1].chapter.id)}>Previous memory</Button><Button variant="outline" disabled={index === entries.length - 1} onClick={() => setId(entries[index + 1].chapter.id)}>Next memory</Button></nav>
+    <nav aria-label="Memory navigation" className="flex flex-wrap justify-between gap-3"><Button variant="outline" disabled={index === 0} onClick={() => setId(entries[index - 1].chapter.id)}>Previous memory</Button><Button variant="outline" disabled={index === entries.length - 1} onClick={() => setId(entries[index + 1].chapter.id)}>Next memory</Button></nav>
   </section>;
 }

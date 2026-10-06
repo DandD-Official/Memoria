@@ -164,7 +164,7 @@ export function NoteDetail({ note, canEdit, isOwner, autoSave, systemAvailable, 
         </>
       ) : (
         <>
-          <DocumentReader content={content} kind="note" related={related} next={<><Link href={`/reviewers?fromNote=${note.id}`} className="journal-link">Build a study guide <Sparkles className="h-4 w-4" /></Link><Link href={`/quizzes?fromNote=${note.id}`} className="journal-link">Quiz yourself <ListChecks className="h-4 w-4" /></Link><Link href="/diagrams" className="journal-link">Visualize an idea <Workflow className="h-4 w-4" /></Link></>} />
+          <DocumentReader content={content} title={title} kind="note" related={related} next={<><Link href={`/reviewers?fromNote=${note.id}`} className="journal-link">Build a study guide <Sparkles className="h-4 w-4" /></Link><Link href={`/quizzes?fromNote=${note.id}`} className="journal-link">Quiz yourself <ListChecks className="h-4 w-4" /></Link><Link href="/diagrams" className="journal-link">Visualize an idea <Workflow className="h-4 w-4" /></Link></>} />
         </>
       )}
     </div>

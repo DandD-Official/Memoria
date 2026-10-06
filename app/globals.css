@@ -567,6 +567,25 @@
 
 
 .native-overlay::backdrop { background: rgb(18 32 23 / 0.45); }
+
+.reader-fullscreen {
+  position: fixed;
+  inset: 0;
+  margin: 0 !important;
+  z-index: 90;
+  height: 100dvh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background: rgb(var(--color-paper));
+  padding: max(1rem, env(safe-area-inset-top)) max(1rem, env(safe-area-inset-right)) max(5rem, env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left));
+}
+.reader-fullscreen > section, .reader-fullscreen > div { max-width: 1500px; margin-inline: auto; }
+.reader-fullscreen .mobile-contents-trigger { bottom: max(1rem, env(safe-area-inset-bottom)); }
+.reader-fullscreen .reader-controls { position: sticky; top: 0; z-index: 30; background: rgb(var(--color-paper)); padding-block: 0.5rem; }
+/* An animation's final transform must not contain the viewport-filling fallback. */
+.motion-page:has(.reader-fullscreen), .motion-page .page-header + *:has(.reader-fullscreen) { animation: none; transform: none; }
+@media (min-width: 640px) { .reader-fullscreen { padding: 1.5rem 1.5rem 5rem; } }
+@media (min-width: 1024px) { .reader-fullscreen { padding-bottom: 1.5rem; } }
 @keyframes memoria-enter { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 @keyframes memoria-exit { from { opacity: 1; transform: translateY(0); } to { opacity: 0; transform: translateY(4px); } }
 @keyframes memoria-backdrop { from { background-color: rgb(18 32 23 / 0); } to { background-color: rgb(18 32 23 / 0.45); } }

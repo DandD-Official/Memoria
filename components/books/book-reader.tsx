@@ -1,6 +1,6 @@
 "use client";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
-import { BookOpen, FileText, Bookmark, ChevronLeft, ChevronRight, ListTree } from "lucide-react";
+import { BookOpen, FileText, Bookmark, ChevronLeft, ChevronRight, ListTree, Maximize2, Minimize2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { MemoryReader } from "./memory-reader";
 import { bookContents } from "@/lib/books/contents";
@@ -9,6 +9,8 @@ import { renderBook, type RenderedBook } from "@/lib/books/render";
 import type { BookDocument } from "@/lib/books/document";
 import { readBookmarks, type BookBookmark } from "@/lib/books/notebooks";
 import { bookmarkPage, visibleBookPages } from "@/lib/books/reader-state";
+import { ReadAloud } from "@/components/library/read-aloud";
+import { useReaderFullscreen } from "./use-reader-fullscreen";
 
 function PaginatedBookReader({ book, storageKey, canPersist = false, resumeChapter, onChapterChange, modeControl, editing = false }: { editing?: boolean; modeControl: ReactNode; book: BookDocument; storageKey?: string; canPersist?: boolean; resumeChapter?: string | null; onChapterChange?: (id: string) => void }) {
   const rendered = useRef<RenderedBook | null>(null), viewport = useRef<HTMLDivElement>(null), papers = useRef<HTMLDivElement>(null);
@@ -78,8 +80,9 @@ function PaginatedBookReader({ book, storageKey, canPersist = false, resumeChapt
     finally { setSaving(false); }
   }
   const currentMark = bookmarks.find(mark => bookmarkPage(mark, rendered.current?.chapterPages ?? {}, total) === page);
+  const readingChapter = chapter ?? book.chapters.find(item => !item.quiz);
   return <section aria-label={book.title + " reader"} className="space-y-4">
-    <div className="flex flex-wrap items-center gap-2 border-b border-line pb-3">
+    <div className="reader-controls flex flex-wrap items-center gap-2 border-b border-line pb-3">
       <Button variant="ghost" size="sm" aria-expanded={contents} onClick={() => setContents(!contents)}><ListTree className="h-4 w-4" />Contents</Button>
       <div className="flex flex-1 gap-1"><Button size="sm" variant={!spread ? "secondary" : "ghost"} aria-pressed={!spread} onClick={() => setSpread(false)}>One page</Button><Button size="sm" variant={spread ? "secondary" : "ghost"} aria-pressed={spread} onClick={() => setSpread(true)}>Two pages</Button></div>
       <div className="ms-auto flex items-center gap-2">
@@ -87,6 +90,7 @@ function PaginatedBookReader({ book, storageKey, canPersist = false, resumeChapt
       {modeControl}
       </div>
     </div>
+    {!editing && !practice && readingChapter && !readingChapter.quiz && <ReadAloud content={readingChapter.content} title={readingChapter.title} />}
     {saveError && <p role="alert" className="text-sm text-danger">{saveError}</p>}
     <div className={contents ? "grid items-start gap-5 lg:grid-cols-[220px_minmax(0,1fr)]" : "min-w-0"}>
       {contents && <aside className="max-h-64 overflow-y-auto lg:sticky lg:top-24 lg:max-h-[75dvh]" aria-label="Contents and bookmarks">
@@ -108,6 +112,7 @@ function PaginatedBookReader({ book, storageKey, canPersist = false, resumeChapt
 }
 
 export function BookReader(props: Omit<Parameters<typeof PaginatedBookReader>[0], "modeControl">) {
+  const { ref, fullscreen, toggle } = useReaderFullscreen();
   const [mode, setMode] = useState<"book" | "memories">("book");
   const [chapter, setChapter] = useState(props.resumeChapter);
   const { onChapterChange } = props;
@@ -116,7 +121,10 @@ export function BookReader(props: Omit<Parameters<typeof PaginatedBookReader>[0]
     <button type="button" title="Read as book" aria-label="Read as book" aria-pressed={mode === "book"} onClick={() => setMode("book")} className={"flex h-10 w-10 items-center justify-center rounded-control transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent " + (mode === "book" ? "bg-surface text-ink shadow-sm" : "text-ink-soft hover:text-ink")}><BookOpen aria-hidden="true" className="h-4 w-4" /></button>
     <button type="button" title="Read as memories" aria-label="Read as memories" aria-pressed={mode === "memories"} onClick={() => setMode("memories")} className={"flex h-10 w-10 items-center justify-center rounded-control transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent " + (mode === "memories" ? "bg-surface text-ink shadow-sm" : "text-ink-soft hover:text-ink")}><FileText aria-hidden="true" className="h-4 w-4" /></button>
   </div>;
-  return props.editing || mode === "book"
-    ? <PaginatedBookReader {...props} resumeChapter={chapter} onChapterChange={changeChapter} modeControl={props.editing ? null : modeControl} />
-    : <div className="space-y-5"><div className="flex justify-end border-b border-line pb-3">{modeControl}</div><MemoryReader {...props} resumeChapter={chapter} onChapterChange={changeChapter} /></div>;
+  const controls = <div className="flex flex-wrap items-center justify-end gap-2">{!props.editing && modeControl}<Button type="button" variant="outline" size="sm" onClick={toggle} aria-label={fullscreen ? "Exit full screen" : "View full screen"} aria-pressed={fullscreen}>{fullscreen ? <Minimize2 className="h-4 w-4" aria-hidden="true" /> : <Maximize2 className="h-4 w-4" aria-hidden="true" />}<span className="hidden sm:inline">{fullscreen ? "Exit full screen" : "Full screen"}</span></Button></div>;
+  return <div ref={ref} tabIndex={-1} role={fullscreen ? "dialog" : undefined} aria-modal={fullscreen || undefined} aria-label={fullscreen ? props.book.title + " fullscreen reader" : undefined} className={fullscreen ? "reader-fullscreen" : "min-w-0"}>
+    {props.editing || mode === "book"
+      ? <PaginatedBookReader {...props} resumeChapter={chapter} onChapterChange={changeChapter} modeControl={controls} />
+      : <div className="space-y-5"><div className="reader-controls flex justify-end border-b border-line pb-3">{controls}</div><MemoryReader {...props} resumeChapter={chapter} onChapterChange={changeChapter} /></div>}
+  </div>;
 }
