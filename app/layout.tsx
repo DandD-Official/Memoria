@@ -4,6 +4,7 @@ import { ThemeProvider, THEME_INIT_SCRIPT } from "@/components/layout/theme-prov
 import { CodeThemeProvider } from "@/components/mmd/code-theme-context";
 import { StartupScreen } from "@/components/layout/startup-screen";
 import { ToastViewport } from "@/components/ui/toast";
+import { PwaRegistration } from "@/components/layout/pwa-registration";
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXTAUTH_URL || "https://memoria-studynotes.vercel.app"),
@@ -24,6 +25,7 @@ export const metadata: Metadata = {
   icons: {
     icon: "/icon.svg?v=memoria-mark-2",
   },
+  appleWebApp: { capable: true, title: "Memoria", statusBarStyle: "default" },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -36,7 +38,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className="font-sans" suppressHydrationWarning>
         <ThemeProvider>
-          <CodeThemeProvider><StartupScreen />{children}<ToastViewport /></CodeThemeProvider>
+          <CodeThemeProvider><StartupScreen /><PwaRegistration />{children}<ToastViewport /></CodeThemeProvider>
         </ThemeProvider>
       </body>
     </html>

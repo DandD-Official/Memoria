@@ -27,7 +27,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const userSettings = settings ?? { sidebarMode: "MANUAL", sidebarCollapsed: false, compactLayout: false, reduceMotion: false };
 
   return (
-    <WorkspaceShell userName={user.name ?? user.email ?? "Account"} unreadNotifications={unreadNotifications} studyStreak={studyStreak} compact={userSettings.compactLayout} reduceMotion={userSettings.reduceMotion} indexCollapsed={userSettings.sidebarCollapsed} indexMode={userSettings.sidebarMode}>
+    <WorkspaceShell userId={user.id} userName={user.name ?? user.email ?? "Account"} unreadNotifications={unreadNotifications} studyStreak={studyStreak} compact={userSettings.compactLayout} reduceMotion={userSettings.reduceMotion} indexCollapsed={userSettings.sidebarCollapsed} indexMode={userSettings.sidebarMode}>
       {children}
       <SessionHeartbeat />
       {user.sessionConflict && user.sessionId && <SessionConflictModal userName={user.name ?? user.email ?? "This account"} sessionId={user.sessionId} otherDevice={user.sessionConflictDevice} currentDevice={user.currentSessionDevice} />}

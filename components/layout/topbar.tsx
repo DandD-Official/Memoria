@@ -14,8 +14,9 @@ import { primaryNavigation, isNavigationItemActive } from "@/components/layout/n
 import { Sheet } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { OfflineControls } from "@/components/layout/offline-controls";
 
-export function Topbar({ userName, unreadNotifications, studyStreak }: { userName: string; unreadNotifications: number; studyStreak: number }) {
+export function Topbar({ userId, userName, unreadNotifications, studyStreak }: { userId: string; userName: string; unreadNotifications: number; studyStreak: number }) {
   const pathname = usePathname();
   const [searchOpen, setSearchOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
@@ -38,6 +39,7 @@ export function Topbar({ userName, unreadNotifications, studyStreak }: { userNam
     <CommandSearch open={searchOpen} onOpenChange={setSearchOpen} />
     <Sheet open={accountOpen} onOpenChange={setAccountOpen} title={userName} description="Your personal learning space.">
       <div className="divide-y divide-line">
+        <OfflineControls accountId={userId} accountName={userName} />
         <div className="flex items-center justify-between py-5"><span className="text-sm">Appearance</span><ThemeToggle /></div>
         <Link onClick={() => setAccountOpen(false)} href="/workspaces" className="flex min-h-14 items-center gap-3 text-sm">Shared workspaces<ArrowUpRight className="ms-auto h-4 w-4" /></Link>
         <Link onClick={() => setAccountOpen(false)} href="/walkthrough" className="flex min-h-14 items-center gap-3 text-sm">Walkthrough & help<ArrowUpRight className="ms-auto h-4 w-4" /></Link>
