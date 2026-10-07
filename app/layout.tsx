@@ -24,6 +24,7 @@ export const metadata: Metadata = {
     "Import your notes, organize them into reviewers, and test yourself with customizable quizzes and exams.",
   icons: {
     icon: "/icon.svg?v=memoria-mark-2",
+    apple: "/apple-icon-v2.png",
   },
   appleWebApp: { capable: true, title: "Memoria", statusBarStyle: "default" },
 };

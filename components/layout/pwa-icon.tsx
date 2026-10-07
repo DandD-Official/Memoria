@@ -1,6 +1,11 @@
 export function PwaIcon({ size = 512 }: { size?: number }) {
-  return <div style={{ alignItems: "center", background: "#f6f6ef", border: `${Math.max(1, Math.round(size / 180))}px solid #d9dfd2`, color: "#22312b", display: "flex", height: size, justifyContent: "center", position: "relative", width: size }}>
-    <span style={{ fontFamily: "Georgia, serif", fontSize: Math.round(size * 0.62), fontWeight: 500, lineHeight: 1, marginTop: -Math.round(size * 0.04) }}>M</span>
-    <span style={{ background: "#22312b", borderRadius: "50%", bottom: `${Math.round(size * 0.24)}px`, height: `${Math.round(size * 0.09)}px`, position: "absolute", right: `${Math.round(size * 0.21)}px`, width: `${Math.round(size * 0.09)}px` }} />
-  </div>;
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 150 150" fill="none">
+      <rect width="150" height="150" fill="#f7f7ef" />
+      <g transform="translate(42 44) scale(1.8)" fill="none" stroke="#22312b" strokeWidth="2.2" strokeLinecap="round">
+        <path d="M6 26V13a6 6 0 0 1 12 0v10a4 4 0 0 1-8 0v-6a4 4 0 0 1 8 0v6a4 4 0 0 0 8 0V13a6 6 0 0 0-12 0v13" />
+        <circle cx="30" cy="27" r="2.5" fill="#22312b" stroke="none" />
+      </g>
+    </svg>
+  );
 }

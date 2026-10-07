@@ -15,6 +15,17 @@ export function WorkspaceShell({ children, userId, userName, unreadNotifications
   const [collapsed, setCollapsed] = useState(indexCollapsed);
   useEffect(() => setCollapsed(indexCollapsed), [indexCollapsed]);
   useEffect(() => {
+    const enterOfflineWorkspace = () => {
+      if (navigator.onLine || window.location.pathname === "/offline") return;
+      const currentPath = window.location.pathname + window.location.search;
+      window.location.replace("/offline?path=" + encodeURIComponent(currentPath));
+    };
+    enterOfflineWorkspace();
+    window.addEventListener("offline", enterOfflineWorkspace);
+    return () => window.removeEventListener("offline", enterOfflineWorkspace);
+  }, []);
+
+  useEffect(() => {
     document.documentElement.classList.toggle("reduce-motion", reduceMotion);
     return () => document.documentElement.classList.remove("reduce-motion");
   }, [reduceMotion]);

@@ -1,4 +1,4 @@
-const CACHE_NAME = "memoria-shell-v1";
+const CACHE_NAME = "memoria-shell-v2";
 const OFFLINE_URL = "/offline";
 
 async function precacheShell() {
@@ -7,7 +7,7 @@ async function precacheShell() {
   if (!page.ok) throw new Error("Could not cache the offline library page.");
   await cache.put(OFFLINE_URL, page.clone());
   const html = await page.text();
-  const urls = new Set(["/icon.svg", "/icon-192.png", "/icon-512.png"]);
+  const urls = new Set(["/icon.svg", "/icon-192-v2.png", "/icon-512-v2.png"]);
   for (const match of html.matchAll(/(?:src|href)=["']([^"']*\/_next\/static\/[^"']+)["']/g)) {
     urls.add(new URL(match[1], self.location.origin).href);
   }
@@ -36,7 +36,9 @@ self.addEventListener("fetch", event => {
       try { return await fetch(request, { signal: controller.signal }); }
       catch {
       if (url.pathname === OFFLINE_URL) return (await caches.match(OFFLINE_URL)) || new Response("Connect once to save the offline library to this device.", { status: 503, headers: { "Content-Type": "text/plain; charset=utf-8" } });
-      return Response.redirect(new URL(OFFLINE_URL, self.location.origin).href, 302);
+      const fallback = new URL(OFFLINE_URL, self.location.origin);
+      fallback.searchParams.set("path", url.pathname + url.search);
+      return Response.redirect(fallback.href, 302);
       } finally { self.clearTimeout(timeout); }
     })());
     return;
