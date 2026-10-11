@@ -4,6 +4,7 @@ import { ThemeProvider, THEME_INIT_SCRIPT } from "@/components/layout/theme-prov
 import { CodeThemeProvider } from "@/components/mmd/code-theme-context";
 import { StartupScreen } from "@/components/layout/startup-screen";
 import { ToastViewport } from "@/components/ui/toast";
+import { NavigationLoadingProvider } from "@/components/layout/navigation-loading";
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXTAUTH_URL || "https://memoria-studynotes.vercel.app"),
@@ -36,7 +37,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className="font-sans" suppressHydrationWarning>
         <ThemeProvider>
-          <CodeThemeProvider><StartupScreen />{children}<ToastViewport /></CodeThemeProvider>
+          <CodeThemeProvider><NavigationLoadingProvider><StartupScreen />{children}<ToastViewport /></NavigationLoadingProvider></CodeThemeProvider>
         </ThemeProvider>
       </body>
     </html>

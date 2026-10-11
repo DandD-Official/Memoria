@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import Link from "@/components/layout/navigation-link";
 import { LegalPage, type LegalSection } from "@/components/legal/legal-page";
 import { LegalContact } from "@/components/legal/legal-contact";
 

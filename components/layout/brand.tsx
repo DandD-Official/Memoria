@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/layout/navigation-link";
 import { cn } from "@/lib/utils";
 
 export function MemoryMark({ className }: { className?: string }) {

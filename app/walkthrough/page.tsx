@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import Link from "@/components/layout/navigation-link";
 import { ArrowUpRight } from "lucide-react";
 import { walkthroughs } from "@/lib/walkthrough";
 export const metadata: Metadata = { title: "Getting started | Memoria", description: "Step-by-step walkthroughs for notes, study guides, SVGs, collaboration, and sharing in Memoria." };

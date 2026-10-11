@@ -34,7 +34,8 @@ describe("quiz results", () => {
     const page = await QuizResultsPage({ params: Promise.resolve({ id: "quiz-1" }), searchParams: Promise.resolve({ attempt: "attempt-1", show: "missed" }) });
     const html = renderToStaticMarkup(page);
     expect(html).not.toContain("First question");
-    expect(html).toContain("2. Second question");
+    expect(html).toContain("Question 2");
+    expect(html).toContain("Second question");
     expect(html).toContain("All questions (2)");
   });
 });

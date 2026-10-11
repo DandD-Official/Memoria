@@ -1,14 +1,17 @@
 "use client";
+import { QuizFeedback } from "@/components/quizzes/quiz-feedback";
 
 import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
-import { Check, ChevronLeft, ChevronRight, Clock, Flag } from "lucide-react";
+import { useRouter } from "@/components/layout/navigation-loading";
+import { ChevronLeft, ChevronRight, Clock, Flag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { cn } from "@/lib/utils";
 import type { QuizQuestion } from "@/lib/validation/quiz";
+import { QuizContent } from "@/components/quizzes/quiz-content";
+import { QuestionNavigator, hasAnswer } from "@/components/quizzes/question-navigator";
 import { QuestionInput } from "@/components/quizzes/question-input";
-import { formatCorrectAnswer, isAnswerCorrect } from "@/lib/quiz-grading";
+import { isAnswerCorrect } from "@/lib/quiz-grading";
 
 interface QuizPlayerProps {
   quizId: string;
@@ -105,7 +108,7 @@ export function QuizPlayer({ quizId, title, questions: rawQuestions, testMode, s
     setSubmitting(false);
   }
 
-  const answeredCount = Object.values(answers).filter(hasAnswer).length;
+  const answeredCount = questions.filter(item => hasAnswer(answers[item.id])).length;
   const minutes = secondsLeft !== null ? Math.floor(secondsLeft / 60) : null;
   const seconds = secondsLeft !== null ? secondsLeft % 60 : null;
 
@@ -117,26 +120,23 @@ export function QuizPlayer({ quizId, title, questions: rawQuestions, testMode, s
     : <Button onClick={handleSubmit} loading={submitting}>Finish quiz</Button>;
 
   return (
-    <div className="mx-auto max-w-3xl pb-8">
-      <header className="mb-8 border-b border-line pb-5"><div className="flex flex-wrap items-start justify-between gap-4"><div className="min-w-0"><p className="eyebrow">{testMode === "exam" ? "Focus / Exam" : "Focus / Learn as you go"}</p><h1 className="mt-3 break-words font-display text-2xl tracking-tight">{title}</h1></div>{secondsLeft !== null && <span role="timer" aria-label={`${minutes} minutes and ${seconds} seconds remaining`} className={cn("inline-flex items-center gap-2 rounded-control border px-3 py-2 font-mono text-sm tabular-nums", secondsLeft < 60 ? "border-danger text-danger" : "border-line text-ink-soft")}><Clock className="h-4 w-4" />{minutes}:{String(seconds).padStart(2, "0")}</span>}</div></header>
-      <div className="mb-7 flex flex-wrap items-center justify-between gap-3"><p className="index-label">Question {index + 1} of {questions.length}</p><p role="status" className={cn("text-xs", saveState === "failed" ? "text-danger" : "text-ink-faint")}>{saveState === "saving" ? "Saving your place?" : saveState === "failed" ? "Answers haven?t synced. Check your connection; submission will retry." : "Your place is saved"}</p></div>
+    <div className="quiz-experience mx-auto max-w-6xl pb-8">
+      <header className="quiz-hero mb-8 p-5 sm:p-7"><div className="flex flex-wrap items-start justify-between gap-4"><div className="min-w-0"><p className="eyebrow">{testMode === "exam" ? "Focus / Exam" : "Focus / Learn as you go"}</p><h1 className="mt-3 break-words font-display text-2xl tracking-tight">{title}</h1></div>{secondsLeft !== null && <span role="timer" aria-label={`${minutes} minutes and ${seconds} seconds remaining`} className={cn("inline-flex items-center gap-2 rounded-control border px-3 py-2 font-mono text-sm tabular-nums", secondsLeft < 60 ? "border-danger text-danger" : "border-line text-ink-soft")}><Clock className="h-4 w-4" />{minutes}:{String(seconds).padStart(2, "0")}</span>}</div></header>
+      <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_260px]">
+      <div className="min-w-0">
+      <div className="mb-7 flex flex-wrap items-center justify-between gap-3"><p className="index-label">Question {index + 1} of {questions.length}</p><p role="status" className={cn("text-xs", saveState === "failed" ? "text-danger" : "text-ink-faint")}>{saveState === "saving" ? "Saving your place..." : saveState === "failed" ? "Answers have not synced. Check your connection; submission will retry." : "Your place is saved"}</p></div>
       <div className="mb-8 h-1 bg-line" role="progressbar" aria-label="Questions answered" aria-valuemin={0} aria-valuemax={questions.length} aria-valuenow={answeredCount}><div className="h-full bg-action" style={{ width: `${answeredCount / Math.max(questions.length, 1) * 100}%` }} /></div>
-      <section aria-label={`Question ${index + 1}`} className="study-prompt">
-        <div className="flex items-start gap-5"><div className="min-w-0 flex-1"><p className="mb-4 text-xs text-ink-faint">{question.type.replaceAll("_", " ")}</p><h2 tabIndex={-1} id="active-question" className="break-words font-display text-2xl leading-snug tracking-tight sm:text-3xl">{question.question}</h2></div><button type="button" onClick={toggleFlag} aria-label={flagged.has(question.id) ? "Remove flag from question" : "Flag question for later"} aria-pressed={flagged.has(question.id)} className={cn("flex h-11 w-11 shrink-0 items-center justify-center rounded-full border", flagged.has(question.id) ? "border-action bg-accent-soft text-ink" : "border-line text-ink-faint")}><Flag className={cn("h-4 w-4", flagged.has(question.id) && "fill-accent")} /></button></div>
+      <section aria-label={`Question ${index + 1}`} className="quiz-question-panel p-5 sm:p-8">
+        <div className="flex items-start gap-5"><div className="min-w-0 flex-1"><p className="quiz-type-badge mb-4">{question.type.replaceAll("_", " ")}</p><h2 id="active-question" className="sr-only">Question {index + 1}</h2><div className="quiz-prompt"><QuizContent content={question.question} /></div></div><button type="button" onClick={toggleFlag} aria-label={flagged.has(question.id) ? "Remove flag from question" : "Flag question for later"} aria-pressed={flagged.has(question.id)} className={cn("flex h-11 w-11 shrink-0 items-center justify-center rounded-full border", flagged.has(question.id) ? "border-action bg-accent-soft text-ink" : "border-line text-ink-faint")}><Flag className={cn("h-4 w-4", flagged.has(question.id) && "fill-accent")} /></button></div>
         {question.sourceSection && <p className="mt-3 text-xs text-ink-faint">From {question.sourceSection}</p>}
-        <div className="mt-8"><QuestionInput question={question} value={answers[question.id]} onChange={setAnswer} /></div>
-        {testMode === "review" && <div className="mt-7 border-t border-line pt-6">{!checked.has(question.id) ? <Button variant="outline" disabled={!hasAnswer(answers[question.id])} onClick={() => setChecked(prev => new Set(prev).add(question.id))}>Check my understanding</Button> : <div className="border-s-2 border-action ps-5" role="status"><p className={cn("font-medium", isAnswerCorrect(question, answers[question.id]) ? "text-success" : "text-ink")}>{isAnswerCorrect(question, answers[question.id]) ? "That?s it." : "Here?s the connection."}</p><p className="mt-3 text-sm"><strong>Answer:</strong> {formatCorrectAnswer(question)}</p>{showExplanations && <p className="mt-2 text-sm leading-relaxed text-ink-soft">{question.explanation || "This question does not have an explanation yet."}</p>}</div>}</div>}
+        <div className="quiz-answer-area mt-8"><p className="mb-3 text-xs font-semibold uppercase tracking-wide text-ink-soft">Your answer</p><QuestionInput question={question} value={answers[question.id]} onChange={setAnswer} /></div>
+        {testMode === "review" && <div className="mt-7 border-t border-line pt-6">{!checked.has(question.id) ? <Button variant="outline" disabled={!hasAnswer(answers[question.id])} onClick={() => setChecked(prev => new Set(prev).add(question.id))}>Check my understanding</Button> : <QuizFeedback question={question} correct={isAnswerCorrect(question, answers[question.id])} showExplanations={showExplanations} />}</div>}
       </section>
       {submitError && <p className="mt-4 text-sm text-danger" role="alert">{submitError}</p>}
       <div className="sticky bottom-0 z-20 mt-5 flex items-center justify-between gap-3 border-t border-line bg-surface-muted py-4 pb-[max(1rem,env(safe-area-inset-bottom))]"><Button variant="ghost" onClick={() => setIndex(current => Math.max(0, current - 1))} disabled={index === 0}><ChevronLeft className="h-4 w-4" />Previous</Button>{index === questions.length - 1 ? submitAction : <Button onClick={() => setIndex(current => Math.min(questions.length - 1, current + 1))}>Continue<ChevronRight className="h-4 w-4" /></Button>}</div>
-      <details className="mt-5 border-y border-line py-4"><summary className="cursor-pointer text-sm text-ink-soft">{answeredCount} answered ? {flagged.size} flagged <span className="ms-2 text-accent-dark">Open question navigator</span></summary><nav aria-label="Jump to a question" className="mt-5 grid grid-cols-5 gap-2 sm:grid-cols-10">{questions.map((item, questionIndex) => <button key={item.id} type="button" onClick={() => setIndex(questionIndex)} aria-label={`Question ${questionIndex + 1}, ${hasAnswer(answers[item.id]) ? "answered" : "unanswered"}${flagged.has(item.id) ? ", flagged" : ""}`} aria-current={index === questionIndex ? "step" : undefined} className={cn("relative flex min-h-11 items-center justify-center gap-1 rounded-control border text-xs", index === questionIndex ? "border-action bg-action text-action-foreground" : "border-line bg-surface text-ink-soft")}><span>{questionIndex + 1}</span>{flagged.has(item.id) ? <Flag className="h-3 w-3" /> : hasAnswer(answers[item.id]) ? <Check className="h-3 w-3" /> : null}</button>)}</nav></details>
+      </div>
+      <QuestionNavigator questions={questions} answers={answers} index={index} flagged={flagged} onNavigate={setIndex} />
+      </div>
     </div>
   );
-}
-
-function hasAnswer(value: unknown): boolean {
-  if (value === undefined || value === null || value === "") return false;
-  if (Array.isArray(value)) return value.length > 0;
-  if (typeof value === "object") return Object.values(value).some(hasAnswer);
-  return true;
 }

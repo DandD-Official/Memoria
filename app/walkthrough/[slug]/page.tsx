@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import Link from "@/components/layout/navigation-link";
 import { notFound } from "next/navigation";
 import { walkthroughs } from "@/lib/walkthrough";
 import { ButtonLink } from "@/components/ui/button";

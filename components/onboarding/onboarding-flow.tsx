@@ -3,7 +3,7 @@ import { MemoryMark } from "@/components/layout/brand";
 
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter } from "@/components/layout/navigation-loading";
 import { Check, Cloud, KeyRound, Palette, User, Compass } from "lucide-react";
 import { toast } from "@/components/ui/toast";
 import { Button } from "@/components/ui/button";

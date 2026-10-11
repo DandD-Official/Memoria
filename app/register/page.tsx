@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import Link from "next/link";
+import { useRouter } from "@/components/layout/navigation-loading";
+import Link from "@/components/layout/navigation-link";
 import { signIn } from "next-auth/react";
 import { AuthFrame } from "@/components/auth/auth-frame";
 import { Button } from "@/components/ui/button";

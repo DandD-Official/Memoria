@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import Link from "next/link";
+import Link from "@/components/layout/navigation-link";
 import { ArrowLeft, ArrowRight, BookOpenCheck, Clock3, History, ListChecks, PlayCircle } from "lucide-react";
 import { prisma } from "@/lib/db";
 import { requireUser } from "@/lib/auth/session";

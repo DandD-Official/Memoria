@@ -1,5 +1,5 @@
 "use client";
-import Link from "next/link";
+import Link from "@/components/layout/navigation-link";
 import { RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { MemoryMark } from "@/components/layout/brand";

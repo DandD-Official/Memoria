@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
-import Link from "next/link";
+import { useRouter } from "@/components/layout/navigation-loading";
+import Link from "@/components/layout/navigation-link";
 import { Bell, Check, Inbox, Loader2 } from "lucide-react";
 import { formatRelativeTime } from "@/lib/utils";
 
@@ -64,24 +64,23 @@ export function NotificationMenu({ initialUnreadCount }: { initialUnreadCount: n
     };
   }, []);
 
-  async function openNotification(item: NotificationItem) {
-    if (!item.readAt) {
-      const response = await fetch("/api/notifications", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: item.id }),
-      });
-      if (response.ok) {
-        setItems((current) => current.map((entry) => entry.id === item.id ? { ...entry, readAt: new Date().toISOString() } : entry));
-        setUnreadCount((current) => Math.max(0, current - 1));
-      }
-    }
-
+  function openNotification(item: NotificationItem) {
     setOpen(false);
     const target = item.href ?? "/notifications";
     const separator = target.includes("?") ? "&" : "?";
     router.push(`${target}${separator}notification=${item.id}`);
-    router.refresh();
+    if (!item.readAt) {
+      void fetch("/api/notifications", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: item.id }),
+      }).then(response => {
+        if (!response.ok) return;
+        setItems(current => current.map(entry => entry.id === item.id ? { ...entry, readAt: new Date().toISOString() } : entry));
+        setUnreadCount(current => Math.max(0, current - 1));
+        router.refresh();
+      }).catch(() => {});
+    }
   }
 
   async function markAllRead() {

@@ -3,8 +3,8 @@
 import { AddToCollection } from "@/components/collections/add-to-collection";
 import { savedMmdMessage } from "@/lib/mmd/diagnostics";
 import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
-import Link from "next/link";
+import { useRouter } from "@/components/layout/navigation-loading";
+import Link from "@/components/layout/navigation-link";
 import { ArrowLeft, ListChecks, Pencil, Workflow, Sparkles, Trash2, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/input";
@@ -21,6 +21,7 @@ import { ExportMenu } from "@/components/exports/export-menu";
 import type { ExportProgressHandler } from "@/lib/export/types";
 import { RepromptDialog } from "@/components/notes/reprompt-dialog";
 import { toast } from "@/components/ui/toast";
+import { NoteReviewerReminder } from "@/components/notes/note-reviewer-reminder";
 
 interface NoteDetailProps {
   note: {
@@ -146,6 +147,8 @@ export function NoteDetail({ note, canEdit, isOwner, autoSave, systemAvailable, 
           />
         </div>
       </div>
+
+      {isOwner && !isEditing && !related?.length && <NoteReviewerReminder noteId={note.id} />}
 
       {canEdit && isEditing ? (
         <>

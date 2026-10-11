@@ -1,5 +1,5 @@
+import { correctAnswerMarkdown, quizOptionMarkdown } from "@/lib/quiz-content";
 import type { PublicCollection } from "@/lib/share-collections-repo";
-import { formatCorrectAnswer } from "@/lib/quiz-grading";
 import type { QuizQuestion } from "@/lib/validation/quiz";
 import { subjectOrder } from "./notebooks";
 
@@ -14,13 +14,13 @@ export function chapterBody(content: string, title: string): string {
 export function quizChapterMarkdown(questions: QuizQuestion[]): string {
   const questionsText = questions.map((question, index) => {
     const options = question.type === "multiple_choice" || question.type === "multiple_select"
-      ? question.choices.map((choice, i) => `${String.fromCharCode(65 + i)}. ${choice}`).join("\n\n")
+      ? question.choices.map(quizOptionMarkdown).join("\n\n")
       : question.type === "true_false" ? "□ True    □ False"
-      : question.type === "matching" ? `${question.pairs.map(pair => `- ${pair.left}: ____________________`).join("\n")}\n\nOptions: ${question.pairs.map(pair => pair.right).sort().map((right, index) => `${String.fromCharCode(65 + index)}. ${right}`).join(" · ")}`
+      : question.type === "matching" ? `${question.pairs.map(pair => `${pair.left}\n\nMatch: ____________________`).join("\n\n")}\n\n**Options**\n\n${question.pairs.map(pair => pair.right).sort().map(quizOptionMarkdown).join("\n\n")}`
       : "Answer: ________________________________________";
-    return `### ${index + 1}. ${question.question}\n\n${options}`;
+    return `:::card{title="Question ${index + 1}" icon="\u270e"}\n${question.question}\n\n${options}\n:::`;
   });
-  return [...questionsText, "## Answer key", ...questions.map((question, index) => `**${index + 1}. ${formatCorrectAnswer(question)}**\n\n${question.explanation ?? "No explanation provided."}`)].join("\n\n");
+  return [...questionsText, "## Answer key", ...questions.map((question, index) => `:::success{title="Answer ${index + 1}"}\n${correctAnswerMarkdown(question)}\n\n${question.explanation ?? "No explanation provided."}\n:::`)].join("\n\n");
 }
 
 export function collectionBookDocument(collection: PublicCollection): BookDocument {

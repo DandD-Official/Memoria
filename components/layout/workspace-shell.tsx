@@ -1,6 +1,6 @@
 "use client";
 import { usePathname } from "next/navigation";
-import Link from "next/link";
+import Link from "@/components/layout/navigation-link";
 import { useEffect, useState } from "react";
 import { ArrowLeft, ChevronDown, PanelTop } from "lucide-react";
 import { Topbar } from "@/components/layout/topbar";

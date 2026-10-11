@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/layout/navigation-link";
 import { ArrowDown, ArrowRight, Check, FileText, Layers3, ListChecks, Sparkles, TrendingUp } from "lucide-react";
 
 const workflow = [

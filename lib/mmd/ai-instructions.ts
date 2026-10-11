@@ -60,10 +60,10 @@ function buildBlockReference(): string {
   }).filter(Boolean).join("\n\n");
 }
 
-export function buildMmdOutputRules(): string {
+export function buildMmdOutputRules(mode: "document" | "quiz-fields" = "document"): string {
   return `MEMORIA MARKDOWN OUTPUT RULES
 
-Your output must use standard Markdown and the supported Memoria Markdown (MMD) extensions below.
+${mode === "quiz-fields" ? "Rich-text quiz fields may use standard Markdown and the supported Memoria Markdown (MMD) extensions below. These rules apply inside JSON string values, not to the outer response format." : "Your output must use standard Markdown and the supported Memoria Markdown (MMD) extensions below."}
 
 Use normal Markdown for ordinary document structure. For source code, use the editable :::code block with a language attribute instead of a triple-backtick fence so Memoria can show line numbers, syntax colors, and preserved indentation.
 
@@ -94,7 +94,7 @@ VISUAL COMPOSITION
 
 ${SVG_QUALITY_RULES}
 
-Maintain a logical heading hierarchy (one top-level "#" title, then "##"/"###" for structure). Give every image meaningful alt text.
+${mode === "quiz-fields" ? "Keep each question self-contained. The quiz interface supplies the title, question number, and surrounding card; do not duplicate these with a top-level heading or a decorative wrapper. Preserve meaningful nested blocks and icons. Give every visual meaningful alt text." : "Maintain a logical heading hierarchy (one top-level \"#\" title, then \"##\"/\"###\" for structure). Give every image meaningful alt text."}
 
-Return the COMPLETE final document inside exactly ONE outer Markdown code fence (\`\`\`markdown ... \`\`\`). Do not include any explanation outside that code block. If the document contains any triple-backtick code snippet, use FOUR backticks for the outer wrapper so the inner snippet cannot close it. Use a matching-length closing fence.`;
+${mode === "quiz-fields" ? "Return MMD only within the permitted JSON string fields. Follow the quiz JSON output contract; do not return a standalone Markdown document." : "Return the COMPLETE final document inside exactly ONE outer Markdown code fence (```markdown ... ```). Do not include any explanation outside that code block. If the document contains any triple-backtick code snippet, use FOUR backticks for the outer wrapper so the inner snippet cannot close it. Use a matching-length closing fence."}`;
 }

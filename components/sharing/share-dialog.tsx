@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
+import Link from "@/components/layout/navigation-link";
 import { Check, Copy, Link2, Loader2, Search, Share2, Trash2, UserRound, Layers } from "lucide-react";
 import { Dialog } from "@/components/ui/dialog";
 import { toast } from "@/components/ui/toast";

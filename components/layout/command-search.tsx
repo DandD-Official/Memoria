@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import Link from "next/link";
+import { useRouter } from "@/components/layout/navigation-loading";
+import Link from "@/components/layout/navigation-link";
 import { ArrowUpRight, Search, FileText, Layers3, ListChecks, Workflow, BookOpen, Clock, ArrowRight } from "lucide-react";
 import { Dialog } from "@/components/ui/dialog";
 import { primaryNavigation } from "@/components/layout/navigation";

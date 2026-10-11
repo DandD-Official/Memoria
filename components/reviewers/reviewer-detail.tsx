@@ -4,7 +4,7 @@ import { AddToCollection } from "@/components/collections/add-to-collection";
 import { savedMmdMessage } from "@/lib/mmd/diagnostics";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
+import Link from "@/components/layout/navigation-link";
 import { ArrowLeft, BookOpen, Pencil, Sparkles, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
