@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useId, useRef, useState } from "react";
-import Link from "next/link";
+import Link from "@/components/layout/navigation-link";
 import { ArrowUpRight, ListTree } from "lucide-react";
 import { MmdRenderer as MarkdownRenderer } from "@/components/mmd/renderer";
 import { MobileContents } from "@/components/library/mobile-contents";

@@ -2,7 +2,7 @@
 /* eslint-disable @next/next/no-img-element -- authenticated media uses runtime URLs. */
 
 import { useState } from "react";
-import Link from "next/link";
+import Link from "@/components/layout/navigation-link";
 import { ImagePlus, Loader2, Upload } from "lucide-react";
 import type { MmdBlockNode } from "@/lib/mmd/ast";
 import { buildStudyVisualSvg, type StudyVisualTemplate } from "@/lib/svg/templates";

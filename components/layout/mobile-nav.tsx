@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import Link from "next/link";
+import Link from "@/components/layout/navigation-link";
 import { usePathname } from "next/navigation";
 import { Menu } from "lucide-react";
 import { mobilePrimaryNavigation, mobileMoreNavigation, isNavigationItemActive } from "@/components/layout/navigation";

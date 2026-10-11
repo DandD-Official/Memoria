@@ -2,7 +2,7 @@ import { Layers } from "lucide-react";
 import { prisma } from "@/lib/db";
 import { requireUser } from "@/lib/auth/session";
 import { EmptyState } from "@/components/ui/empty-state";
-import Link from "next/link";
+import Link from "@/components/layout/navigation-link";
 import { ReviewerWizardLauncher } from "@/components/reviewers/reviewer-wizard-launcher";
 import { formatRelativeTime } from "@/lib/utils";
 import { LibraryNavigation } from "@/components/library/library-navigation";

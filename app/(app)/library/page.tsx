@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/layout/navigation-link";
 import { ArrowRight, Plus, Search, BookOpen } from "lucide-react";
 import { requireUser } from "@/lib/auth/session";
 import { prisma } from "@/lib/db";

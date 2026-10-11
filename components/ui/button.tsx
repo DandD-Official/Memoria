@@ -1,5 +1,5 @@
 import { forwardRef } from "react";
-import Link from "next/link";
+import Link from "@/components/layout/navigation-link";
 import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 

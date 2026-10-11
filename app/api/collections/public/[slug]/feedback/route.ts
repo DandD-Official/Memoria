@@ -9,8 +9,8 @@ import { collectionAccessCookieName, validCollectionAccessToken } from "@/lib/co
 import { requireUserOrNull } from "@/lib/auth/session";
 
 const feedbackSchema = z.object({
-  authorName: z.string().max(80).optional(),
-  message: z.string().min(1, "Say something first.").max(2000),
+  authorName: z.string().trim().max(80).optional(),
+  message: z.string().trim().min(1, "Say something first.").max(2000),
   resourceType: z.enum(["NOTE", "REVIEWER", "QUIZ"]).optional(),
   resourceId: z.string().optional(),
   parentId: z.string().optional(),
@@ -20,7 +20,8 @@ const feedbackSchema = z.object({
 
 export const POST = withApiErrorHandling(async (request: Request, context: RouteContext<{ slug: string }>) => {
   const params = await context.params;
-  const user = await requireUserOrNull();
+  const sessionUser = await requireUserOrNull();
+  const user = new URL(request.url).searchParams.get("view") === "guest" ? null : sessionUser;
   if (!user) {
     const limited = await guestRateLimit(request);
     if (limited) return limited;

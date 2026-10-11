@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/layout/navigation-link";
 import { ArrowUpRight, BookOpen, FileText, Layers3, ListChecks, Star, Workflow, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 

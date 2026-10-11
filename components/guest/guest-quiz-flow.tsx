@@ -5,9 +5,8 @@ import { Check, Copy, FileJson, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input, Label, Textarea } from "@/components/ui/input";
 import { FileDropzone } from "@/components/notes/file-dropzone";
-import { QuestionInput } from "@/components/quizzes/question-input";
+import { BookQuiz } from "@/components/books/book-quiz";
 import { parseAiJson, validateStructuredQuiz, type StructuredQuiz } from "@/lib/validation/quiz";
-import { formatCorrectAnswer, gradeQuiz, isAnswerCorrect } from "@/lib/quiz-grading";
 import { cn } from "@/lib/utils";
 import { ExportMenu } from "@/components/exports/export-menu";
 
@@ -21,7 +20,6 @@ const QUESTION_TYPES = [
   ["short_answer", "Short answer"],
 ] as const;
 const PLACEHOLDER_NOTE = "[Paste your notes here before sending this prompt to the AI]";
-type TestMode = "review" | "exam";
 
 export function GuestQuizFlow({ activityMode = "quiz" }: { activityMode?: "quiz" | "exam" }) {
   const fieldId = `guest-${activityMode}`;
@@ -42,14 +40,6 @@ export function GuestQuizFlow({ activityMode = "quiz" }: { activityMode?: "quiz"
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
-  const [testMode, setTestMode] = useState<TestMode | null>(null);
-  const [answers, setAnswers] = useState<Record<string, unknown>>({});
-  const [checked, setChecked] = useState<Set<string>>(new Set());
-  const [result, setResult] = useState<{
-    score: number;
-    total: number;
-    graded: Record<string, { given: unknown; correct: boolean }>;
-  } | null>(null);
   const quiz = validation?.valid ? validation.data : null;
 
   function toggleType(type: string) {
@@ -133,8 +123,6 @@ export function GuestQuizFlow({ activityMode = "quiz" }: { activityMode?: "quiz"
 
   function validateJson(raw = pastedJson) {
     setError(null);
-    setResult(null);
-    setTestMode(null);
     try {
       const parsed = validateStructuredQuiz(parseAiJson(raw));
       if (parsed.success) {
@@ -146,29 +134,6 @@ export function GuestQuizFlow({ activityMode = "quiz" }: { activityMode?: "quiz"
     } catch (validationError) {
       setValidation({ valid: false, errors: [validationError instanceof Error ? validationError.message : "Invalid JSON."] });
     }
-  }
-
-  function startTest(mode: TestMode) {
-    setAnswers({});
-    setChecked(new Set());
-    setResult(null);
-    setTestMode(mode);
-  }
-
-  function updateAnswer(questionId: string, value: unknown) {
-    setAnswers((previous) => ({ ...previous, [questionId]: value }));
-    setChecked((previous) => {
-      const next = new Set(previous);
-      next.delete(questionId);
-      return next;
-    });
-  }
-
-  function submitTest() {
-    if (!quiz) return;
-    const graded = gradeQuiz(quiz.questions, answers);
-    setResult({ score: graded.score, total: graded.total, graded: graded.gradedAnswers });
-    setTestMode(null);
   }
 
   function downloadJson() {
@@ -239,32 +204,15 @@ export function GuestQuizFlow({ activityMode = "quiz" }: { activityMode?: "quiz"
 
           {validation && !validation.valid && <div className="mt-3 rounded-lg border border-danger/30 bg-danger/5 p-3 text-sm text-danger"><p className="font-medium">This doesn&apos;t match the expected format:</p><ul className="mt-1 list-disc pl-5">{validation.errors.slice(0, 5).map((item) => <li key={item}>{item}</li>)}</ul></div>}
 
-          {quiz && !testMode && !result && (
+          {quiz && (
             <div className="mt-4 space-y-4">
               <div className="rounded-lg border border-success/30 bg-success/5 p-3 text-sm text-success">{quiz.questions.length} questions parsed and ready.</div>
-              <div><p className="mb-2 text-sm font-medium text-ink">Choose a test-taking mode</p><div className="grid gap-3 sm:grid-cols-2"><ModeButton onClick={() => startTest("review")} title="Review mode" description="Check each response and see explanations immediately." /><ModeButton onClick={() => startTest("exam")} title="Exam mode" description="No feedback until the final submission." /></div></div>
+              <BookQuiz key={pastedJson} title={quiz.title} questions={quiz.questions} />
               <ExportMenu options={[{ value: "pdf", label: "PDF document" }, { value: "docx", label: "Word document" }, { value: "json", label: "Memoria JSON" }]} onExport={exportQuiz} />
             </div>
           )}
 
-          {testMode && quiz && (
-            <div className="mt-5 space-y-4">
-              <div className="rounded-lg bg-ink/5 px-3 py-2 text-sm text-ink-soft">{testMode === "review" ? "Review mode — check answers as you go." : "Exam mode — feedback appears after submission."}</div>
-              {quiz.questions.map((question, index) => {
-                const wasChecked = checked.has(question.id);
-                const correct = wasChecked && isAnswerCorrect(question, answers[question.id]);
-                return <div key={question.id} className="card p-4"><p className="mb-3 text-sm font-medium text-ink">{index + 1}. {question.question}</p><QuestionInput question={question} value={answers[question.id]} onChange={(value) => updateAnswer(question.id, value)} />{testMode === "review" && <><Button variant="outline" size="sm" className="mt-3" disabled={answers[question.id] === undefined} onClick={() => setChecked((previous) => new Set(previous).add(question.id))}>Check answer</Button>{wasChecked && <div className={cn("mt-3 rounded-lg border p-3 text-sm", correct ? "border-success/30 bg-success/5" : "border-danger/30 bg-danger/5")}><p className="font-semibold">{correct ? "Correct" : "Not quite"}</p><p className="mt-1">Correct answer: {formatCorrectAnswer(question)}</p><p className="mt-1 text-ink-soft">{question.explanation || "No explanation was provided."}</p></div>}</>}</div>;
-              })}
-              <Button onClick={submitTest}>Submit {activityLabel}</Button>
-            </div>
-          )}
 
-          {result && quiz && (
-            <div className="mt-5 space-y-3">
-              <div className="card p-6 text-center"><p className="text-xs uppercase tracking-wide text-ink-faint">Your score</p><p className="mt-1 font-display text-4xl text-ink">{Math.round((result.score / Math.max(result.total, 1)) * 100)}%</p><p className="mt-1 text-sm text-ink-soft">{result.score} out of {result.total} correct</p><Button size="sm" variant="outline" className="mt-3" onClick={() => startTest("exam")}>Retake in exam mode</Button></div>
-              {quiz.questions.map((question, index) => { const graded = result.graded[question.id]; return <div key={question.id} className="card p-4"><p className="text-sm font-medium text-ink">{index + 1}. {question.question} {graded?.correct ? "✅" : "❌"}</p><p className="mt-2 text-sm">Correct answer: {formatCorrectAnswer(question)}</p><p className="mt-1 text-sm text-ink-soft">{question.explanation || "No explanation was provided."}</p></div>; })}
-            </div>
-          )}
         </div>
       )}
       {error && <p role="alert" className="text-sm text-danger">{error}</p>}
@@ -274,8 +222,4 @@ export function GuestQuizFlow({ activityMode = "quiz" }: { activityMode?: "quiz"
 
 function SourceButton({ active, onClick, icon, title, description }: { active: boolean; onClick: () => void; icon: React.ReactNode; title: string; description: string }) {
   return <button type="button" onClick={onClick} className={cn("rounded-xl border p-4 text-left", active ? "border-accent bg-accent-soft/50" : "border-line")} >{icon}<span className="block text-sm font-semibold">{title}</span><span className="text-xs text-ink-soft">{description}</span></button>;
-}
-
-function ModeButton({ onClick, title, description }: { onClick: () => void; title: string; description: string }) {
-  return <button type="button" onClick={onClick} className="rounded-xl border border-line p-4 text-left hover:border-accent"><span className="block text-sm font-semibold">{title}</span><span className="text-xs text-ink-soft">{description}</span></button>;
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import Link from "next/link";
+import Link from "@/components/layout/navigation-link";
 import { BookOpen, MessageSquare, ChevronLeft, ChevronRight, RefreshCw, ArrowLeft, Pencil, LogIn } from "lucide-react";
 import { MemoryMark } from "@/components/layout/brand";
 import { BookReader } from "@/components/books/book-reader";
@@ -75,7 +75,7 @@ export function PublicCollectionView({ collection, book, guestPreview = false }:
         </nav>
 
         {readerView === "book" && <><h1 className="sr-only">{collection.title}</h1><BookReader book={book} storageKey={collection.id} canPersist={!!collection.viewerUserId && !guestPreview} resumeChapter={collection.lastReadItemId} onChapterChange={openChapter} /></>}
-        {readerView === "practice" && <section className="mx-auto max-w-3xl space-y-6 rounded-card border border-line bg-surface p-5 sm:p-8"><div><h1 className="font-display text-3xl">Practice & recall</h1><p className="mt-2 text-sm text-ink-soft">Read your notes, flip review cards, and try a quiz.</p></div><label className="block text-sm font-medium">Chapter<select className="mt-2 h-11 w-full rounded-control border border-line bg-surface px-3" value={activeItemId ?? ""} onChange={event => openChapter(event.target.value)}>{collection.items.map(item => <option key={item.id} value={item.id}>{chapterTitle(item)}</option>)}</select></label>{activeItem && activeResource ? activeItem.resourceType === "QUIZ" ? <BookQuiz key={activeItem.id} title={activeResource.title} questions={(activeResource as PublicCollection["quizzes"][number]).questions as QuizQuestion[]} /> : <><MarkdownRenderer content={(activeResource as PublicCollection["notes"][number]).content} resolvedAssets={book.assets} />{activeItem.resourceType === "REVIEWER" && extractFlashcardsFromMarkdown((activeResource as PublicCollection["reviewers"][number]).content).length > 0 && <PublicFlashcardDeck key={activeItem.id} cards={extractFlashcardsFromMarkdown((activeResource as PublicCollection["reviewers"][number]).content)} />}</> : <p className="text-sm text-ink-soft">Add a chapter to start practicing.</p>}</section>}
+        {readerView === "practice" && <section className="mx-auto max-w-6xl space-y-6"><div><h1 className="font-display text-3xl">Practice & recall</h1><p className="mt-2 text-sm text-ink-soft">Read your notes, flip review cards, and try a quiz.</p></div><label className="block text-sm font-medium">Chapter<select className="mt-2 h-11 w-full rounded-control border border-line bg-surface px-3" value={activeItemId ?? ""} onChange={event => openChapter(event.target.value)}>{collection.items.map(item => <option key={item.id} value={item.id}>{chapterTitle(item)}</option>)}</select></label>{activeItem && activeResource ? activeItem.resourceType === "QUIZ" ? <BookQuiz resolvedAssets={book.assets} key={activeItem.id} title={activeResource.title} questions={(activeResource as PublicCollection["quizzes"][number]).questions as QuizQuestion[]} /> : <><MarkdownRenderer content={(activeResource as PublicCollection["notes"][number]).content} resolvedAssets={book.assets} />{activeItem.resourceType === "REVIEWER" && extractFlashcardsFromMarkdown((activeResource as PublicCollection["reviewers"][number]).content).length > 0 && <PublicFlashcardDeck key={activeItem.id} cards={extractFlashcardsFromMarkdown((activeResource as PublicCollection["reviewers"][number]).content)} />}</> : <p className="text-sm text-ink-soft">Add a chapter to start practicing.</p>}</section>}
 
         {readerView === "feedback" && <FeedbackSection preview={guestPreview} slug={collection.slug} viewerUserId={collection.viewerUserId} feedback={feedback} onSubmitted={(f) => setFeedback((prev) => [...prev, f])} onChanged={setFeedback} />}
       </main>
@@ -168,12 +168,11 @@ function FeedbackSection({
 
   async function submit(content: string, parentId?: string) {
     const target = parentId ?? "root";
-    if (preview) { setError({ target, message: "Leave guest preview to post feedback." }); return; }
     if (!content.trim()) return;
     setSending(target);
     setError(null);
     try {
-      const res = await fetch(`/api/collections/public/${slug}/feedback`, {
+      const res = await fetch(`/api/collections/public/${slug}/feedback${preview ? "?view=guest" : ""}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ authorName: name.trim() || undefined, message: content.trim(), parentId }),
@@ -240,14 +239,14 @@ function FeedbackSection({
       <h2 className="flex items-center gap-1.5 font-display text-lg text-ink">
         <MessageSquare className="h-4 w-4" /> Feedback
       </h2>
-      <p className="mt-1 text-sm text-ink-soft">Start a discussion or reply to another person&apos;s feedback.</p>
+      <p className="mt-1 text-sm text-ink-soft">Share a thought, correction, or question. Guests can post without an account.</p>
       {notice && <p className="mt-3 inline-flex rounded-control border border-success/25 bg-success/10 px-3 py-2 text-sm text-success" role="status">{notice}</p>}
 
       <div className="card mt-4 p-5">
-        {!viewerUserId && <><Label htmlFor="feedback-name">Name (optional)</Label><Input id="feedback-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Anonymous" className="mt-1.5" /></>}
+        {!viewerUserId && <><Label htmlFor="feedback-name">Name (optional)</Label><Input id="feedback-name" maxLength={80} value={name} onChange={(e) => setName(e.target.value)} placeholder="Anonymous" className="mt-1.5" /></>}
         <div className="mt-3">
           <Label htmlFor="feedback-message">Your feedback</Label>
-          <Textarea id="feedback-message" rows={3} value={message} onChange={(e) => setMessage(e.target.value)} placeholder="Thoughts, corrections, questions…" className="mt-1.5" />
+          <Textarea id="feedback-message" maxLength={2000} rows={3} value={message} onChange={(e) => setMessage(e.target.value)} placeholder="Thoughts, corrections, questions…" className="mt-1.5" />
         </div>
         {error?.target === "root" && <p className="mt-2 text-sm text-danger">{error.message}</p>}
         <div className="mt-3 flex items-center justify-end gap-2">
