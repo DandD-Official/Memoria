@@ -4,7 +4,10 @@ import { ThemeProvider, THEME_INIT_SCRIPT } from "@/components/layout/theme-prov
 import { CodeThemeProvider } from "@/components/mmd/code-theme-context";
 import { StartupScreen } from "@/components/layout/startup-screen";
 import { ToastViewport } from "@/components/ui/toast";
+<<<<<<< HEAD
 import { PwaRegistration } from "@/components/layout/pwa-registration";
+=======
+>>>>>>> 2e5a531e04c559242f347345eeb5696f429f9d34
 import { NavigationLoadingProvider } from "@/components/layout/navigation-loading";
 import { OfflineProvider } from "@/components/offline/offline-provider";
 
@@ -41,7 +44,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className="font-sans" suppressHydrationWarning>
         <ThemeProvider>
+<<<<<<< HEAD
           <CodeThemeProvider><NavigationLoadingProvider><OfflineProvider /><StartupScreen /><PwaRegistration />{children}<ToastViewport /></NavigationLoadingProvider></CodeThemeProvider>
+=======
+          <CodeThemeProvider><NavigationLoadingProvider><OfflineProvider /><StartupScreen />{children}<ToastViewport /></NavigationLoadingProvider></CodeThemeProvider>
+>>>>>>> 2e5a531e04c559242f347345eeb5696f429f9d34
         </ThemeProvider>
       </body>
     </html>

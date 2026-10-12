@@ -1,6 +1,10 @@
 /* eslint-env serviceworker */
 /* Encrypted, device-local storage. No passwords, cookies, or session tokens are persisted here. */
+<<<<<<< HEAD
 const DB_NAME = "memoria-encrypted-offline-v1";
+=======
+const DB_NAME = "memoria-offline-v1";
+>>>>>>> 2e5a531e04c559242f347345eeb5696f429f9d34
 const ASSETS = "memoria-offline-assets-v1";
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
@@ -363,10 +367,13 @@ self.addEventListener("fetch", event => {
   const request = event.request;
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
+<<<<<<< HEAD
   if (request.method === "GET" && url.pathname === "/offline" && request.mode === "navigate") {
     event.respondWith(Response.redirect(new URL("/login?offline=1", self.location.origin)));
     return;
   }
+=======
+>>>>>>> 2e5a531e04c559242f347345eeb5696f429f9d34
   if (request.method === "GET" && (url.pathname.startsWith("/_next/static/") || url.pathname.startsWith("/brand/") || url.pathname === "/icon.svg")) {
     event.respondWith((async () => {
       const cache = await caches.open(ASSETS);

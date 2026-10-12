@@ -59,18 +59,25 @@ document page, load the online version, and merge in the same editor.
 
 ## Storage and authentication
 
+<<<<<<< HEAD
 `memoria-encrypted-offline-v1` contains an encrypted identity, encrypted page/API
+=======
+`memoria-offline-v1` contains an encrypted identity, encrypted page/API
+>>>>>>> 2e5a531e04c559242f347345eeb5696f429f9d34
 snapshots, and encrypted drafts. AES-GCM uses a fresh random 96-bit IV per write
 and authenticates the record name. PBKDF2-SHA-256 (600,000 iterations, random
 128-bit salt) derives a nonextractable 256-bit key from the separate passphrase.
 Neither the account password nor the offline passphrase is persisted. Session
 cookies and authentication responses are never added to offline storage.
 
+<<<<<<< HEAD
 The previous offline library used `memoria-offline-v1` with an incompatible,
 unencrypted account-snapshot store. The encrypted system uses a separate database
 and disables the old library, snapshot polling, and worker registration. Existing
 legacy copies are left intact; they are not automatically migrated or encrypted.
 
+=======
+>>>>>>> 2e5a531e04c559242f347345eeb5696f429f9d34
 The worker and open tabs keep unlock keys only in memory. A live tab can resume
 its suspended worker by structured-cloning the key. Explicit sign-out rotates
 the resume identifier, drops the key, and locks other open tabs. Offline sign-out
