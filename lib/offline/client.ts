@@ -38,7 +38,7 @@ export async function offlineCommand<T = unknown>(type: string, payload: Record<
 
 export type OfflineStatus = {
   configured: boolean; unlocked: boolean; pending: number; conflicts: number;
-  preparation?: { state: "idle" | "preparing" | "complete" | "partial" | "error"; completed: number; total: number; current: string; failed: { path: string; error: string }[] };
+  preparation?: { state: "idle" | "preparing" | "complete" | "partial" | "error"; completed: number; total: number; downloaded?: number; unchanged?: number; current: string; failed: { path: string; error: string }[] };
   synchronization?: { state: "idle" | "syncing" | "complete" | "error"; completed: number; total: number; error: string };
   lastSyncedAt?: string | null; lastPreparedAt?: string | null;
 };

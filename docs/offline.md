@@ -1,5 +1,20 @@
 # Offline access
 
+Preparation compares saved document versions with current server timestamps.
+Unchanged note/reviewer payloads and compatible detail pages are reused after
+checking that their saved data and required assets still exist. Changed data,
+missing cached files, or a new application build cause the affected items to be
+downloaded again. Related-library and preference changes may refresh multiple
+detail pages. Live summaries, shared resources, books, and workspaces are still
+refreshed because their state can change independently of document timestamps.
+Settings reports downloaded and already-up-to-date counts separately. Existing
+pending drafts are preserved when newer server content is downloaded.
+
+The public landing page and login page are also prepared, with their assets,
+and remain available offline while the private vault is locked. Shared links
+continue to open the existing browser reader without a manual file download;
+first-time access to shared content still requires a connection.
+
 Preparation includes the Practice and Together tabs, the library lists,
 owned notes, reviewers, quizzes, flashcard pages, editable books/notebooks,
 shared documents, and accessible workspaces. Book contents and workspace API

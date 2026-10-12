@@ -48,9 +48,10 @@ export function OfflineSettings() {
         finally { setBusy(false); }
       }}>{preparation?.failed.length ? "Retry offline preparation" : "Prepare offline library"}</Button>
       {preparation && preparation.state !== "idle" && <div className="space-y-2" aria-busy={preparation.state === "preparing"}>
-        <p role="status" className="text-sm text-ink-soft">{preparation.state === "preparing" ? "Saving your library..." : preparation.state === "complete" ? "Offline library ready" : "Preparation needs attention"}: {preparation.completed} of {preparation.total} items saved</p>
+        <p role="status" className="text-sm text-ink-soft">{preparation.state === "preparing" ? "Checking and updating your library..." : preparation.state === "complete" ? "Offline library ready" : "Preparation needs attention"}: {preparation.completed} of {preparation.total} items ready</p>
+        <p className="text-xs text-ink-faint">{preparation.downloaded ?? 0} downloaded · {preparation.unchanged ?? 0} already up to date</p>
         <progress aria-label="Offline preparation" value={preparation.completed} max={preparation.total || 1} className="h-2 w-full accent-action" />
-        {preparation.current && preparation.state === "preparing" && <p className="break-all text-xs text-ink-faint">Saving {preparation.current}</p>}
+        {preparation.current && preparation.state === "preparing" && <p className="break-all text-xs text-ink-faint">Checking {preparation.current === "/" ? "Memoria landing page" : preparation.current}</p>}
         {preparation.failed.length > 0 && <details className="text-sm text-danger"><summary className="cursor-pointer">{preparation.failed.length} items could not be saved</summary><ul className="mt-2 space-y-1">{preparation.failed.map((failure, index) => <li key={index} className="break-words">{failure.path}: {failure.error}</li>)}</ul></details>}
       </div>}
       <p className="text-xs text-ink-faint">{status.lastPreparedAt ? "Last complete download: " + new Date(status.lastPreparedAt).toLocaleString() : "Your library has not finished downloading yet."}</p>

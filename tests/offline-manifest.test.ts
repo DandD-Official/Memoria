@@ -1,10 +1,12 @@
 import { expect, it, vi } from "vitest";
-const mocks = vi.hoisted(() => ({ user: vi.fn(), notes: vi.fn(), reviewers: vi.fn(), quizzes: vi.fn(), collections: vi.fn(), workspaces: vi.fn(), shares: vi.fn() }));
+const mocks = vi.hoisted(() => ({ user: vi.fn(), notes: vi.fn(), reviewers: vi.fn(), quizzes: vi.fn(), collections: vi.fn(), workspaces: vi.fn(), shares: vi.fn(), settings: vi.fn(), notifications: vi.fn(), reviews: vi.fn() }));
 vi.mock("@/lib/auth/session", () => ({ requireUserOrNull: mocks.user }));
 vi.mock("@/lib/api/handler", () => ({ withApiErrorHandling: (handler: unknown) => handler }));
 vi.mock("@/lib/db", () => ({ prisma: {
   note: { findMany: mocks.notes }, reviewer: { findMany: mocks.reviewers }, quiz: { findMany: mocks.quizzes },
   shareCollection: { findMany: mocks.collections }, workspace: { findMany: mocks.workspaces }, resourceShare: { findMany: mocks.shares },
+  userSettings: { findUnique: mocks.settings },
+  notification: { count: mocks.notifications }, flashcardReview: { aggregate: mocks.reviews },
 } }));
 import { GET } from "@/app/api/offline/manifest/route";
 
@@ -25,4 +27,20 @@ it("includes Practice, Together, book content, workspaces and editable documents
 it("requires an authenticated account before enumerating private pages", async () => {
   mocks.user.mockResolvedValue(null);
   expect((await GET(new Request("https://memoria.test/api/offline/manifest"))).status).toBe(401);
+});
+
+it("keeps unchanged document versions stable and invalidates them after edits or deployment", async () => {
+  mocks.user.mockResolvedValue({ id: "alice" });
+  mocks.notes.mockResolvedValue([{ id: "n1", updatedAt: new Date("2026-10-01") }]);
+  mocks.reviewers.mockResolvedValue([]); mocks.quizzes.mockResolvedValue([]); mocks.collections.mockResolvedValue([]); mocks.workspaces.mockResolvedValue([]); mocks.shares.mockResolvedValue([]);
+  const read = async () => (await GET(new Request("https://memoria.test/api/offline/manifest"))).json();
+  const first = await read();
+  expect((await read()).versions).toEqual(first.versions);
+  mocks.notes.mockResolvedValue([{ id: "n1", updatedAt: new Date("2026-10-02") }]);
+  const changed = await read();
+  expect(changed.versions["/api/notes/n1"]).not.toBe(first.versions["/api/notes/n1"]);
+  expect(changed.versions["/notes/n1"]).not.toBe(first.versions["/notes/n1"]);
+  vi.stubEnv("MEMORIA_BUILD_VERSION", "another-deployment");
+  expect((await read()).versions["/notes/n1"]).not.toBe(changed.versions["/notes/n1"]);
+  vi.unstubAllEnvs();
 });

@@ -1,4 +1,5 @@
 import { PHASE_DEVELOPMENT_SERVER } from "next/constants.js";
+import { randomUUID } from "node:crypto";
 
 const securityHeaders = [
   // Prevents this app from being framed by another site (clickjacking).
@@ -28,6 +29,7 @@ const securityHeaders = [
 ];
 
 const nextConfig = {
+  env: { MEMORIA_BUILD_VERSION: process.env.VERCEL_GIT_COMMIT_SHA || randomUUID() },
   serverExternalPackages: ["pdf-parse"],
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }, { source: "/offline-worker.js", headers: [{ key: "Cache-Control", value: "no-cache" }, { key: "Service-Worker-Allowed", value: "/" }] }];

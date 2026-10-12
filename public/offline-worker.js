@@ -8,7 +8,7 @@ let vault = null;
 let serial = Promise.resolve();
 let syncing = null;
 let preparing = null;
-let preparation = { state: "idle", completed: 0, total: 0, failed: [], current: "" };
+let preparation = { state: "idle", completed: 0, total: 0, downloaded: 0, unchanged: 0, failed: [], current: "" };
 let synchronization = { state: "idle", completed: 0, total: 0, error: "" };
 const privatePage = path => /^\/(dashboard|notes|reviewers|quizzes|books|notebooks|library|favorites|archive|study|workspaces|shared|progress|notifications|search|settings|diagrams)(\/|$)/.test(path);
 const documentPath = path => /^\/api\/(notes|reviewers)\/[a-zA-Z0-9_-]+$/.test(path);
@@ -194,10 +194,10 @@ async function cacheResponse(request, response, current) {
     const value = response.headers.get(name);
     if (value !== null) headers[name] = value;
   }
-  await write(await responseKey(request), { text, type, headers }, current);
+  const assets = type.includes("text/html") ? await cacheAssets(text) : [];
+  await write(await responseKey(request), { text, type, headers, assets }, current);
   // Preload scripts/styles in full documents so a first offline reload does
   // not depend on an HTTP cache that the browser is free to discard.
-  if (type.includes("text/html")) await cacheAssets(text);
 }
 
 async function cacheAssets(html) {
@@ -214,13 +214,41 @@ async function cacheAssets(html) {
     const media = references.filter(path => /^\/api\/media\/[a-zA-Z0-9_-]+$/.test(path) || /^\/api\/diagrams\/[a-zA-Z0-9_-]+\/preview$/.test(path));
     for (const path of new Set(media)) await cachedApi(new Request(new URL(path, self.location.origin)));
   }
+  return [...new Set(urls)];
 }
 
-async function prepareLogin() {
-  const response = await fetch("/login", { cache: "reload" });
-  if (!response.ok || response.redirected) throw new Error("Could not prepare the login page.");
-  await cacheAssets(await response.clone().text());
-  await (await caches.open(ASSETS)).put("/login", response);
+async function assetsPresent(paths) {
+  if (!Array.isArray(paths)) return false;
+  const cache = await caches.open(ASSETS);
+  return (await Promise.all(paths.map(path => cache.match(path)))).every(Boolean);
+}
+
+async function preparePublicPage(path, version) {
+  const cache = await caches.open(ASSETS);
+  const metadataKey = `/__memoria-public-cache${path === "/" ? "/home" : path}`;
+  const metadata = await (await cache.match(metadataKey))?.json().catch(() => null);
+  if (version && metadata?.version === version && await cache.match(path) && await assetsPresent(metadata.assets)) return true;
+  // These two routes are public and must remain usable with the vault locked.
+  const response = await fetch(path, { cache: "reload", credentials: "omit" });
+  if (!response.ok || response.redirected) throw new Error(`Could not save ${path === "/" ? "the landing page" : "the login page"}.`);
+  const assets = await cacheAssets(await response.clone().text());
+  await cache.put(path, response);
+  await cache.put(metadataKey, Response.json({ version, assets }));
+  return false;
+}
+
+async function isPrepared(job, version) {
+  if (!version) return false;
+  const saved = await read(`prepared:${job.kind}:${job.path}`);
+  if (saved?.version !== version) return false;
+  if (job.kind === "page") {
+    const url = new URL(job.path, self.location.origin);
+    const html = await read(await responseKey(new Request(url)));
+    const flight = await read(await responseKey(new Request(url, { headers: { RSC: "1" } })));
+    return Boolean(html && flight && await assetsPresent(html.assets));
+  }
+  if (!await read(`api:${new URL(job.path, self.location.origin).href}`)) return false;
+  return job.kind !== "document" || Boolean(await read(`document:${job.path}`));
 }
 
 async function capture(path) {
@@ -246,15 +274,15 @@ async function prepare() {
   preparing = (async () => {
     const current = vault;
     if (!current) throw new Error("Unlock offline access first.");
-    preparation = { state: "preparing", completed: 0, total: 0, failed: [], current: "Checking your library" };
+    preparation = { state: "preparing", completed: 0, total: 0, downloaded: 0, unchanged: 0, failed: [], current: "Checking your library" };
     await publishStatus();
     try {
-    await prepareLogin();
     const response = await fetch("/api/offline/manifest", { cache: "no-store" });
     if (!response.ok) throw new Error("Sign in online to prepare your library.");
     const manifest = await response.json();
     if (manifest.userId !== current.userId) throw new Error("Sign in to the same account to prepare offline access.");
     const jobs = [
+      { path: "/", kind: "public" }, { path: "/login", kind: "public" },
       ...(manifest.documents || []).map(path => ({ path, kind: "document" })),
       ...(manifest.apis || []).map(path => ({ path, kind: "api" })),
       ...manifest.paths.map(path => ({ path, kind: "page" })),
@@ -265,6 +293,13 @@ async function prepare() {
       preparation.current = path;
       await publishStatus();
       try {
+        const version = manifest.versions?.[path];
+        if (kind === "public") {
+          const unchanged = await preparePublicPage(path, manifest.buildVersion);
+          preparation[unchanged ? "unchanged" : "downloaded"]++;
+        } else if (await isPrepared({ path, kind }, version)) {
+          preparation.unchanged++;
+        } else {
         if (kind === "page") await capture(path);
         else {
           const request = new Request(new URL(path, self.location.origin), { credentials: "same-origin" });
@@ -277,6 +312,9 @@ async function prepare() {
             await exclusive(() => command({ type: "DOCUMENT", document: { path, title: document.title, content: document.content, updatedAt: document.updatedAt } }));
           }
         }
+        if (version) await write(`prepared:${kind}:${path}`, { version }, current);
+        preparation.downloaded++;
+        }
         preparation.completed++;
       } catch (error) { preparation.failed.push({ path, error: error.message }); }
       await publishStatus();
@@ -284,7 +322,7 @@ async function prepare() {
     preparation.state = preparation.failed.length ? "partial" : "complete";
     preparation.current = "";
     await saveActivity({ preparation, ...(preparation.failed.length ? {} : { lastPreparedAt: new Date().toISOString() }) }, current);
-    await broadcast({ type: "OFFLINE_NOTICE", error: Boolean(preparation.failed.length), message: `${preparation.completed} of ${preparation.total} items saved on this device.${preparation.failed.length ? " Some items failed. Open Offline access to retry." : " Offline preparation finished."}` });
+    await broadcast({ type: "OFFLINE_NOTICE", error: Boolean(preparation.failed.length), message: `${preparation.completed} of ${preparation.total} items ready: ${preparation.downloaded} downloaded, ${preparation.unchanged} already up to date.${preparation.failed.length ? " Some items failed. Open Offline access to retry." : " Offline preparation finished."}` });
     } catch (error) {
       preparation.state = "error";
       preparation.failed.push({ path: preparation.current, error: error.message });
@@ -455,8 +493,12 @@ self.addEventListener("fetch", event => {
     })());
     return;
   }
-  if (request.method === "GET" && url.pathname === "/login" && request.mode === "navigate") {
-    event.respondWith(fetch(request).catch(async () => (await (await caches.open(ASSETS)).match("/login")) || Response.error()));
+  if (request.method === "GET" && ["/", "/login"].includes(url.pathname) && (request.mode === "navigate" || request.headers.get("rsc"))) {
+    event.respondWith(fetch(request).catch(async () => {
+      // Next falls back to a document navigation on a non-Flight response.
+      if (request.headers.get("rsc")) return new Response("", { headers: { "Content-Type": "text/html" } });
+      return (await (await caches.open(ASSETS)).match(url.pathname)) || Response.error();
+    }));
     return;
   }
   if (request.method === "POST" && url.pathname === "/api/auth/signout") vault = null;

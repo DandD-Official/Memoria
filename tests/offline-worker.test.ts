@@ -50,6 +50,51 @@ function worker(records = new Map<string, unknown>()) {
 }
 
 describe("encrypted offline worker", () => {
+  it("skips unchanged files, repairs missing assets, and keeps pending drafts when the server changes", async () => {
+    const w = worker(); await w.enroll();
+    let revision = "one";
+    const asset = "/_next/static/chunks/offline-test.js";
+    w.fetcher.mockImplementation(async input => {
+      const path = new URL(typeof input === "string" ? input : input instanceof URL ? input.href : input.url, "https://memoria.test").pathname;
+      if (path === "/api/auth/session") return Response.json({ user: { id: "alice" } });
+      if (path === "/api/offline/manifest") return Response.json({ userId: "alice", buildVersion: "build-1", paths: ["/notes/n1"], documents: [base.path], versions: { [base.path]: revision, "/notes/n1": revision } });
+      if (path === base.path) return Response.json({ note: { ...base, content: revision, updatedAt: revision === "one" ? base.updatedAt : "2026-10-02T00:00:00.000Z" } });
+      if (path === asset) return new Response("script");
+      const flight = input instanceof Request && input.headers.get("rsc");
+      return new Response(flight ? `flight:${revision}` : `<html>${path}${path === "/notes/n1" ? `<script src="${asset}"></script>` : ""}</html>`, { headers: { "Content-Type": flight ? "text/x-component" : "text/html" } });
+    });
+    await w.api.prepare();
+    w.fetcher.mockClear();
+    await w.api.prepare();
+    expect((await w.api.command({ type: "STATUS" })).preparation).toMatchObject({ downloaded: 0, unchanged: 4 });
+    expect(w.fetcher.mock.calls.map(call => String(call[0]))).toEqual(["/api/offline/manifest"]);
+    w.assets.delete(asset);
+    await w.api.prepare();
+    expect(w.assets.has(asset)).toBe(true);
+    expect((await w.api.command({ type: "STATUS" })).preparation).toMatchObject({ downloaded: 1, unchanged: 3 });
+    await w.save("My pending draft");
+    revision = "two";
+    await w.api.prepare();
+    expect((await w.api.command({ type: "STATUS" })).preparation).toMatchObject({ downloaded: 2, unchanged: 2 });
+    expect(await w.api.read(`document:${base.path}`)).toMatchObject({ content: "My pending draft", pending: true });
+  });
+
+  it("serves the prepared landing page with the vault locked and falls back from client navigation", async () => {
+    const w = worker(); await w.enroll();
+    w.fetcher.mockImplementation(async input => {
+      if (String(input) === "/api/offline/manifest") return Response.json({ userId: "alice", buildVersion: "build-1", paths: [] });
+      return new Response(`<html>Public page ${String(input)}</html>`, { headers: { "Content-Type": "text/html" } });
+    });
+    await w.api.prepare();
+    await w.api.command({ type: "LOCK" });
+    w.fetcher.mockRejectedValue(new TypeError("Offline"));
+    const request = new Request("https://memoria.test/?campaign=shared");
+    Object.defineProperty(request, "mode", { value: "navigate" });
+    expect(await (await w.fetchRequest(request))?.text()).toContain("Public page /");
+    const flight = await w.fetchRequest(new Request("https://memoria.test/", { headers: { RSC: "1" } }));
+    expect(flight?.headers.get("content-type")).toBe("text/html");
+    expect((await w.api.command({ type: "STATUS" })).unlocked).toBe(false);
+  });
   it("keeps incomplete edits encrypted locally until they are ready to upload", async () => {
     const w = worker(); await w.enroll(); await w.seed();
     await w.api.command({ type: "SAVE_DOCUMENT", path: base.path, title: "", content: "" });
@@ -67,7 +112,7 @@ describe("encrypted offline worker", () => {
     });
     await w.api.prepare();
     const ready = await w.api.command({ type: "STATUS" });
-    expect(ready.preparation).toMatchObject({ state: "complete", completed: 4, total: 4, failed: [] });
+    expect(ready.preparation).toMatchObject({ state: "complete", completed: 6, total: 6, failed: [] });
     expect(ready.lastPreparedAt).toBeTruthy();
     w.fetcher.mockRejectedValue(new TypeError("offline"));
     for (const path of ["/study", "/books", "/notebooks"]) {
@@ -89,7 +134,7 @@ describe("encrypted offline worker", () => {
     });
     await w.api.prepare();
     const status = await w.api.command({ type: "STATUS" });
-    expect(status.preparation).toMatchObject({ state: "partial", completed: 1, total: 2, failed: [{ path: "/study" }] });
+    expect(status.preparation).toMatchObject({ state: "partial", completed: 3, total: 4, failed: [{ path: "/study" }] });
     expect(status.lastPreparedAt).toBeNull();
   });
 

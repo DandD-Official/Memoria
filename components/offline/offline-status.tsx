@@ -32,13 +32,14 @@ export function OfflineStatusDetails({ status, online }: { status: OfflineStatus
 }
 
 export function OfflineStatusBar() {
-  const { status, online, localSession } = useOfflineStatus();
+  const { status, online } = useOfflineStatus();
   if (!status?.unlocked) return null;
+  const sync = status.synchronization;
   return <aside aria-label="Offline saving and sync" className="border-b border-line bg-surface-muted">
-    <div className="mx-auto max-w-[1400px] space-y-2 px-page py-3">
-      <OfflineStatusDetails status={status} online={online} />
-      {localSession && online && <p className="text-xs text-ink-soft">Connection restored. Saved edits sync automatically when your online session is valid.</p>}
-      <Link href="/settings#offline" className="inline-flex min-h-8 items-center text-xs text-accent-dark underline">Offline library and download progress</Link>
+    <div role="status" className="mx-auto flex max-w-[1400px] flex-wrap items-center gap-x-4 gap-y-1 px-page py-2 text-xs text-ink-soft">
+      <span className="inline-flex items-center gap-2">{online ? <Cloud className="h-4 w-4" aria-hidden="true" /> : <CloudOff className="h-4 w-4" aria-hidden="true" />}{online ? "You're online" : "You're currently offline"}</span>
+      <span>{status.pending} pending {status.pending === 1 ? "change" : "changes"}</span>
+      <span>{!online ? "Saved on this device. Sync resumes when connected." : sync?.state === "syncing" ? `Updating files: ${sync.completed} of ${sync.total}` : status.conflicts ? `${status.conflicts} changes need review before syncing.` : sync?.error ? "Sync paused. Your local changes are kept." : status.pending ? "Waiting to update your online files." : "No changes waiting to sync."}</span>
     </div>
   </aside>;
 }
