@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Check, ChevronUp, ChevronDown, Pencil, Plus, Settings2, Share2, Trash2 } from "lucide-react";
 import { MemoryPicker } from "./memory-picker";
@@ -11,7 +10,7 @@ import { BookPreview } from "@/components/books/book-preview";
 import { ExportMenu } from "@/components/exports/export-menu";
 import { Dialog } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { DeleteCollectionButton } from "./delete-collection-button";
 import { NotebookSubjects } from "@/components/books/notebook-subjects";
 import { subjectOrder, type NotebookSubject } from "@/lib/books/notebooks";
 import { Input, Label, Textarea } from "@/components/ui/input";
@@ -27,7 +26,6 @@ interface Collection {
   passwordProtected: boolean; items: CollectionItem[]; members: BookMember[];
 }
 export function CollectionEditor({ initialCollection, access, canExport, rows, initiallyEditing = false }: { initiallyEditing?: boolean; initialCollection: Collection; access: "OWNER" | "EDIT"; canExport: boolean; rows: Record<ResourceType, MemoryPickerRow[]> }) {
-  const router = useRouter();
   const [collection, setCollection] = useState(initialCollection);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [adding, setAdding] = useState(false);
@@ -124,11 +122,6 @@ export function CollectionEditor({ initialCollection, access, canExport, rows, i
     if (format === "pdf" || format === "docx") { const { downloadBook } = await import("@/lib/books/download"); await downloadBook(data.book, format, onProgress); }
   }
 
-  async function deleteBook() {
-    try { await request(`/api/collections/${collection.id}`, { method: "DELETE" }); router.replace(base); }
-    catch (caught) { setError(caught instanceof Error ? caught.message : "Couldn't delete this Book."); }
-  }
-
   const detailsChanged = title.trim() !== collection.title || subtitle.trim() !== (collection.subtitle ?? "") || description.trim() !== (collection.description ?? "") || tocTitle.trim() !== collection.tocTitle;
   async function finishEditing() {
     if (busy) return;
@@ -142,6 +135,7 @@ export function CollectionEditor({ initialCollection, access, canExport, rows, i
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <Link href={base} className="inline-flex min-h-11 items-center gap-2 text-sm font-medium text-ink-soft hover:text-ink"><ArrowLeft aria-hidden="true" className="h-4 w-4" />All {label.toLowerCase()}s</Link>
         <div className="flex flex-wrap items-center gap-2">
+          {isOwner && <DeleteCollectionButton id={collection.id} title={collection.title} kind={collection.kind} disabled={busy} />}
           {canExport && <ExportMenu label="Download" options={[{ value: "pdf", label: "PDF document" }, { value: "docx", label: "Word document" }, { value: "json", label: "Memoria JSON" }]} onExport={exportBook} />}
           {isOwner && <Button variant="outline" size="sm" onClick={() => setShareOpen(true)}><Share2 className="h-4 w-4" />Share</Button>}
           <Button disabled={busy} onClick={() => editing ? void finishEditing() : setEditing(true)}>{editing ? <Check className="h-4 w-4" /> : <Pencil className="h-4 w-4" />}{editing ? "Done" : "Edit"}</Button>
@@ -201,7 +195,6 @@ export function CollectionEditor({ initialCollection, access, canExport, rows, i
       <Dialog open={detailsOpen} onOpenChange={open => { if (!busy) setDetailsOpen(open); }} title={label + " cover details"} description="These words appear on the cover and contents pages." footer={<Button disabled={busy || !title.trim() || !tocTitle.trim()} loading={saving} onClick={async () => { if (await saveDetails()) setDetailsOpen(false); }}>Save details</Button>}>
         <div className="space-y-4"><div><Label htmlFor="book-subtitle">Subtitle</Label><Input id="book-subtitle" maxLength={240} value={subtitle} onChange={event => setSubtitle(event.target.value)} /></div><div><Label htmlFor="book-toc-title">Contents heading</Label><Input id="book-toc-title" maxLength={80} value={tocTitle} onChange={event => setTocTitle(event.target.value)} /></div><div><Label htmlFor="book-description">Description</Label><Textarea id="book-description" rows={4} maxLength={2000} value={description} onChange={event => setDescription(event.target.value)} /></div></div>
         {error && <p role="alert" className="mt-3 text-sm text-danger">{error}</p>}
-        {isOwner && <div className="mt-6 border-t border-line pt-4"><ConfirmDialog trigger={<Button disabled={busy} variant="ghost" className="text-danger"><Trash2 className="h-4 w-4" />Delete {label.toLowerCase()}</Button>} title={"Delete this " + label.toLowerCase() + "?"} description={"The collection and its reading order will be removed. Your original memories will remain in your library."} confirmLabel={"Delete " + label.toLowerCase()} destructive onConfirm={deleteBook} /></div>}
       </Dialog>
       {isOwner && <BookShareDialog objectLabel={label} bookId={collection.id} publicPath={publicPath} open={shareOpen} onOpenChange={setShareOpen} linkEnabled={collection.isPublished} linkPermission={collection.linkPermission} linkAllowExport={collection.allowExport} passwordProtected={collection.passwordProtected} members={collection.members} onChanged={(changes) => setCollection((current) => ({ ...current, ...(changes.linkEnabled === undefined ? {} : { isPublished: changes.linkEnabled }), ...(changes.linkPermission === undefined ? {} : { linkPermission: changes.linkPermission }), ...(changes.linkAllowExport === undefined ? {} : { allowExport: changes.linkAllowExport }), ...(changes.passwordProtected === undefined ? {} : { passwordProtected: changes.passwordProtected }), ...(changes.members === undefined ? {} : { members: changes.members }) }))} />}
     </div>

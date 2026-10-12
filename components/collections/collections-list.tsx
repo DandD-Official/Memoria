@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import Link from "next/link";
 import { ArrowUpRight, BookOpen, Plus, Star } from "lucide-react";
+import { DeleteCollectionButton } from "./delete-collection-button";
 import { MemoryMark } from "@/components/layout/brand";
 import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/input";
@@ -110,6 +111,7 @@ export function CollectionsList({ initialCollections, initiallyCreating = false,
                 <div className="px-1 pt-3"><p className="line-clamp-2 text-sm leading-relaxed text-ink-soft">{book.description || "Open this Book and begin shaping its chapters."}</p><div className="mt-2 flex items-center justify-between gap-3 text-xs text-ink-faint"><span>{chapter > 0 ? `Continue · Chapter ${chapter}` : formatRelativeTime(new Date(book.updatedAt))}</span><span>{book._count.members > 0 ? `${book._count.members} people` : book.isPublished ? "Link shared" : "Only you"}</span></div></div>
               </Link>
               <button type="button" onClick={() => void toggleFavorite(book.id, book.isFavorite)} className="absolute right-4 top-4 inline-flex h-9 w-9 items-center justify-center rounded-full border border-line bg-surface/90 text-accent-dark shadow-sm backdrop-blur transition-colors hover:bg-surface" aria-label={book.isFavorite ? `Remove ${book.title} from favorites` : `Add ${book.title} to favorites`}><Star className={`h-4 w-4 ${book.isFavorite ? "fill-current" : ""}`} /></button>
+              <div className="mt-2 flex justify-end"><DeleteCollectionButton id={book.id} title={book.title} kind={kind} onDeleted={() => setBooks(current => current.filter(row => row.id !== book.id))} /></div>
             </article>
             );
           })}
