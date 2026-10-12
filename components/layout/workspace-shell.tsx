@@ -8,6 +8,7 @@ import { MobileNav } from "@/components/layout/mobile-nav";
 import { libraryNavigation, togetherNavigation } from "@/components/layout/navigation";
 import { Brand } from "@/components/layout/brand";
 import { cn } from "@/lib/utils";
+import { OfflineStatusBar } from "@/components/offline/offline-status";
 
 export function WorkspaceShell({ children, userId, userName, unreadNotifications, studyStreak, compact, reduceMotion, indexCollapsed, indexMode }: { children: React.ReactNode; userId: string; userName: string; unreadNotifications: number; studyStreak: number; compact: boolean; reduceMotion: boolean; indexCollapsed: boolean; indexMode: string }) {
   const pathname = usePathname();
@@ -24,6 +25,7 @@ export function WorkspaceShell({ children, userId, userName, unreadNotifications
   return <><div className={cn("workspace min-h-dvh", reading && "reading-workspace-shell", focus && "focus-workspace", compact && "compact-layout", reduceMotion && "reduce-motion")}>
     <a href="#main-content" className="skip-link">Skip to content</a>
     {focus ? <header className="focus-header"><Link href="/study" className="inline-flex min-h-11 items-center gap-2 text-sm text-ink-soft"><ArrowLeft className="h-4 w-4" /> Leave focus</Link><Brand href="/dashboard" compact /><span className="hidden font-mono text-xs uppercase tracking-widest text-ink-faint sm:block">One thing at a time</span></header> : <Topbar userId={userId} userName={userName} unreadNotifications={unreadNotifications} studyStreak={studyStreak} />}
+    <OfflineStatusBar />
     {!focus && library && <div className="context-index" onMouseEnter={() => { if (indexMode === "HOVER") setCollapsed(false); }} onMouseLeave={() => { if (indexMode === "HOVER" && indexCollapsed) setCollapsed(true); }}>
       <div className="mx-auto flex max-w-[1400px] items-start gap-3 px-page">
         <button type="button" aria-label={collapsed ? "Expand library navigation" : "Collapse library navigation"} aria-expanded={!collapsed} onClick={() => setCollapsed(!collapsed)} className="inline-flex min-h-14 shrink-0 items-center gap-2 text-xs text-ink-soft"><PanelTop className="h-4 w-4" /><span className="hidden md:inline">Library index</span><ChevronDown className={cn("h-3 w-3", !collapsed && "rotate-180")} /></button>

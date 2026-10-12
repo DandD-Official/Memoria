@@ -1,5 +1,29 @@
 # Offline access
 
+Preparation includes the Practice and Together tabs, the library lists,
+owned notes, reviewers, quizzes, flashcard pages, editable books/notebooks,
+shared documents, and accessible workspaces. Book contents and workspace API
+data are downloaded explicitly, along with editable note/reviewer records.
+It does not save every URL or every online feature: quiz submissions,
+flashcard ratings, generation, collection changes, and live collaboration
+still require the server. Pages and content that fail to download appear in
+the preparation report; a partial download is never reported as complete.
+
+Settings shows preparation progress, failed items, and the last complete
+download. The workspace shows connectivity, pending edits, conflicts, sync
+progress, and the last successful sync. Sync uploads queued edits; preparation
+downloads page snapshots. These are separate operations. Sync automatically
+retries on reconnection and periodically while the app is visible. The
+**Sync now** action also retries manually. A valid online session for the same
+account is required; otherwise edits remain on this device.
+
+Prepared notes and reviewers autosave encrypted drafts as they are edited,
+including incomplete text. Upload validation still requires a valid title
+and content. Closing a tab before a draft is committed prompts the user to
+stay. Offline passphrase login suppresses online session-conflict dialogs and
+revocation polling, including after reconnection, until normal online login.
+This UI behavior does not bypass server authentication for syncing.
+
 Offline workers run only with a production build (`npm run build`, then
 `npm start`). Development automatically unregisters old Memoria workers and
 clears their asset caches before hydration, preserving encrypted IndexedDB

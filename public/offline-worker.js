@@ -8,6 +8,8 @@ let vault = null;
 let serial = Promise.resolve();
 let syncing = null;
 let preparing = null;
+let preparation = { state: "idle", completed: 0, total: 0, failed: [], current: "" };
+let synchronization = { state: "idle", completed: 0, total: 0, error: "" };
 const privatePage = path => /^\/(dashboard|notes|reviewers|quizzes|books|notebooks|library|favorites|archive|study|workspaces|shared|progress|notifications|search|settings|diagrams)(\/|$)/.test(path);
 const documentPath = path => /^\/api\/(notes|reviewers)\/[a-zA-Z0-9_-]+$/.test(path);
 const readableApi = path => /^\/api\/(notes|reviewers|quizzes|flashcards|library|search|tags|revisions|notifications|diagrams|media|collections|workspaces)(\/|$)/.test(path) && !/\/(export|unlock|members)(\/|$)/.test(path);
@@ -92,7 +94,18 @@ async function verifyAccount(current) {
 async function status() {
   const profile = await record("get", "profile");
   const documents = vault ? await allDocuments() : [];
-  return { configured: Boolean(profile), unlocked: Boolean(vault), pending: documents.filter(item => item.pending).length, conflicts: documents.filter(item => item.conflict).length };
+  const history = vault ? await read("activity") : null;
+  return { configured: Boolean(profile), unlocked: Boolean(vault), pending: documents.filter(item => item.pending).length, conflicts: documents.filter(item => item.conflict).length,
+    preparation: preparing ? preparation : history?.preparation || preparation,
+    synchronization, lastSyncedAt: history?.lastSyncedAt || null, lastPreparedAt: history?.lastPreparedAt || null };
+}
+
+async function publishStatus() { await broadcast({ type: "OFFLINE_STATUS", status: await status() }); }
+
+async function saveActivity(values, current = vault) {
+  await exclusive(async () => {
+    if (current && current === vault) await write("activity", { ...await read("activity", current), ...values }, current);
+  });
 }
 
 async function allDocuments() {
@@ -102,12 +115,14 @@ async function allDocuments() {
 }
 
 async function saveDocument(path, title, content, updatedAt) {
-  if (!documentPath(path) || typeof title !== "string" || typeof content !== "string" || !title.trim() || title.length > 200 || !content) throw new Error("Add a title and content before saving.");
+  // Keep incomplete drafts too; the sync endpoint validates publishable content.
+  if (!documentPath(path) || typeof title !== "string" || typeof content !== "string" || title.length > 200 || content.length > 2_000_000) throw new Error("This draft is too large to save on this device.");
   const existing = await read(`document:${path}`);
   if (!existing) throw new Error("Open this document online with offline access unlocked before editing offline.");
   if (existing.title === title && existing.content === content) return existing;
   const next = { ...existing, updatedAt: existing.pending ? existing.updatedAt : updatedAt || existing.updatedAt, title, content, pending: true, revision: crypto.randomUUID() };
   await write(`document:${path}`, next);
+  await publishStatus();
   return next;
 }
 
@@ -116,18 +131,21 @@ async function sync() {
   syncing = (async () => {
     const current = vault;
     if (!current) return;
+    const documents = await allDocuments();
+    synchronization = { state: "syncing", completed: 0, total: documents.filter(item => item.pending && !item.conflict).length, error: "" };
+    await publishStatus();
+    try {
     await verifyAccount(current);
-    for (const document of await allDocuments()) {
+    for (const document of documents) {
       if (current !== vault || !document.pending || document.conflict) continue;
       let response;
       try {
         response = await fetch("/api/offline/sync", { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...document, userId: current.userId }) });
-      } catch { return; }
-      if (response.status === 401) return;
+      } catch { throw new Error("Connection interrupted. Your changes are saved on this device and will retry."); }
+      if (response.status === 401) throw new Error("Sign in online to sync. Your local changes are kept.");
       const data = await response.json().catch(() => null);
       if (!response.ok && response.status !== 409) {
-        await broadcast({ type: "OFFLINE_NOTICE", error: true, message: data?.error || "Sync could not complete. Your local changes are kept." });
-        return;
+        throw new Error(data?.error || "Sync could not complete. Your local changes are kept.");
       }
       await exclusive(async () => {
         if (current !== vault) return;
@@ -140,7 +158,18 @@ async function sync() {
         await broadcast({ type: "OFFLINE_DOCUMENT", document: next });
       });
       if (response.status === 409) await broadcast({ type: "OFFLINE_NOTICE", error: true, message: "Another device changed a document. Your draft is kept; open it to review before syncing." });
+      synchronization.completed++;
+      await publishStatus();
     }
+    synchronization.state = "complete";
+    await saveActivity({ lastSyncedAt: new Date().toISOString() }, current);
+    } catch (error) {
+      synchronization.state = "error";
+      synchronization.error = error.message || "Could not sync. Your local changes are kept.";
+      await publishStatus();
+      throw error;
+    }
+    await publishStatus();
   })().finally(() => { syncing = null; });
   return syncing;
 }
@@ -217,21 +246,56 @@ async function prepare() {
   preparing = (async () => {
     const current = vault;
     if (!current) throw new Error("Unlock offline access first.");
+    preparation = { state: "preparing", completed: 0, total: 0, failed: [], current: "Checking your library" };
+    await publishStatus();
+    try {
     await prepareLogin();
     const response = await fetch("/api/offline/manifest", { cache: "no-store" });
     if (!response.ok) throw new Error("Sign in online to prepare your library.");
     const manifest = await response.json();
     if (manifest.userId !== current.userId) throw new Error("Sign in to the same account to prepare offline access.");
-    for (const path of manifest.paths) {
+    const jobs = [
+      ...(manifest.documents || []).map(path => ({ path, kind: "document" })),
+      ...(manifest.apis || []).map(path => ({ path, kind: "api" })),
+      ...manifest.paths.map(path => ({ path, kind: "page" })),
+    ];
+    preparation.total = jobs.length;
+    for (const { path, kind } of jobs) {
       if (vault !== current) return;
-      await capture(path);
+      preparation.current = path;
+      await publishStatus();
+      try {
+        if (kind === "page") await capture(path);
+        else {
+          const request = new Request(new URL(path, self.location.origin), { credentials: "same-origin" });
+          const response = await cachedApi(request, true);
+          if (!response.ok) throw new Error("Could not download this content.");
+          if (kind === "document") {
+            const payload = await response.json();
+            const document = payload.note || payload.reviewer;
+            if (!document?.updatedAt || typeof document.content !== "string") throw new Error("Could not prepare this document for editing.");
+            await exclusive(() => command({ type: "DOCUMENT", document: { path, title: document.title, content: document.content, updatedAt: document.updatedAt } }));
+          }
+        }
+        preparation.completed++;
+      } catch (error) { preparation.failed.push({ path, error: error.message }); }
+      await publishStatus();
     }
-    await broadcast({ type: "OFFLINE_NOTICE", message: "Your notes and reviewers are ready on this device. Other pages save when you open them." });
+    preparation.state = preparation.failed.length ? "partial" : "complete";
+    preparation.current = "";
+    await saveActivity({ preparation, ...(preparation.failed.length ? {} : { lastPreparedAt: new Date().toISOString() }) }, current);
+    await broadcast({ type: "OFFLINE_NOTICE", error: Boolean(preparation.failed.length), message: `${preparation.completed} of ${preparation.total} items saved on this device.${preparation.failed.length ? " Some items failed. Open Offline access to retry." : " Offline preparation finished."}` });
+    } catch (error) {
+      preparation.state = "error";
+      preparation.failed.push({ path: preparation.current, error: error.message });
+      await saveActivity({ preparation }, current);
+    }
+    await publishStatus();
   })().finally(() => { preparing = null; });
   return preparing;
 }
 
-async function cachedApi(request) {
+async function cachedApi(request, strict = false) {
   const current = vault;
   const name = `api:${request.url}`;
   let response;
@@ -246,7 +310,8 @@ async function cachedApi(request) {
       await verifyAccount(current);
       const bytes = new Uint8Array(await response.clone().arrayBuffer());
       if (bytes.length <= 10_000_000) await write(name, { bytes: Array.from(bytes), type: response.headers.get("content-type") || "application/octet-stream" }, current);
-    } catch { /* A failed local write must not fail the online request. */ }
+      else if (strict) throw new Error("This content exceeds the offline storage size limit.");
+    } catch (error) { if (strict) throw error; /* Keep ordinary online requests working if storage fails. */ }
   }
   return response;
 }
@@ -281,12 +346,19 @@ async function command(data) {
   }
   if (data.type === "LOCK") {
     vault = null;
+    preparation = { state: "idle", completed: 0, total: 0, failed: [], current: "" };
+    synchronization = { state: "idle", completed: 0, total: 0, error: "" };
     const profile = await record("get", "profile");
     if (profile) await record("put", "profile", { ...profile, resumeId: crypto.randomUUID() });
     await broadcast({ type: "OFFLINE_LOCKED" }, data.clientId);
     return true;
   }
-  if (data.type === "REMOVE") { vault = null; await record("clear"); await broadcast({ type: "OFFLINE_LOCKED" }, data.clientId); return true; }
+  if (data.type === "REMOVE") {
+    vault = null;
+    preparation = { state: "idle", completed: 0, total: 0, failed: [], current: "" };
+    synchronization = { state: "idle", completed: 0, total: 0, error: "" };
+    await record("clear"); await broadcast({ type: "OFFLINE_LOCKED" }, data.clientId); return true;
+  }
   if (data.type === "DOCUMENT") {
     if (!vault) return null;
     const document = data.document;
@@ -327,10 +399,9 @@ async function command(data) {
 }
 
 self.addEventListener("install", event => {
-  event.waitUntil((async () => {
-    await prepareLogin();
-    await self.skipWaiting();
-  })());
+  // Installation must not wait for an authenticated page or a slow download.
+  // PREPARE explicitly downloads the login page and reports any failure.
+  event.waitUntil(self.skipWaiting());
 });
 self.addEventListener("activate", event => event.waitUntil(self.clients.claim()));
 self.addEventListener("message", event => {
@@ -351,9 +422,10 @@ self.addEventListener("message", event => {
           }
         }
       });
-      const result = data.type === "PREPARE" ? true : data.type === "SYNC" ? await sync() : data.type === "CAPTURE" ? await capture(data.path) : await exclusive(() => command(data));
+      const result = ["PREPARE", "SYNC"].includes(data.type) ? true : data.type === "CAPTURE" ? await capture(data.path) : await exclusive(() => command(data));
       event.ports[0]?.postMessage({ result, resume: vault ? { key: vault.key, id: vault.resumeId } : null });
       if (data.type === "SAVE_DOCUMENT") await sync().catch(() => undefined);
+      if (data.type === "SYNC") await sync().catch(() => undefined);
       if (data.type === "PREPARE") await prepare().catch(error => broadcast({ type: "OFFLINE_NOTICE", error: true, message: `${error.message} Pages already saved are kept; unlock offline access in Settings to retry preparation.` }));
     } catch (error) { event.ports[0]?.postMessage({ error: error.message || "Offline storage failed." }); }
   })());

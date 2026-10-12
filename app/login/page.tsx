@@ -10,6 +10,7 @@ import { Input, Label } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
 import { loginSchema } from "@/lib/validation/auth";
 import { offlineCommand } from "@/lib/offline/client";
+import { setLocalSession } from "@/lib/offline/local-session";
 
 const REMEMBERED_EMAIL_KEY = "memoria-remembered-email";
 
@@ -35,7 +36,7 @@ export default function LoginPage() {
     // credentials again, even if they reached the sign-in page directly.
     if (!offlineLogin) void getSession()
       .then((session) => {
-        if (session?.user) router.replace("/dashboard");
+        if (session?.user) { setLocalSession(false); router.replace("/dashboard"); }
       })
       .catch(() => {
         // A temporary session check failure should not block manual sign-in.
@@ -50,6 +51,7 @@ export default function LoginPage() {
       setLoading(true);
       try {
         await offlineCommand("UNLOCK", { email: form.email, passphrase: form.password });
+        setLocalSession(true);
         // A document navigation also works when the worker has no Flight
         // response for the signed-out router tree.
         window.location.assign("/dashboard");
@@ -78,6 +80,7 @@ export default function LoginPage() {
       return;
     }
 
+    setLocalSession(false);
     if (keepLoggedIn) {
       window.localStorage.setItem(REMEMBERED_EMAIL_KEY, parsed.data.email.toLowerCase().trim());
     } else {

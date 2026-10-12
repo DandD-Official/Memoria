@@ -12,7 +12,7 @@ function worker(records = new Map<string, unknown>()) {
   const listeners: Record<string, (event: unknown) => void> = {};
   const fetcher = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) => Response.json({ user: { id: "alice", email: "alice@example.com" } }));
   const context = vm.createContext({ crypto: webcrypto, TextEncoder, TextDecoder, Uint8Array, URL, Request, Response, fetch: fetcher,
-    caches: { open: async () => ({ match: async (request: Request) => assets.get(request.url)?.clone(), put: async (request: Request, response: Response) => { assets.set(request.url, response); } }) },
+    caches: { open: async () => ({ match: async (request: Request | string) => assets.get(typeof request === "string" ? request : request.url)?.clone(), put: async (request: Request | string, response: Response) => { assets.set(typeof request === "string" ? request : request.url, response); } }) },
     self: { location: { origin: "https://memoria.test" }, clients: { matchAll: async () => [] }, addEventListener: (type: string, listener: (event: unknown) => void) => { listeners[type] = listener; } },
     recordAdapter: async (mode: string, key: string, value: unknown) => {
       if (mode === "get") return records.get(key);
@@ -22,11 +22,12 @@ function worker(records = new Map<string, unknown>()) {
       records.set(key, value);
     },
   });
-  vm.runInContext(source + "\nrecord = recordAdapter; globalThis.api = { command, read, sync, responseKey, cacheResponse };", context);
+  vm.runInContext(source + "\nrecord = recordAdapter; globalThis.api = { command, read, sync, prepare, responseKey, cacheResponse };", context);
   const api = context.api as {
     command(data: Record<string, unknown>): Promise<any>;
     read(key: string): Promise<any>;
     sync(): Promise<void>;
+    prepare(): Promise<void>;
     responseKey(request: Request): Promise<string>;
     cacheResponse(request: Request, response: Response, current?: unknown): Promise<void>;
   };
@@ -49,6 +50,55 @@ function worker(records = new Map<string, unknown>()) {
 }
 
 describe("encrypted offline worker", () => {
+  it("keeps incomplete edits encrypted locally until they are ready to upload", async () => {
+    const w = worker(); await w.enroll(); await w.seed();
+    await w.api.command({ type: "SAVE_DOCUMENT", path: base.path, title: "", content: "" });
+    expect(await w.api.read(`document:${base.path}`)).toMatchObject({ title: "", content: "", pending: true });
+  });
+  it("prepares Practice and Together navigation and editable records without opening their editors", async () => {
+    const w = worker(); await w.enroll();
+    w.fetcher.mockImplementation(async input => {
+      const path = new URL(typeof input === "string" ? input : input instanceof URL ? input.href : input.url, "https://memoria.test").pathname;
+      if (path === "/api/auth/session") return Response.json({ user: { id: "alice" } });
+      if (path === "/api/offline/manifest") return Response.json({ userId: "alice", paths: ["/study", "/books", "/notebooks"], documents: [base.path] });
+      if (path === base.path) return Response.json({ note: base });
+      const flight = input instanceof Request && input.headers.get("rsc");
+      return new Response(flight ? `flight:${path}` : `<html>${path}</html>`, { headers: { "Content-Type": flight ? "text/x-component" : "text/html" } });
+    });
+    await w.api.prepare();
+    const ready = await w.api.command({ type: "STATUS" });
+    expect(ready.preparation).toMatchObject({ state: "complete", completed: 4, total: 4, failed: [] });
+    expect(ready.lastPreparedAt).toBeTruthy();
+    w.fetcher.mockRejectedValue(new TypeError("offline"));
+    for (const path of ["/study", "/books", "/notebooks"]) {
+      expect(await (await w.fetchRequest(new Request(`https://memoria.test${path}`, { headers: { rsc: "1", "next-router-state-tree": "another-route" } })))?.text()).toBe(`flight:${path}`);
+    }
+    await w.save("First edit made offline");
+    expect((await w.api.read(`document:${base.path}`)).content).toBe("First edit made offline");
+    expect((await w.api.command({ type: "STATUS" })).pending).toBe(1);
+  });
+
+  it("reports partial preparation and continues saving remaining pages", async () => {
+    const w = worker(); await w.enroll();
+    w.fetcher.mockImplementation(async input => {
+      const path = new URL(typeof input === "string" ? input : input instanceof URL ? input.href : input.url, "https://memoria.test").pathname;
+      if (path === "/api/auth/session") return Response.json({ user: { id: "alice" } });
+      if (path === "/api/offline/manifest") return Response.json({ userId: "alice", paths: ["/study", "/books"] });
+      if (path === "/study") return new Response("Failed", { status: 500 });
+      return new Response("saved", { headers: { "Content-Type": "text/html" } });
+    });
+    await w.api.prepare();
+    const status = await w.api.command({ type: "STATUS" });
+    expect(status.preparation).toMatchObject({ state: "partial", completed: 1, total: 2, failed: [{ path: "/study" }] });
+    expect(status.lastPreparedAt).toBeNull();
+  });
+
+  it("reports a failed sync without discarding the pending edit or claiming success", async () => {
+    const w = worker(); await w.enroll(); await w.seed(); await w.save();
+    w.fetcher.mockRejectedValue(new TypeError("offline"));
+    await expect(w.api.sync()).rejects.toThrow();
+    expect(await w.api.command({ type: "STATUS" })).toMatchObject({ pending: 1, lastSyncedAt: null, synchronization: { state: "error" } });
+  });
   it("replaces stale JavaScript online and retains the updated copy offline", async () => {
     const w = worker();
     const request = new Request("https://memoria.test/_next/static/chunks/app/layout.js");
@@ -117,7 +167,7 @@ describe("encrypted offline worker", () => {
   it("retains pending work when the network fails during upload", async () => {
     const w = worker(); await w.enroll(); await w.seed(); await w.save();
     w.fetcher.mockResolvedValueOnce(Response.json({ user: { id: "alice" } })).mockRejectedValueOnce(new TypeError("offline"));
-    await w.api.sync();
+    await expect(w.api.sync()).rejects.toThrow("Connection interrupted");
     expect((await w.api.read(`document:${base.path}`)).pending).toBe(true);
   });
 

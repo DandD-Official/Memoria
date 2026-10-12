@@ -127,8 +127,8 @@ export function NoteDetail({ note, canEdit, isOwner, autoSave, systemAvailable, 
         <ArrowLeft className="h-4 w-4" /> Back to notes
       </Link>
 
-      {saveMessage && <p role="status" className="mb-3 text-sm text-ink-soft">{saveMessage}</p>}
-      <OfflineDocumentNotice message={offlineProblem} path={`/api/notes/${note.id}`} title={title} content={content} onLoad={draft => { setTitle(draft.title); setContent(draft.content); lastSaved.current = `${draft.title}\u0000${draft.content}`; savedValues.current = { title: draft.title, content: draft.content }; }} />
+      {(offlineProblem.saveStatus || saveMessage) && <p role="status" className="mb-3 text-sm text-ink-soft">{offlineProblem.saveStatus || saveMessage}</p>}
+      <OfflineDocumentNotice message={offlineProblem.problem} path={`/api/notes/${note.id}`} title={title} content={content} onLoad={draft => { setTitle(draft.title); setContent(draft.content); lastSaved.current = `${draft.title}\u0000${draft.content}`; savedValues.current = { title: draft.title, content: draft.content }; }} />
       <div className="document-heading">
         <div className="flex flex-col gap-6">
           <div className="min-w-0">

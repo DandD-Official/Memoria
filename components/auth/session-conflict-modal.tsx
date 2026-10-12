@@ -4,8 +4,11 @@ import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { LogOut, UserCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useConnection } from "@/components/offline/use-offline-status";
+import { canCheckOnlineSession } from "@/lib/offline/local-session";
 
 export function SessionConflictModal({ userName, sessionId, otherDevice, currentDevice }: { userName: string; sessionId: string; otherDevice?: string; currentDevice?: string }) {
+  const { online, localSession } = useConnection();
   const [mounted, setMounted] = useState(false);
   const [open, setOpen] = useState(true);
   const [busy, setBusy] = useState<"logout_other" | "continue" | null>(null);
@@ -15,14 +18,14 @@ export function SessionConflictModal({ userName, sessionId, otherDevice, current
     if (window.sessionStorage.getItem("memoria-session-resolved") === sessionId) setOpen(false);
   }, [sessionId]);
   useEffect(() => {
-    if (!mounted || !open) return;
+    if (!mounted || !open || !online || localSession) return;
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     return () => { document.body.style.overflow = previousOverflow; };
-  }, [mounted, open]);
-  if (!mounted || !open) return null;
+  }, [mounted, open, online, localSession]);
+  if (!mounted || !open || !online || localSession) return null;
   async function resolve(action: "logout_other" | "continue") {
-    if (busy) return;
+    if (busy || !canCheckOnlineSession()) return;
     setBusy(action);
     setError(null);
     try {
