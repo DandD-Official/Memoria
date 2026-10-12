@@ -8,22 +8,11 @@ import { MobileNav } from "@/components/layout/mobile-nav";
 import { libraryNavigation, togetherNavigation } from "@/components/layout/navigation";
 import { Brand } from "@/components/layout/brand";
 import { cn } from "@/lib/utils";
-import { OfflineSync } from "@/components/layout/offline-controls";
 
 export function WorkspaceShell({ children, userId, userName, unreadNotifications, studyStreak, compact, reduceMotion, indexCollapsed, indexMode }: { children: React.ReactNode; userId: string; userName: string; unreadNotifications: number; studyStreak: number; compact: boolean; reduceMotion: boolean; indexCollapsed: boolean; indexMode: string }) {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(indexCollapsed);
   useEffect(() => setCollapsed(indexCollapsed), [indexCollapsed]);
-  useEffect(() => {
-    const enterOfflineWorkspace = () => {
-      if (navigator.onLine || window.location.pathname === "/offline") return;
-      const currentPath = window.location.pathname + window.location.search;
-      window.location.replace("/offline?path=" + encodeURIComponent(currentPath));
-    };
-    enterOfflineWorkspace();
-    window.addEventListener("offline", enterOfflineWorkspace);
-    return () => window.removeEventListener("offline", enterOfflineWorkspace);
-  }, []);
 
   useEffect(() => {
     document.documentElement.classList.toggle("reduce-motion", reduceMotion);
@@ -32,7 +21,7 @@ export function WorkspaceShell({ children, userId, userName, unreadNotifications
   const focus = /\/quizzes\/[^/]+\/play$/.test(pathname) || pathname === "/study/review" || pathname.startsWith("/study/flashcards/");
   const library = libraryNavigation.some(item => pathname === item.href);
   const reading = /^\/(notes|reviewers|books)\/[^/]+$/.test(pathname) && !pathname.endsWith("/import");
-  return <><OfflineSync accountId={userId} /><div className={cn("workspace min-h-dvh", reading && "reading-workspace-shell", focus && "focus-workspace", compact && "compact-layout", reduceMotion && "reduce-motion")}>
+  return <><div className={cn("workspace min-h-dvh", reading && "reading-workspace-shell", focus && "focus-workspace", compact && "compact-layout", reduceMotion && "reduce-motion")}>
     <a href="#main-content" className="skip-link">Skip to content</a>
     {focus ? <header className="focus-header"><Link href="/study" className="inline-flex min-h-11 items-center gap-2 text-sm text-ink-soft"><ArrowLeft className="h-4 w-4" /> Leave focus</Link><Brand href="/dashboard" compact /><span className="hidden font-mono text-xs uppercase tracking-widest text-ink-faint sm:block">One thing at a time</span></header> : <Topbar userId={userId} userName={userName} unreadNotifications={unreadNotifications} studyStreak={studyStreak} />}
     {!focus && library && <div className="context-index" onMouseEnter={() => { if (indexMode === "HOVER") setCollapsed(false); }} onMouseLeave={() => { if (indexMode === "HOVER" && indexCollapsed) setCollapsed(true); }}>

@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { signOut } from "next-auth/react";
+import { signOut } from "@/lib/offline/sign-out";
+import { offlineCommand } from "@/lib/offline/client";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Input, Label } from "@/components/ui/input";
@@ -41,6 +42,7 @@ export function AccountSettings({ initial }: { initial: { name: string; email: s
       const response = await fetch("/api/account", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ password: deletePassword }) });
       const data = await response.json().catch(() => null);
       if (!response.ok) throw new Error(data?.error ?? "Couldn't delete your account.");
+      await offlineCommand("REMOVE").catch(() => undefined);
       await signOut({ callbackUrl: "/" });
     } catch (caught) { setError(caught instanceof Error ? caught.message : "Couldn't reach the server."); setBusy(null); throw caught; }
   }

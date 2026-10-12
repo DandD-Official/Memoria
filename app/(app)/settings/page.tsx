@@ -5,6 +5,7 @@ import { IntegrationConnections } from "@/components/settings/integration-connec
 import { connectionStatuses } from "@/lib/integrations/repository";
 import { isProviderConfigured } from "@/lib/integrations/config";
 import { AccountSettings } from "@/components/settings/account-settings";
+import { OfflineSettings } from "@/components/offline/offline-settings";
 import { AiConnections } from "@/components/settings/ai-connections";
 import { DEFAULT_AI_MODELS } from "@/lib/ai/providers";
 import { isCodeThemeId } from "@/lib/mmd/code-themes";
@@ -57,6 +58,7 @@ export default async function SettingsPage() {
       />
       <AiConnections initialConnections={aiConnections} defaults={DEFAULT_AI_MODELS} />
       <AccountSettings initial={{ name: user.name ?? "", email: user.email ?? "" }} />
+      <OfflineSettings />
     </PageShell>
   );
 }

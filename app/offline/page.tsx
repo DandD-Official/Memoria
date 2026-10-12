@@ -1,5 +1,5 @@
-import { OfflineLibrary } from "@/components/layout/offline-library";
+import { redirect } from "next/navigation";
 
 export default function OfflinePage() {
-  return <OfflineLibrary />;
+  redirect("/login?offline=1");
 }

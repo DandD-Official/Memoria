@@ -13,7 +13,8 @@ declare global {
 
 export function PwaRegistration() {
   useEffect(() => {
-    if ("serviceWorker" in navigator) void navigator.serviceWorker.register("/sw.js", { scope: "/" }).catch(() => {});
+    // OfflineProvider owns the root service worker. Keep installation events
+    // here without replacing the encrypted worker with the legacy worker.
     const installAvailable = (event: Event) => {
       event.preventDefault();
       window.memoriaInstallPrompt = event as InstallPromptEvent;
