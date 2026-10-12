@@ -22,6 +22,8 @@ import type { ExportProgressHandler } from "@/lib/export/types";
 import { RepromptDialog } from "@/components/notes/reprompt-dialog";
 import { toast } from "@/components/ui/toast";
 import { NoteReviewerReminder } from "@/components/notes/note-reviewer-reminder";
+import { useOfflineDocument } from "@/components/offline/use-offline-document";
+import { OfflineDocumentNotice } from "@/components/offline/document-notice";
 
 interface NoteDetailProps {
   note: {
@@ -51,6 +53,12 @@ export function NoteDetail({ note, canEdit, isOwner, autoSave, systemAvailable, 
   const [saved, setSaved] = useState(false);
   const lastSaved = useRef(`${note.title}\u0000${note.content}`);
   const savedValues = useRef({ title: note.title, content: note.content });
+  const offlineProblem = useOfflineDocument({ path: `/api/notes/${note.id}`, ...note }, canEdit && isEditing, title, content, draft => {
+    setTitle(draft.title); setContent(draft.content);
+    lastSaved.current = `${draft.title}\u0000${draft.content}`;
+    savedValues.current = { title: draft.title, content: draft.content };
+    setSaveMessage(draft.pending ? "Saved on this device. Syncs when connected." : "Synced to your account.");
+  });
 
   useEffect(() => {
     if (!autoSave || !canEdit || !isEditing) return;
@@ -60,7 +68,7 @@ export function NoteDetail({ note, canEdit, isOwner, autoSave, systemAvailable, 
       setSaving(true);
       try {
       const response = await fetch(`/api/notes/${note.id}`, { method: "PATCH", headers: { "Content-Type": "application/json", "X-Memora-Autosave": "1" }, body: JSON.stringify({ title, content }) });
-      if (response.ok) { setSaveMessage(savedMmdMessage(content)); lastSaved.current = signature; savedValues.current = { title, content }; setSaved(true); window.setTimeout(() => setSaved(false), 1500); }
+      if (response.ok) { setSaveMessage(response.status === 202 ? "Saved on this device. Syncs when connected." : savedMmdMessage(content)); lastSaved.current = signature; savedValues.current = { title, content }; setSaved(true); window.setTimeout(() => setSaved(false), 1500); }
       else { setSaveMessage("Auto-save failed. Your draft is still here; choose Save changes to retry."); toast("Could not auto-save. Your draft is still in the editor.", "error"); }
       } catch { setSaveMessage("Connection interrupted. Your draft is still here; choose Save changes to retry."); toast("Auto-save interrupted. Check your connection and retry saving.", "error"); }
       finally { setSaving(false); }
@@ -78,15 +86,15 @@ export function NoteDetail({ note, canEdit, isOwner, autoSave, systemAvailable, 
     });
     setSaving(false);
     if (res.ok) {
-      toast("Note saved.");
-      setSaveMessage(savedMmdMessage(content));
+      toast(res.status === 202 ? "Saved on this device. Syncs when connected." : "Note saved.");
+      setSaveMessage(res.status === 202 ? "Saved on this device. Syncs when connected." : savedMmdMessage(content));
       lastSaved.current = `${title}\u0000${content}`;
       savedValues.current = { title, content };
       setSaved(true);
       setIsEditing(false);
       // Clear the client router cache so the Notes list and dashboard
       // immediately receive the updated title and timestamp on navigation.
-      router.refresh();
+      if (res.status !== 202) router.refresh();
       setTimeout(() => setSaved(false), 2000);
     } else { const data = await res.json().catch(() => null); toast(data?.error || "Could not save. Your changes are still in the editor.", "error"); }
     } catch { toast("Could not reach the server. Your changes are still in the editor.", "error"); }
@@ -120,6 +128,7 @@ export function NoteDetail({ note, canEdit, isOwner, autoSave, systemAvailable, 
       </Link>
 
       {saveMessage && <p role="status" className="mb-3 text-sm text-ink-soft">{saveMessage}</p>}
+      <OfflineDocumentNotice message={offlineProblem} path={`/api/notes/${note.id}`} title={title} content={content} onLoad={draft => { setTitle(draft.title); setContent(draft.content); lastSaved.current = `${draft.title}\u0000${draft.content}`; savedValues.current = { title: draft.title, content: draft.content }; }} />
       <div className="document-heading">
         <div className="flex flex-col gap-6">
           <div className="min-w-0">

@@ -29,7 +29,7 @@ const securityHeaders = [
 const nextConfig = {
   serverExternalPackages: ["pdf-parse"],
   async headers() {
-    return [{ source: "/:path*", headers: securityHeaders }];
+    return [{ source: "/:path*", headers: securityHeaders }, { source: "/offline-worker.js", headers: [{ key: "Cache-Control", value: "no-cache" }, { key: "Service-Worker-Allowed", value: "/" }] }];
   },
 };
 

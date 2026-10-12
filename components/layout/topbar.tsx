@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { usePathname } from "next/navigation";
-import { signOut } from "next-auth/react";
+import { signOut } from "@/lib/offline/sign-out";
 import { LogOut, Search, Settings, ArrowUpRight, LineChart } from "lucide-react";
 import Link from "@/components/layout/navigation-link";
 import { Brand } from "@/components/layout/brand";

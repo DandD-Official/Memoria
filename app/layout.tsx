@@ -5,6 +5,7 @@ import { CodeThemeProvider } from "@/components/mmd/code-theme-context";
 import { StartupScreen } from "@/components/layout/startup-screen";
 import { ToastViewport } from "@/components/ui/toast";
 import { NavigationLoadingProvider } from "@/components/layout/navigation-loading";
+import { OfflineProvider } from "@/components/offline/offline-provider";
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXTAUTH_URL || "https://memoria-studynotes.vercel.app"),
@@ -37,7 +38,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className="font-sans" suppressHydrationWarning>
         <ThemeProvider>
-          <CodeThemeProvider><NavigationLoadingProvider><StartupScreen />{children}<ToastViewport /></NavigationLoadingProvider></CodeThemeProvider>
+          <CodeThemeProvider><NavigationLoadingProvider><OfflineProvider /><StartupScreen />{children}<ToastViewport /></NavigationLoadingProvider></CodeThemeProvider>
         </ThemeProvider>
       </body>
     </html>

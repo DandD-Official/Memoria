@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { signOut } from "next-auth/react";
+import { signOut } from "@/lib/offline/sign-out";
 
 // Keep revocation responsive after another session is logged out without
 // adding a request on every render or keystroke.
@@ -12,7 +12,7 @@ export function SessionHeartbeat() {
 
   useEffect(() => {
     const heartbeat = async () => {
-      if (document.visibilityState !== "visible" || signingOut.current) return;
+      if (!navigator.onLine || document.visibilityState !== "visible" || signingOut.current) return;
 
       try {
         const response = await fetch("/api/sessions/heartbeat", {

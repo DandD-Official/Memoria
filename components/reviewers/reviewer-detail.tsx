@@ -19,6 +19,8 @@ import { TagEditor } from "@/components/library/tag-editor";
 import { RevisionHistory } from "@/components/library/revision-history";
 import { ExportMenu } from "@/components/exports/export-menu";
 import type { ExportProgressHandler } from "@/lib/export/types";
+import { useOfflineDocument } from "@/components/offline/use-offline-document";
+import { OfflineDocumentNotice } from "@/components/offline/document-notice";
 
 interface ReviewerDetailProps {
   reviewer: {
@@ -46,6 +48,10 @@ export function ReviewerDetail({ reviewer, isOwner, canEdit, autoSave, related }
   const [saving, setSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState("");
   const lastSaved = useRef(`${reviewer.title}\u0000${reviewer.content}`);
+  const offlineProblem = useOfflineDocument({ path: `/api/reviewers/${reviewer.id}`, ...reviewer }, canEdit && editing, title, content, draft => {
+    setTitle(draft.title); setContent(draft.content); lastSaved.current = `${draft.title}\u0000${draft.content}`;
+    setSaveMessage(draft.pending ? "Saved on this device. Syncs when connected." : "Synced to your account.");
+  });
 
   useEffect(() => {
     if (!editing || !autoSave || !canEdit) return;
@@ -53,26 +59,31 @@ export function ReviewerDetail({ reviewer, isOwner, canEdit, autoSave, related }
     if (signature === lastSaved.current) return;
     const timer = window.setTimeout(async () => {
       setSaving(true);
+      try {
       const response = await fetch(`/api/reviewers/${reviewer.id}`, { method: "PATCH", headers: { "Content-Type": "application/json", "X-Memora-Autosave": "1" }, body: JSON.stringify({ title, content }) });
-      setSaving(false);
-      if (response.ok) { lastSaved.current = signature; setSaveMessage(savedMmdMessage(content)); }
+      if (response.ok) { lastSaved.current = signature; setSaveMessage(response.status === 202 ? "Saved on this device. Syncs when connected." : savedMmdMessage(content)); }
+      else { const data = await response.json().catch(() => null); setSaveMessage(data?.error || "Could not save. Your draft is still in the editor."); }
+      } catch { setSaveMessage("Could not connect. Your draft is still in the editor."); }
+      finally { setSaving(false); }
     }, 1200);
     return () => window.clearTimeout(timer);
   }, [autoSave, content, editing, canEdit, reviewer.id, title]);
 
   async function handleSave() {
     setSaving(true);
+    try {
     const res = await fetch(`/api/reviewers/${reviewer.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ title, content }),
     });
-    setSaving(false);
     if (res.ok) {
-      setSaveMessage(savedMmdMessage(content));
+      setSaveMessage(res.status === 202 ? "Saved on this device. Syncs when connected." : savedMmdMessage(content));
       lastSaved.current = `${title}\u0000${content}`;
       setEditing(false);
-    }
+    } else { const data = await res.json().catch(() => null); setSaveMessage(data?.error || "Could not save. Your draft is still in the editor."); }
+    } catch { setSaveMessage("Could not connect. Your draft is still in the editor."); }
+    finally { setSaving(false); }
   }
 
   async function handleExport(format: string, onProgress?: ExportProgressHandler) {
@@ -88,6 +99,7 @@ export function ReviewerDetail({ reviewer, isOwner, canEdit, autoSave, related }
       </Link>
 
       {saveMessage && <p role="status" className="mb-3 text-sm text-ink-soft">{saveMessage}</p>}
+      <OfflineDocumentNotice message={offlineProblem} path={`/api/reviewers/${reviewer.id}`} title={title} content={content} onLoad={draft => { setTitle(draft.title); setContent(draft.content); lastSaved.current = `${draft.title}\u0000${draft.content}`; }} />
       <div className="document-heading">
         <div className="flex flex-col gap-6">
           <div className="min-w-0">
