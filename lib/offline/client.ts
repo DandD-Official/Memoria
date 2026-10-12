@@ -5,6 +5,7 @@ let resume: { key: CryptoKey; id: string } | undefined;
 export function forgetOfflineKey() { resume = undefined; }
 
 export async function offlineWorker() {
+  if (process.env.NODE_ENV !== "production") throw new Error("Offline access requires a production build. Run npm run build and npm start to test it.");
   if (!("serviceWorker" in navigator) || !window.isSecureContext) throw new Error("Offline storage requires HTTPS and a browser with service worker support.");
   registration ??= navigator.serviceWorker.register("/offline-worker.js", { scope: "/", updateViaCache: "none" });
   await registration;
@@ -31,6 +32,7 @@ export type OfflineStatus = { configured: boolean; unlocked: boolean; pending: n
 export type OfflineDocument = { path: string; title: string; content: string; updatedAt: string; pending?: boolean; conflict?: boolean };
 
 export async function lockOffline() {
+  if (process.env.NODE_ENV !== "production") return;
   if (!("serviceWorker" in navigator) || !navigator.serviceWorker.controller) return;
   await offlineCommand("LOCK");
 }

@@ -20,7 +20,7 @@ export function PwaRegistration() {
       window.memoriaInstallPrompt = event as InstallPromptEvent;
       window.dispatchEvent(new Event("memoria:install-available"));
     };
-    const installed = () => { window.memoriaInstallPrompt = null; window.dispatchEvent(new Event("appinstalled")); };
+    const installed = () => { window.memoriaInstallPrompt = null; };
     window.addEventListener("beforeinstallprompt", installAvailable);
     window.addEventListener("appinstalled", installed);
     return () => { window.removeEventListener("beforeinstallprompt", installAvailable); window.removeEventListener("appinstalled", installed); };

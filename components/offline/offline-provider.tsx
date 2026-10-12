@@ -8,6 +8,7 @@ import { toast } from "@/components/ui/toast";
 export function OfflineProvider() {
   const pathname = usePathname();
   useEffect(() => {
+    if (process.env.NODE_ENV !== "production") return;
     if (!("serviceWorker" in navigator)) return;
     void offlineWorker().catch(() => undefined);
     void offlineCommand("STATUS").catch(() => undefined);
@@ -33,7 +34,7 @@ export function OfflineProvider() {
   useEffect(() => {
     // Capture a full document as well as Next's route responses. This makes
     // refresh/direct navigation work without inventing another offline page.
-    if (navigator.onLine) void offlineCommand("CAPTURE", { path: pathname + window.location.search }).catch(() => undefined);
+    if (process.env.NODE_ENV === "production" && navigator.onLine) void offlineCommand("CAPTURE", { path: pathname + window.location.search }).catch(() => undefined);
   }, [pathname]);
   return null;
 }

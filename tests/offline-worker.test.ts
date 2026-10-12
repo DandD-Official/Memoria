@@ -8,9 +8,11 @@ const base = { path: "/api/notes/n1", title: "Original", content: "Private learn
 const phrase = "correct horse device phrase";
 
 function worker(records = new Map<string, unknown>()) {
+  const assets = new Map<string, Response>();
   const listeners: Record<string, (event: unknown) => void> = {};
   const fetcher = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) => Response.json({ user: { id: "alice", email: "alice@example.com" } }));
   const context = vm.createContext({ crypto: webcrypto, TextEncoder, TextDecoder, Uint8Array, URL, Request, Response, fetch: fetcher,
+    caches: { open: async () => ({ match: async (request: Request) => assets.get(request.url)?.clone(), put: async (request: Request, response: Response) => { assets.set(request.url, response); } }) },
     self: { location: { origin: "https://memoria.test" }, clients: { matchAll: async () => [] }, addEventListener: (type: string, listener: (event: unknown) => void) => { listeners[type] = listener; } },
     recordAdapter: async (mode: string, key: string, value: unknown) => {
       if (mode === "get") return records.get(key);
@@ -43,10 +45,19 @@ function worker(records = new Map<string, unknown>()) {
     await pending;
     return reply;
   }
-  return { api, records, fetcher, enroll, seed, save, fetchRequest, message };
+  return { api, records, assets, fetcher, enroll, seed, save, fetchRequest, message };
 }
 
 describe("encrypted offline worker", () => {
+  it("replaces stale JavaScript online and retains the updated copy offline", async () => {
+    const w = worker();
+    const request = new Request("https://memoria.test/_next/static/chunks/app/layout.js");
+    w.assets.set(request.url, new Response("old module"));
+    w.fetcher.mockResolvedValueOnce(new Response("current module"));
+    expect(await (await w.fetchRequest(request))?.text()).toBe("current module");
+    w.fetcher.mockRejectedValueOnce(new TypeError("Offline"));
+    expect(await (await w.fetchRequest(request))?.text()).toBe("current module");
+  });
   it("persists encrypted identity and drafts, rejects wrong unlock, and locks reads", async () => {
     const w = worker(); await w.enroll(); await w.seed(); await w.save();
     const stored = JSON.stringify([...w.records], (_key, value) => value instanceof ArrayBuffer ? Array.from(new Uint8Array(value)) : value);

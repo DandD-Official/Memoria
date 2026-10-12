@@ -75,11 +75,7 @@ export function NotificationMenu({ initialUnreadCount }: { initialUnreadCount: n
       document.removeEventListener("mousedown", closeMenu);
       document.removeEventListener("keydown", closeOnEscape);
     };
-<<<<<<< HEAD
   }, [open, mobile]);
-=======
-  }, []);
->>>>>>> 2e5a531e04c559242f347345eeb5696f429f9d34
 
   function openNotification(item: NotificationItem) {
     setOpen(false);
