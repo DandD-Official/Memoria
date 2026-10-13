@@ -6,5 +6,5 @@ export function namespaceSvgIds(markup: string, prefix: string): string {
     .replace(/\bid="([^"]+)"/g, (_, id: string) => `id="${ids.get(id)}"`)
     .replace(/url\(\s*#([\w:.-]+)\s*\)/g, (value, id: string) => ids.has(id) ? `url(#${ids.get(id)})` : value)
     .replace(/\bhref="#([^"]+)"/g, (value, id: string) => ids.has(id) ? `href="#${ids.get(id)}"` : value)
-    .replace(/\baria-labelledby="([^"]+)"/g, (_, values: string) => `aria-labelledby="${values.split(/\s+/).map(id => ids.get(id) || id).join(" ")}"`);
+    .replace(/\b(aria-labelledby|aria-describedby)="([^"]+)"/g, (_, attribute: string, values: string) => `${attribute}="${values.split(/\s+/).map(id => ids.get(id) || id).join(" ")}"`);
 }

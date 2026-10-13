@@ -2,6 +2,9 @@ import { describe, expect, it } from "vitest";
 import { buildMmdOutputRules, EXAMPLE_SYNTAX } from "@/lib/mmd/ai-instructions";
 import { getSupportedBlockNames } from "@/lib/mmd/spec-blocks";
 import { parseMmd, collectMmdErrors } from "@/lib/mmd/parser";
+import { buildNoteReformatPrompt, buildTopicNotePrompt } from "@/lib/prompts/note-prompt";
+import { buildOcrExtractionPrompt } from "@/lib/prompts/ocr-prompt";
+import { workspaceSvgPrompt } from "@/lib/workspaces/svg-prompt";
 
 describe("buildMmdOutputRules", () => {
   const rules = buildMmdOutputRules();
@@ -33,6 +36,19 @@ describe("buildMmdOutputRules", () => {
     expect(rules).not.toContain(":::image-request");
     expect(rules).not.toContain(":::diagram");
     expect(rules).not.toContain(":::image");
+  });
+
+  it("gives generation and extraction workflows the same richer SVG contract", () => {
+    for (const prompt of [rules, buildNoteReformatPrompt([], "balanced"), buildTopicNotePrompt("Pivot tables", "visual_creative"), buildOcrExtractionPrompt([], []), workspaceSvgPrompt("Field areas", "")]) {
+      expect(prompt).toContain("feDropShadow");
+      expect(prompt).toContain("textPath");
+      expect(prompt).toContain("x/y/dx/dy");
+      expect(prompt).toContain("preserve useful existing SVG geometry");
+      expect(prompt).toContain("Never silently omit a figure");
+      expect(prompt).toContain("external or data URLs");
+      expect(prompt).not.toContain("Avoid CSS classes, external fonts, filters");
+      expect(prompt).not.toContain("animations, filters, and unsupported attributes");
+    }
   });
 
   it("every worked example is itself valid MMD", () => {

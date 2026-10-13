@@ -138,8 +138,15 @@ marker in v1 — added only if/when v2 introduces a breaking change.
   `caption`, `align`, and `size` are optional and use the same bounded values
   as `:::image`. This is the one MMD block where SVG markup is allowed.
   Before rendering, Memoria reconstructs the SVG from a strict element and
-  attribute allowlist. Scripts, event handlers, external URLs, styles,
-  `foreignObject`, and other embedded HTML are rejected.
+    attribute allowlist. Gradients, masks, clipping, patterns, markers,
+    symbols/use, textPath, text positioning, and self-contained filter effects
+    (including drop shadows, blur, lighting, and component transfer) are supported.
+    Simple inline styles and element/class/ID CSS rules are converted to allowed
+    presentation attributes. Local href/xlink:href and quoted fragment URLs are
+    supported; references are namespaced per figure in the reader.
+    Scripts, event handlers, external resources, image/feImage, animations,
+    `foreignObject`, and other embedded HTML are rejected. The authoritative
+    element and attribute lists live in `lib/svg/sanitize.ts`.
 
 ## 5. Attribute validation
 Every block type above has a fixed attribute allowlist (name + type +

@@ -10,14 +10,20 @@
 
 export const MAX_INLINE_SVG_CHARS = 500_000;
 
-const ALLOWED_ELEMENTS = new Set([
+export const SVG_SUPPORTED_ELEMENTS = [
   "svg", "g", "defs", "marker", "path", "rect", "circle", "ellipse", "line",
   "polyline", "polygon", "text", "tspan", "title", "desc", "linearGradient",
-  "radialGradient", "stop", "clipPath", "mask", "pattern", "symbol", "use",
-]);
+  "radialGradient", "stop", "clipPath", "mask", "pattern", "symbol", "use", "textPath",
+  "filter", "feBlend", "feColorMatrix", "feComponentTransfer", "feComposite",
+  "feConvolveMatrix", "feDiffuseLighting", "feDisplacementMap", "feDistantLight",
+  "feDropShadow", "feFlood", "feFuncA", "feFuncB", "feFuncG", "feFuncR",
+  "feGaussianBlur", "feMerge", "feMergeNode", "feMorphology", "feOffset",
+  "fePointLight", "feSpecularLighting", "feSpotLight", "feTile", "feTurbulence",
+] as const;
+const ALLOWED_ELEMENTS = new Set<string>(SVG_SUPPORTED_ELEMENTS);
 
 const ALLOWED_ATTRIBUTES = new Set([
-  "xmlns", "viewBox", "width", "height", "role", "id", "class",
+  "xmlns", "viewBox", "width", "height", "role", "id", "class", "version", "baseProfile",
   "aria-label", "aria-labelledby", "fill", "fill-opacity", "fill-rule",
   "stroke", "stroke-width", "stroke-linecap", "stroke-linejoin",
   "stroke-dasharray", "stroke-dashoffset", "stroke-miterlimit", "stroke-opacity", "opacity",
@@ -28,7 +34,22 @@ const ALLOWED_ATTRIBUTES = new Set([
   "refX", "refY", "orient", "marker-start", "marker-mid", "marker-end",
   "gradientUnits", "gradientTransform", "offset", "stop-color", "stop-opacity",
   "clipPathUnits", "clip-path", "mask", "maskUnits", "maskContentUnits",
-  "patternUnits", "patternContentUnits", "patternTransform", "href",
+  "patternUnits", "patternContentUnits", "patternTransform", "href", "xlink:href", "xmlns:xlink",
+  "dx", "dy", "rotate", "textLength", "lengthAdjust", "startOffset", "method", "spacing", "side",
+  "fx", "fy", "fr", "spreadMethod", "markerUnits", "pathLength", "clip-rule",
+  "color", "color-interpolation", "color-interpolation-filters", "vector-effect",
+  "paint-order", "shape-rendering", "text-rendering", "image-rendering", "visibility", "display",
+  "enable-background", "isolation", "mix-blend-mode",
+  "word-spacing", "text-decoration", "font-variant", "font-stretch", "writing-mode", "direction",
+  "unicode-bidi", "overflow", "mask-type", "aria-describedby", "aria-hidden", "focusable", "xml:space",
+  "filter", "filterUnits", "primitiveUnits", "in", "in2", "result", "stdDeviation",
+  "mode", "type", "values", "operator", "k1", "k2", "k3", "k4", "radius",
+  "scale", "xChannelSelector", "yChannelSelector", "flood-color", "flood-opacity",
+  "lighting-color", "surfaceScale", "diffuseConstant", "specularConstant", "specularExponent",
+  "azimuth", "elevation", "z", "pointsAtX", "pointsAtY", "pointsAtZ", "limitingConeAngle",
+  "order", "kernelMatrix", "divisor", "bias", "targetX", "targetY", "edgeMode", "kernelUnitLength",
+  "preserveAlpha", "tableValues", "slope", "intercept", "amplitude", "exponent",
+  "baseFrequency", "numOctaves", "seed", "stitchTiles",
 ]);
 
 // XML allows both <rect /> and <rect></rect>, including other leaf shapes.
@@ -42,7 +63,19 @@ const SAFE_CSS_PROPERTIES = new Set([
   "marker-mid", "marker-start", "opacity", "stroke", "stroke-dasharray", "stroke-dashoffset",
   "stroke-linecap", "stroke-linejoin", "stroke-miterlimit", "stroke-opacity", "stroke-width",
   "text-anchor", "dominant-baseline", "stop-color", "stop-opacity", "rx", "ry",
+  "filter", "mask", "mask-type", "clip-rule", "color", "color-interpolation",
+  "color-interpolation-filters", "flood-color", "flood-opacity", "lighting-color",
+  "vector-effect", "paint-order", "shape-rendering", "text-rendering", "image-rendering",
+  "visibility", "display", "word-spacing", "text-decoration", "font-variant", "font-stretch",
+  "writing-mode", "direction", "unicode-bidi", "overflow",
+  "enable-background", "isolation", "mix-blend-mode",
 ]);
+
+// Canonicalize quoted fragment URLs before validation and ID namespacing.
+const LOCAL_URL_RE = /^\s*url\(\s*(["']?)#([A-Za-z_][A-Za-z0-9:._-]*)\1\s*\)\s*$/i;
+function normalizeLocalUrl(value: string): string {
+  return value.replace(LOCAL_URL_RE, "url(#$2)");
+}
 
 function escapeAttribute(value: string): string {
   return value.replace(/[&<>"']/g, (character) => ({
@@ -67,6 +100,9 @@ function decodeXmlEntities(value: string): string {
 function safeAttributeValue(name: string, value: string): boolean {
   if (/[<>]/.test(value) || /(?:javascript|vbscript|data):/i.test(value)) return false;
   if (name === "xmlns" && value !== "http://www.w3.org/2000/svg") return false;
+  if (name === "xmlns:xlink" && value !== "http://www.w3.org/1999/xlink") return false;
+  // CSS escapes/comments can conceal url() from string-based checks.
+  if (SAFE_CSS_PROPERTIES.has(name) && /[\\\u0000-\u001f]|\/\*|\*\//.test(value)) return false;
   if (/url\s*\(/i.test(value) && !/^\s*url\(\s*#[A-Za-z_][A-Za-z0-9:._-]*\s*\)\s*$/i.test(value)) return false;
   if ((name === "href" || name === "xlink:href") && !/^#[A-Za-z_][A-Za-z0-9:._-]*$/.test(value)) return false;
   return true;
@@ -92,7 +128,7 @@ function parseAttributes(source: string): { attrs: string[]; selfClosing: boolea
     if (!ALLOWED_ATTRIBUTES.has(name) || !quotedValue) return null;
     if (seen.has(name)) return null;
     seen.add(name);
-    const value = decodeXmlEntities(quotedValue.slice(1, -1).replace(/\\(.)/g, "$1"));
+    const value = normalizeLocalUrl(decodeXmlEntities(quotedValue.slice(1, -1)));
     if (!safeAttributeValue(name, value)) return null;
     attrs.push(`${name}="${escapeAttribute(value)}"`);
     position = ATTRIBUTE_RE.lastIndex;
@@ -113,7 +149,7 @@ function normalizeAiSvgMarkup(source: string): string {
 }
 
 function safeCssValue(value: string): boolean {
-  if (!value || /[<>{};]/.test(value)) return false;
+  if (!value || /[<>{};\\\u0000-\u001f]|\/\*|\*\//.test(value)) return false;
   if (/(?:expression|javascript|vbscript|data):/i.test(value)) return false;
   return !/url\s*\(/i.test(value) || /^\s*url\(\s*#[A-Za-z_][A-Za-z0-9:._-]*\s*\)\s*$/i.test(value);
 }
@@ -125,7 +161,7 @@ function parseSafeCssDeclarations(css: string): Array<[string, string]> {
       const separator = declaration.indexOf(":");
       if (separator < 0) return null;
       const property = declaration.slice(0, separator).trim();
-      const value = declaration.slice(separator + 1).trim();
+      const value = normalizeLocalUrl(decodeXmlEntities(declaration.slice(separator + 1).trim()));
       return SAFE_CSS_PROPERTIES.has(property) && safeCssValue(value) ? [property, value] as [string, string] : null;
     })
     .filter((declaration): declaration is [string, string] => Boolean(declaration));
@@ -152,10 +188,13 @@ function inlineSafeStyles(source: string): string {
   });
 
   return withoutStyles.replace(/<([A-Za-z][A-Za-z0-9:.-]*)([^<>]*?)(\/?)>/g, (token, name: string, attributes: string, closing: string) => {
-    const classes = attributes.match(/\bclass\s*=\s*"([^"]*)"/i)?.[1]?.split(/\s+/).filter(Boolean) ?? [];
-    const id = attributes.match(/\bid\s*=\s*"([^"]*)"/i)?.[1];
+    const classMatch = attributes.match(/\bclass\s*=\s*(?:"([^"]*)"|'([^']*)')/i);
+    const classes = (classMatch?.[1] ?? classMatch?.[2] ?? "").split(/\s+/).filter(Boolean);
+    const idMatch = attributes.match(/\bid\s*=\s*(?:"([^"]*)"|'([^']*)')/i);
+    const id = idMatch?.[1] ?? idMatch?.[2];
     const inlineStyle = attributes.match(/\bstyle\s*=\s*(?:"([^"]*)"|'([^']*)')/i);
-    const inlineStyleValue = inlineStyle?.[1] ?? inlineStyle?.[2] ?? "";
+    const inlineStyleValue = decodeXmlEntities(inlineStyle?.[1] ?? inlineStyle?.[2] ?? "")
+      .replace(/url\(\s*(["']?)#([A-Za-z_][A-Za-z0-9:._-]*)\1\s*\)/gi, "url(#$2)");
     const unsafeInlineStyle = /(?:expression|javascript|vbscript|data):|url\s*\(\s*(?!#)|[<>{}]/i.test(inlineStyleValue);
     const safeAttributes = unsafeInlineStyle ? attributes : attributes.replace(/\s+style\s*=\s*(?:"[^"]*"|'[^']*')/i, "");
     attributes = safeAttributes;

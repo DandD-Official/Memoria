@@ -69,7 +69,7 @@ Use normal Markdown for ordinary document structure. For source code, use the ed
 
 Use a Memoria block only when it meaningfully improves organization, comprehension, or learning. Do not force every paragraph into a callout, card, or section.
 
-Do not use raw HTML anywhere except inside a :::svg block. A :::svg body must contain only one self-contained SVG visual; it must not contain scripts, event-handler attributes, external URLs, stylesheets, foreignObject, or other embedded HTML. For mathematical notation, use :::math{formula="..."} or inline $...$ notation.
+Do not use raw HTML anywhere except inside a :::svg block. A :::svg body must contain only one self-contained SVG visual; it must not contain scripts, event-handler attributes, external resources, external stylesheets, foreignObject, or other embedded HTML. Simple presentation styles are supported as described in the SVG quality contract. For mathematical notation, use :::math{formula="..."} or inline $...$ notation.
 
 Do not invent block types that are not listed below.
 
@@ -89,7 +89,7 @@ VISUAL COMPOSITION
 - In visual_creative style, include at least one meaningful SVG when the material contains a relationship or process that can be shown accurately. For long guides, use separate focused visuals instead of a crowded poster.
 - Use a responsive viewBox (for example 0 0 720 420), explicit fills and strokes, a light background, dark readable labels, and a small consistent accent palette. Prefer basic svg, g, rect, circle, ellipse, line, polyline, polygon, path, text, and tspan elements.
 - Plan generous margins and consistent spacing. Keep labels short and at least 18 units tall at a 720-unit width. Split long labels into positioned tspan lines. Increase height instead of shrinking text. Keep labels and arrowheads inside the bounds, with connectors clear of text.
-- Label relationships so meaning does not depend on color alone. Draw arrowheads with simple polygons. Avoid CSS classes, external fonts, filters, and animations. Supply descriptive alt text and explain the main takeaway in nearby prose.
+- Label relationships so meaning does not depend on color alone. Draw arrowheads with polygons or local markers. Use the supported gradients, masks, patterns, and filters where helpful; follow the SVG quality contract below. Supply descriptive alt text and explain the main takeaway in nearby prose.
 - Verify subject-specific labels, accurate relationships, no overlapping text, and a complete closing svg tag. Never use an empty example rectangle as the final visual.
 
 ${SVG_QUALITY_RULES}
