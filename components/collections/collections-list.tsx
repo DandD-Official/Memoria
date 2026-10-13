@@ -1,8 +1,8 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useRouter } from "@/components/layout/navigation-loading";
 import { useState } from "react";
-import Link from "next/link";
+import Link from "@/components/layout/navigation-link";
 import { ArrowUpRight, BookOpen, Plus, Star } from "lucide-react";
 import { DeleteCollectionButton } from "./delete-collection-button";
 import { MemoryMark } from "@/components/layout/brand";

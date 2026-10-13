@@ -1,7 +1,7 @@
 import { MemoryMark } from "@/components/layout/brand";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import Link from "next/link";
+import Link from "@/components/layout/navigation-link";
 import { Users } from "lucide-react";
 import { prisma } from "@/lib/db";
 import { findNoteById } from "@/lib/notes-repo";

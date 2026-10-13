@@ -1,7 +1,7 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
+import Link from "@/components/layout/navigation-link";
+import { useRouter } from "@/components/layout/navigation-loading";
 import { Clock3, FileText, Plus, Share2, Trash2, Download, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/input";

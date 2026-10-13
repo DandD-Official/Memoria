@@ -1,14 +1,16 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import Link from "next/link";
+import { useRouter } from "@/components/layout/navigation-loading";
+import Link from "@/components/layout/navigation-link";
 import { getSession, signIn } from "next-auth/react";
 import { AuthFrame } from "@/components/auth/auth-frame";
 import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
 import { loginSchema } from "@/lib/validation/auth";
+import { offlineCommand } from "@/lib/offline/client";
+import { setLocalSession } from "@/lib/offline/local-session";
 
 const REMEMBERED_EMAIL_KEY = "memoria-remembered-email";
 
@@ -18,8 +20,12 @@ export default function LoginPage() {
   const [keepLoggedIn, setKeepLoggedIn] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [offline, setOffline] = useState(false);
 
   useEffect(() => {
+    const offlineLogin = !navigator.onLine || new URLSearchParams(window.location.search).get("offline") === "1";
+    setOffline(offlineLogin);
+    if (new URLSearchParams(window.location.search).has("missing")) setError("This page has not been saved on this device. Connect and open it first.");
     const rememberedEmail = window.localStorage.getItem(REMEMBERED_EMAIL_KEY);
     if (rememberedEmail) {
       setForm((current) => ({ ...current, email: rememberedEmail }));
@@ -28,9 +34,9 @@ export default function LoginPage() {
 
     // A returning user with a valid persistent session does not need to enter
     // credentials again, even if they reached the sign-in page directly.
-    void getSession()
+    if (!offlineLogin) void getSession()
       .then((session) => {
-        if (session?.user) router.replace("/dashboard");
+        if (session?.user) { setLocalSession(false); router.replace("/dashboard"); }
       })
       .catch(() => {
         // A temporary session check failure should not block manual sign-in.
@@ -40,6 +46,19 @@ export default function LoginPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+
+    if (offline) {
+      setLoading(true);
+      try {
+        await offlineCommand("UNLOCK", { email: form.email, passphrase: form.password });
+        setLocalSession(true);
+        // A document navigation also works when the worker has no Flight
+        // response for the signed-out router tree.
+        window.location.assign("/dashboard");
+      } catch (caught) { setError(caught instanceof Error ? caught.message : "Could not unlock offline access."); }
+      finally { setLoading(false); }
+      return;
+    }
 
     const parsed = loginSchema.safeParse(form);
     if (!parsed.success) {
@@ -61,6 +80,7 @@ export default function LoginPage() {
       return;
     }
 
+    setLocalSession(false);
     if (keepLoggedIn) {
       window.localStorage.setItem(REMEMBERED_EMAIL_KEY, parsed.data.email.toLowerCase().trim());
     } else {
@@ -84,7 +104,7 @@ export default function LoginPage() {
               />
             </div>
             <div>
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password">{offline ? "Offline passphrase" : "Password"}</Label>
               <PasswordInput
                 id="password"
                 name="password"
@@ -111,8 +131,9 @@ export default function LoginPage() {
             </div>
             {error && <p className="rounded-control border border-danger/25 bg-danger/5 p-3 text-sm text-danger" role="alert">{error}</p>}
             <Button type="submit" className="w-full" loading={loading}>
-              Sign in
+              {offline ? "Unlock offline access" : "Sign in"}
             </Button>
+            <Button type="button" variant="ghost" className="w-full" onClick={() => { setOffline(value => !value); setForm(value => ({ ...value, password: "" })); setError(null); }}>{offline ? "Sign in online" : "Use offline passphrase"}</Button>
           </form>
 
           <p className="mt-6 text-center text-sm text-ink-soft">

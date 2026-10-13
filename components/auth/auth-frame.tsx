@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/layout/navigation-link";
 import { ArrowUpRight } from "lucide-react";
 import { Brand, MemoryMark } from "@/components/layout/brand";
 import { ThemeToggle } from "@/components/layout/theme-toggle";

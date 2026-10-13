@@ -1,4 +1,6 @@
-/** @type {import('next').NextConfig} */
+import { PHASE_DEVELOPMENT_SERVER } from "next/constants.js";
+import { randomUUID } from "node:crypto";
+
 const securityHeaders = [
   // Prevents this app from being framed by another site (clickjacking).
   { key: "X-Frame-Options", value: "DENY" },
@@ -27,10 +29,14 @@ const securityHeaders = [
 ];
 
 const nextConfig = {
+  env: { MEMORIA_BUILD_VERSION: process.env.VERCEL_GIT_COMMIT_SHA || randomUUID() },
   serverExternalPackages: ["pdf-parse"],
   async headers() {
-    return [{ source: "/:path*", headers: securityHeaders }];
+    return [{ source: "/:path*", headers: securityHeaders }, { source: "/offline-worker.js", headers: [{ key: "Cache-Control", value: "no-cache" }, { key: "Service-Worker-Allowed", value: "/" }] }];
   },
 };
 
-export default nextConfig;
+// A production verification build must not replace a running dev server's files.
+export default function config(phase) {
+  return { ...nextConfig, distDir: phase === PHASE_DEVELOPMENT_SERVER ? ".next-dev" : ".next" };
+}

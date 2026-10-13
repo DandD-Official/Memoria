@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/layout/navigation-link";
 import { Brand } from "@/components/layout/brand";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
 export default function WalkthroughLayout({ children }: { children: React.ReactNode }) {

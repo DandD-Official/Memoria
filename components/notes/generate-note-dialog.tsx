@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter } from "@/components/layout/navigation-loading";
 import { Sparkles } from "lucide-react";
 import { AiSourcePicker, type AiKeySource } from "@/components/ai/ai-source-picker";
 import { Button } from "@/components/ui/button";

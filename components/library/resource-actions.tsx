@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter } from "@/components/layout/navigation-loading";
 import { Archive, ArchiveRestore, Copy, MoreHorizontal, Star, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet } from "@/components/ui/sheet";

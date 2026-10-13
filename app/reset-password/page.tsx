@@ -2,7 +2,7 @@
 
 import { useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
-import Link from "next/link";
+import Link from "@/components/layout/navigation-link";
 import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/input";
 import { AuthFrame } from "@/components/auth/auth-frame";

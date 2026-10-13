@@ -1,12 +1,13 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
-import Link from "next/link";
+import { useRouter } from "@/components/layout/navigation-loading";
+import Link from "@/components/layout/navigation-link";
 import { pickGoogleDocument } from "@/lib/integrations/google-picker";
 import { generatedVisualIssues } from "@/lib/ai/output-quality";
 import { Dialog } from "@/components/ui/dialog";
 import { Upload, Link2, FileText, Cloud, Copy, Check, ArrowRight } from "lucide-react";
+import { NoteReviewerReminder } from "@/components/notes/note-reviewer-reminder";
 import { FileDropzone } from "@/components/notes/file-dropzone";
 import { Button } from "@/components/ui/button";
 import { Input, Label, Textarea } from "@/components/ui/input";
@@ -66,7 +67,7 @@ function OcrKeepSelector({ selected, onToggle }: { selected: OcrKeepOption[]; on
 
 export default function ImportNotePage() {
   const router = useRouter();
-  const [imported, setImported] = useState<{ href: string; noteId?: string } | null>(null);
+  const [imported, setImported] = useState<{ href: string; noteId?: string; hasNotes: boolean } | null>(null);
   const [processingStage, setProcessingStage] = useState("Reading your material");
   const [tab, setTab] = useState<Tab>("file");
   const [file, setFile] = useState<File | null>(null);
@@ -88,9 +89,9 @@ export default function ImportNotePage() {
 
   const linkType = useMemo(() => detectLinkType(link), [link]);
 
-  function navigateAfterSave(href: string) {
+  function navigateAfterSave(href: string, hasNotes = false) {
     const noteId = href.match(/^\/notes\/([^/]+)$/)?.[1];
-    setImported({ href: href === "/dashboard" ? "/library" : href, noteId });
+    setImported({ href: href === "/dashboard" ? "/library" : href, noteId, hasNotes: hasNotes || Boolean(noteId) });
     setStatus("idle");
     setImageWarning(null);
     router.refresh();
@@ -145,8 +146,8 @@ export default function ImportNotePage() {
         return;
       }
       if (data.errors?.length) setNotice(`${(data.notes?.length ?? 0) + (data.restored?.length ?? 0)} imported; ${data.errors.length} failed. ${data.errors[0].error}`);
-      if (data.redirect) navigateAfterSave(data.redirect);
-      else if ((data.notes?.length ?? 0) + (data.restored?.length ?? 0) > 1) navigateAfterSave("/dashboard");
+      if (data.redirect) navigateAfterSave(data.redirect, Boolean(data.notes?.length || data.note));
+      else if ((data.notes?.length ?? 0) + (data.restored?.length ?? 0) > 1) navigateAfterSave("/dashboard", Boolean(data.notes?.length));
       else if (data.note) navigateAfterSave(`/notes/${data.note.id}`);
     } catch {
       setStatus("failed");
@@ -310,7 +311,7 @@ export default function ImportNotePage() {
     }
   }
 
-  if (imported) return <div className="mx-auto max-w-4xl py-8"><p className="eyebrow">Captured / Ready to connect</p><Check className="mt-8 h-10 w-10 text-success" /><h1 className="mt-5 font-display text-4xl tracking-tight">Your material has a home.</h1><p className="mt-4 max-w-lg text-sm leading-relaxed text-ink-soft">Read through what came in, then give it a shape that helps you learn.</p>{notice && <p role="status" className="mt-4 annotation">{notice}</p>}<div className="mt-8 divide-y divide-line border-y border-line"><Link href={imported.href} className="flex items-center justify-between gap-4 py-6"><span><span className="index-label">01 / Check the source</span><span className="mt-2 block font-display text-xl">Open your material</span></span><ArrowRight className="h-5 w-5" /></Link>{imported.noteId && <><Link href={`/reviewers?fromNote=${imported.noteId}`} className="flex items-center justify-between gap-4 py-6"><span><span className="index-label">02 / Make sense of it</span><span className="mt-2 block font-display text-xl">Build a study guide</span></span><ArrowRight className="h-5 w-5" /></Link><Link href={`/quizzes?fromNote=${imported.noteId}`} className="flex items-center justify-between gap-4 py-6"><span><span className="index-label">03 / Try what you know</span><span className="mt-2 block font-display text-xl">Create a practice set</span></span><ArrowRight className="h-5 w-5" /></Link></>}</div><Button variant="ghost" className="mt-6" onClick={() => { setImported(null); setFile(null); setFiles([]); setPastedContent(""); setNotice(null); }}>Bring in more material</Button></div>;
+  if (imported) return <div className="mx-auto max-w-4xl py-8"><p className="eyebrow">Captured / Ready to connect</p><Check className="mt-8 h-10 w-10 text-success" /><h1 className="mt-5 font-display text-4xl tracking-tight">Your material has a home.</h1><p className="mt-4 max-w-lg text-sm leading-relaxed text-ink-soft">Read through what came in, then give it a shape that helps you learn.</p>{imported.hasNotes && <NoteReviewerReminder noteId={imported.noteId} />}{notice && <p role="status" className="mt-4 annotation">{notice}</p>}<div className="mt-8 divide-y divide-line border-y border-line"><Link href={imported.href} className="flex items-center justify-between gap-4 py-6"><span><span className="index-label">01 / Check the source</span><span className="mt-2 block font-display text-xl">Open your material</span></span><ArrowRight className="h-5 w-5" /></Link>{imported.noteId && <><Link href={`/reviewers?fromNote=${imported.noteId}`} className="flex items-center justify-between gap-4 py-6"><span><span className="index-label">02 / Make sense of it</span><span className="mt-2 block font-display text-xl">Build a study guide</span></span><ArrowRight className="h-5 w-5" /></Link><Link href={`/quizzes?fromNote=${imported.noteId}`} className="flex items-center justify-between gap-4 py-6"><span><span className="index-label">03 / Try what you know</span><span className="mt-2 block font-display text-xl">Create a practice set</span></span><ArrowRight className="h-5 w-5" /></Link></>}</div><Button variant="ghost" className="mt-6" onClick={() => { setImported(null); setFile(null); setFiles([]); setPastedContent(""); setNotice(null); }}>Bring in more material</Button></div>;
   return (
     <div className="mx-auto max-w-5xl">
       <p className="section-kicker">Start with what you already have</p>

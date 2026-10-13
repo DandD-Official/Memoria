@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
+import Link from "@/components/layout/navigation-link";
 import { BookOpen, FileInput, Layers3, Link2, ListChecks, Plus, Workflow } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet } from "@/components/ui/sheet";

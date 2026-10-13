@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { signOut } from "next-auth/react";
+import { signOut } from "@/lib/offline/sign-out";
+import { canCheckOnlineSession } from "@/lib/offline/local-session";
 
 // Keep revocation responsive after another session is logged out without
 // adding a request on every render or keystroke.
@@ -12,7 +13,7 @@ export function SessionHeartbeat() {
 
   useEffect(() => {
     const heartbeat = async () => {
-      if (document.visibilityState !== "visible" || signingOut.current) return;
+      if (!canCheckOnlineSession() || document.visibilityState !== "visible" || signingOut.current) return;
 
       try {
         const response = await fetch("/api/sessions/heartbeat", {
@@ -24,7 +25,7 @@ export function SessionHeartbeat() {
         // The server removes a revoked session from active_sessions. The JWT
         // callback then reports 401 on the next heartbeat; make that visible
         // to the user instead of leaving a dead tab looking authenticated.
-        if (response.status === 401) {
+        if (response.status === 401 && canCheckOnlineSession()) {
           signingOut.current = true;
           await signOut({ callbackUrl: "/login" });
         }

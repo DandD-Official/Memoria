@@ -1,6 +1,6 @@
 import type { LucideIcon } from "lucide-react";
 import { ArrowRight } from "lucide-react";
-import Link from "next/link";
+import Link from "@/components/layout/navigation-link";
 import { Button, buttonStyles } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 interface EmptyStateProps { icon: LucideIcon; title: string; description: string; actionLabel?: string; onAction?: () => void; actionHref?: string; secondaryActionLabel?: string; secondaryActionHref?: string; className?: string }

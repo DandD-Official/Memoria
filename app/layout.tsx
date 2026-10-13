@@ -5,6 +5,9 @@ import { CodeThemeProvider } from "@/components/mmd/code-theme-context";
 import { StartupScreen } from "@/components/layout/startup-screen";
 import { ToastViewport } from "@/components/ui/toast";
 import { PwaRegistration } from "@/components/layout/pwa-registration";
+import { NavigationLoadingProvider } from "@/components/layout/navigation-loading";
+import { OfflineProvider } from "@/components/offline/offline-provider";
+import { DEV_OFFLINE_RECOVERY_SCRIPT } from "@/lib/offline/dev-recovery";
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXTAUTH_URL || "https://memoria-studynotes.vercel.app"),
@@ -33,13 +36,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
+        {process.env.NODE_ENV === "development" && <script dangerouslySetInnerHTML={{ __html: DEV_OFFLINE_RECOVERY_SCRIPT }} />}
         {/* Runs before hydration so appearance (including for signed-out
             visitors) applies with no flash of the wrong theme. */}
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
       </head>
       <body className="font-sans" suppressHydrationWarning>
         <ThemeProvider>
-          <CodeThemeProvider><StartupScreen /><PwaRegistration />{children}<ToastViewport /></CodeThemeProvider>
+          <CodeThemeProvider><NavigationLoadingProvider><OfflineProvider /><StartupScreen /><PwaRegistration />{children}<ToastViewport /></NavigationLoadingProvider></CodeThemeProvider>
         </ThemeProvider>
       </body>
     </html>

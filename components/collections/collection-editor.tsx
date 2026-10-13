@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
+import Link from "@/components/layout/navigation-link";
 import { ArrowLeft, Check, ChevronUp, ChevronDown, Pencil, Plus, Settings2, Share2, Trash2 } from "lucide-react";
 import { MemoryPicker } from "./memory-picker";
 import type { MemoryPickerRow, PickerMemory } from "@/lib/books/memory-picker";
