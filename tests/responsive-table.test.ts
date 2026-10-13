@@ -3,10 +3,29 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { MmdRenderer } from "@/components/mmd/renderer";
 import { MmdExportSurface } from "@/components/exports/mmd-export-surface";
+import { TableViewContext } from "@/components/markdown/table-view-context";
+import { TableViewSettings } from "@/components/settings/table-view-settings";
 
 const table = "| Field | Purpose |\n|---|---|\n| Rows | Group source records |\n| Values | Summarize numbers |";
 
 describe("table viewing options", () => {
+  it("uses the configured fit default and shows it in Settings", () => {
+    const preference = { defaultTableView: "fit" as const, setDefaultTableView: () => true };
+    const html = renderToStaticMarkup(createElement(TableViewContext.Provider, { value: preference }, createElement(MmdRenderer, { content: table })));
+    expect(html).toContain('data-table-view="fit"');
+    expect(html).toMatch(/aria-pressed="true"[^>]*>.*?Fit to width<\/button>/);
+    const settings = renderToStaticMarkup(createElement(TableViewContext.Provider, { value: preference }, createElement(TableViewSettings)));
+    expect(settings).toContain('value="fit" selected=""');
+    expect(settings).toContain("Saved on this browser");
+  });
+
+  it("keeps export layout independent of the configured screen default", () => {
+    const html = renderToStaticMarkup(createElement(TableViewContext.Provider, { value: { defaultTableView: "fit", setDefaultTableView: () => true } }, createElement(MmdExportSurface, { content: table })));
+    expect(html).toContain('data-table-view="scroll"');
+    expect(html).not.toContain("responsive-table__controls");
+    expect(html).toContain("Group source records");
+  });
+
   it("offers both modes while preserving semantic table content and keyboard scrolling", () => {
     const html = renderToStaticMarkup(createElement(MmdRenderer, { content: table }));
     expect(html).toContain('role="group" aria-label="Table view"');

@@ -7,6 +7,7 @@ import { useTheme } from "@/components/layout/theme-provider";
 import { useRouter } from "next/navigation";
 import { CODE_THEMES, isCodeThemeId, type CodeThemeId } from "@/lib/mmd/code-themes";
 import { useCodeTheme } from "@/components/mmd/code-theme-context";
+import { TableViewSettings } from "@/components/settings/table-view-settings";
 
 interface Settings {
   appearance: "LIGHT" | "DARK" | "SYSTEM";
@@ -97,6 +98,7 @@ export function SettingsForm({ initial }: { initial: Settings }) {
             {Object.entries(CODE_THEMES).map(([value, definition]) => <option key={value} value={value}>{definition.label}</option>)}
           </select>
         </div>
+        <TableViewSettings />
         <label className="mt-4 flex items-start gap-3 rounded-lg border border-line p-3 text-sm text-ink">
           <input className="mt-0.5 h-4 w-4 accent-accent" type="checkbox" checked={settings.reduceMotion} onChange={(e) => save({ reduceMotion: e.target.checked })} />
           <span><span className="block font-medium">Reduce motion</span><span className="block text-xs text-ink-soft">Minimize animations and transitions throughout the signed-in app.</span></span>

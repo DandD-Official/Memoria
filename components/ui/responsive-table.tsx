@@ -5,6 +5,8 @@ import { useId, useState } from "react";
 import { MoveHorizontal, Minimize2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useMmdRenderContext } from "@/components/mmd/render-context";
+import { useDefaultTableView } from "@/components/markdown/table-view-context";
+import type { TableView } from "@/lib/table-view";
 
 interface ResponsiveTableProps extends React.HTMLAttributes<HTMLDivElement> {
   /** A short hint for narrow screens; keep it visible only when scrolling is useful. */
@@ -18,7 +20,9 @@ interface ResponsiveTableProps extends React.HTMLAttributes<HTMLDivElement> {
 export function ResponsiveTable({ className, label = "Scroll horizontally to view more columns", children, ...props }: ResponsiveTableProps) {
   const hintId = useId();
   const viewportId = useId();
-  const [view, setView] = useState<"scroll" | "fit">("scroll");
+  const { defaultTableView } = useDefaultTableView();
+  const [override, setView] = useState<TableView | null>(null);
+  const view = override ?? defaultTableView;
   const { mode } = useMmdRenderContext();
   const isExport = mode === "export";
   const tableView = isExport ? "scroll" : view;

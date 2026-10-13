@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { ThemeProvider, THEME_INIT_SCRIPT } from "@/components/layout/theme-provider";
 import { CodeThemeProvider } from "@/components/mmd/code-theme-context";
+import { TableViewProvider } from "@/components/markdown/table-view-context";
 import { StartupScreen } from "@/components/layout/startup-screen";
 import { ToastViewport } from "@/components/ui/toast";
 import { PwaRegistration } from "@/components/layout/pwa-registration";
@@ -43,7 +44,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className="font-sans" suppressHydrationWarning>
         <ThemeProvider>
-          <CodeThemeProvider><NavigationLoadingProvider><OfflineProvider /><StartupScreen /><PwaRegistration />{children}<ToastViewport /></NavigationLoadingProvider></CodeThemeProvider>
+          <CodeThemeProvider><TableViewProvider><NavigationLoadingProvider><OfflineProvider /><StartupScreen /><PwaRegistration />{children}<ToastViewport /></NavigationLoadingProvider></TableViewProvider></CodeThemeProvider>
         </ThemeProvider>
       </body>
     </html>
