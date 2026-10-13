@@ -336,6 +336,18 @@
     overflow-wrap: break-word;
   }
 
+  .responsive-table__viewport:where([data-table-view="fit"]) > table {
+    width: 100%;
+    table-layout: fixed;
+    font-size: 0.875rem;
+  }
+
+  .responsive-table__viewport:where([data-table-view="fit"]) > table :is(th, td) {
+    min-width: 0;
+    max-width: none;
+    overflow-wrap: anywhere;
+  }
+
   .responsive-table__hint {
     @apply mt-1 text-xs text-ink-faint sm:sr-only;
   }
@@ -570,6 +582,7 @@
 }
 @media print {
   .workspace-header, .context-index, .mobile-dock, .focus-header, .document-margin { display: none !important; }
+  .responsive-table__controls, .responsive-table__hint { display: none !important; }
   .document-layout { display: block; }
   .workspace-content { padding: 0; }
 }
