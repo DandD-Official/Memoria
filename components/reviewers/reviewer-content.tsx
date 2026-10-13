@@ -31,7 +31,7 @@ function Block({ block }: { block: Block }) {
       const rows = block.rows as string[][];
       return (
         <ResponsiveTable>
-          <table className="w-full border-collapse text-sm">
+          <table className="border-collapse">
             <thead>
               <tr>
                 {headers.map((h, i) => (

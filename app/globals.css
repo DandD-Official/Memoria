@@ -321,8 +321,19 @@
   }
 
   .responsive-table__viewport > table {
+    /* Keep useful column widths; let the viewport scroll instead of squeezing cells. */
+    width: max-content;
     min-width: 100%;
+    table-layout: auto;
+    font-size: inherit;
     margin: 0;
+  }
+
+  .responsive-table__viewport > table :is(th, td) {
+    min-width: 10rem;
+    max-width: 28rem;
+    white-space: normal;
+    overflow-wrap: break-word;
   }
 
   .responsive-table__hint {
@@ -440,7 +451,7 @@
     @apply my-6 border-line;
   }
   .memora-markdown table {
-    @apply w-full border-collapse text-sm;
+    @apply border-collapse;
   }
   .memora-markdown thead {
     @apply bg-ink/5;
