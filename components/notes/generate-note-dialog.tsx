@@ -2,12 +2,13 @@
 
 import { useState } from "react";
 import { useRouter } from "@/components/layout/navigation-loading";
-import { Sparkles } from "lucide-react";
+import { Check, Copy, Sparkles } from "lucide-react";
+import Link from "@/components/layout/navigation-link";
 import { AiSourcePicker, type AiKeySource } from "@/components/ai/ai-source-picker";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { LoadingState } from "@/components/ui/loading-state";
-import { Input } from "@/components/ui/input";
+import { Input, Textarea } from "@/components/ui/input";
 import { buildTopicNotePrompt, type ProcessingStyle } from "@/lib/prompts/note-prompt";
 import { stripCodeFences } from "@/lib/validation/reviewer";
 
@@ -27,11 +28,34 @@ export function GenerateNoteDialog({ systemAvailable }: { systemAvailable: boole
   const [source, setSource] = useState<AiKeySource>(systemAvailable ? "system" : "personal");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [copiedPrompt, setCopiedPrompt] = useState("");
+  const [showPrompt, setShowPrompt] = useState(false);
+  const [copyError, setCopyError] = useState("");
+  const prompt = topic.trim().length >= 3 ? buildTopicNotePrompt(topic, style) : "";
+  const copied = Boolean(prompt && copiedPrompt === prompt);
 
   function closeDialog(nextOpen: boolean) {
     if (busy) return;
     setOpen(nextOpen);
-    if (!nextOpen) setError("");
+    if (!nextOpen) {
+      setError("");
+      setCopyError("");
+      setCopiedPrompt("");
+      setShowPrompt(false);
+    }
+  }
+
+  async function copyPrompt() {
+    if (!prompt || busy) return;
+    setCopyError("");
+    setCopiedPrompt("");
+    setShowPrompt(true);
+    try {
+      await navigator.clipboard.writeText(prompt);
+      setCopiedPrompt(prompt);
+    } catch {
+      setCopyError("Copying was blocked. Select the prompt below and copy it manually.");
+    }
   }
 
   async function generateNote() {
@@ -48,7 +72,7 @@ export function GenerateNoteDialog({ systemAvailable }: { systemAvailable: boole
       const aiResponse = await fetch("/api/ai/general", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: buildTopicNotePrompt(normalizedTopic, style), source }),
+        body: JSON.stringify({ prompt, source }),
       });
       const aiResult = await aiResponse.json().catch(() => null);
       if (!aiResponse.ok) {
@@ -93,7 +117,7 @@ export function GenerateNoteDialog({ systemAvailable }: { systemAvailable: boole
         open={open}
         onOpenChange={closeDialog}
         title="Generate a note"
-        description="Give Memoria a topic and it will create a new, editable note for you."
+        description="Choose a topic, then generate an editable note here or copy the prompt into your preferred AI tool."
         className="max-w-xl"
       >
         <div className="space-y-5">
@@ -113,12 +137,29 @@ export function GenerateNoteDialog({ systemAvailable }: { systemAvailable: boole
 
           <label className="block text-sm font-medium text-ink" htmlFor="generate-note-style">
             Note style
-            <select id="generate-note-style" value={style} onChange={(event) => setStyle(event.target.value as ProcessingStyle)} className="mt-1.5 h-10 w-full rounded-control border border-line-strong bg-surface px-3 text-sm text-ink">
+            <select id="generate-note-style" value={style} disabled={busy} onChange={(event) => setStyle(event.target.value as ProcessingStyle)} className="mt-1.5 h-10 w-full rounded-control border border-line-strong bg-surface px-3 text-sm text-ink">
               {STYLES.map((item) => <option key={item.value} value={item.value}>{item.label} — {item.description}</option>)}
             </select>
           </label>
 
           <AiSourcePicker value={source} onChange={setSource} systemAvailable={systemAvailable} />
+          <div className="space-y-3 rounded-control border border-line p-4">
+            <p className="text-sm text-ink-soft">Copy the prompt into another AI tool, then use <Link href="/notes/import" className="text-accent-dark underline">Import notes → Write or paste</Link> to save its answer. Copying needs no API key.</p>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button type="button" variant="outline" onClick={() => void copyPrompt()} disabled={!prompt || busy}>
+                {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />} {copied ? "Copied" : "Copy prompt"}
+              </Button>
+              <Button type="button" variant="ghost" size="sm" onClick={() => setShowPrompt(!showPrompt)} disabled={!prompt || busy} aria-expanded={showPrompt} aria-controls="generate-note-prompt">
+                {showPrompt ? "Hide prompt" : "Preview prompt"}
+              </Button>
+            </div>
+            {copied && <p role="status" className="text-xs text-ink-soft">Prompt copied. Paste it into your AI tool.</p>}
+            {copyError && <p role="alert" className="text-sm text-danger">{copyError}</p>}
+            {showPrompt && <div>
+              <label htmlFor="generate-note-prompt" className="mb-1.5 block text-sm font-medium text-ink">Source-note prompt</label>
+              <Textarea id="generate-note-prompt" value={prompt} readOnly rows={8} className="font-mono text-xs" onFocus={(event) => event.currentTarget.select()} />
+            </div>}
+          </div>
           {busy && <LoadingState label="Writing and saving your note. This can take a moment…" rows={2} />}
           {error && <p role="alert" className="rounded-control border border-danger/30 bg-danger/5 px-3 py-2 text-sm text-danger">{error}</p>}
           <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">

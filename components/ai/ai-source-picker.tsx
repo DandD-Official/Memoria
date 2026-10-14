@@ -2,6 +2,7 @@
 
 import { useId } from "react";
 import { KeyRound, Server } from "lucide-react";
+import Link from "@/components/layout/navigation-link";
 import { cn } from "@/lib/utils";
 
 export type AiKeySource = "system" | "personal";
@@ -39,6 +40,7 @@ export function AiSourcePicker({
           );
         })}
       </div>
+      <p className="text-xs text-ink-soft">Add your own API key in <Link href="/settings#ai-providers" className="text-accent-dark underline">Settings → AI providers</Link>.</p>
     </fieldset>
   );
 }
